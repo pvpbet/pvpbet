@@ -1,0 +1,50 @@
+{
+  "name": "@pvpbet/pvpbet",
+  "version": "1.0.0",
+  "description": "A decentralized PVP betting platform based on the Ethereum Virtual Machine (EVM).",
+  "license": "MIT",
+  "scripts": {
+    "build": "npx hardhat clean && npx hardhat compile",
+    "net": "npx hardhat node",
+    "test": "npx hardhat test",
+    "release": "npm run test && npm run build && npm publish --access public",
+    "deploy:test": "npx hardhat run scripts/deploy.ts --network hardhat",
+    "deploy:localhost": "npx hardhat run scripts/deploy.ts --network localhost"
+  },
+  "keywords": [
+    "eth",
+    "eth-contract",
+    "ethereum",
+    "ethereum-contract",
+    "evm",
+    "smart-contract",
+    "pvpbet"
+  ],
+  "homepage": "https://github.com/pvpbet/pvpbet#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pvpbet/pvpbet.git"
+  },
+  "bugs": {
+    "url": "https://github.com/pvpbet/pvpbet/issues"
+  },
+  "files": [
+    "contracts",
+    "artifacts/contracts",
+    "!artifacts/contracts/**/*.dbg.json"
+  ],
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ignition-viem": "^0.15.5",
+    "@nomicfoundation/hardhat-ledger": "^1.0.3",
+    "@nomicfoundation/hardhat-toolbox-viem": "^3.0.0",
+    "@nomicfoundation/hardhat-verify": "^2.0.9",
+    "@openzeppelin/hardhat-upgrades": "^3.2.1",
+    "chai": "^4.5.0",
+    "dotenv": "^16.4.5",
+    "hardhat": "^2.22.9"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.0.2",
+    "@openzeppelin/contracts-upgradeable": "^5.0.2"
+  }
+}

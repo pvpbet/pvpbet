@@ -1,0 +1,110 @@
+<svg fill="none" viewBox="0 0 600 300" width="600" height="300" xmlns="http://www.w3.org/2000/svg">
+  <foreignObject width="100%" height="100%">
+    <div xmlns="http://www.w3.org/1999/xhtml">
+      <style>
+        @keyframes animateGalvanic {
+          0%,
+          40%,
+          44%,
+          58%,
+          61%,
+          65%,
+          69%,
+          73%,
+          to { transform: skewX(0deg); }
+          41% { transform: skewX(60deg); }
+          42% { transform: skewX(-60deg); }
+          59% { transform: skewX(60deg); }
+          60% { transform: skewX(-60deg); }
+          63% { transform: skewX(60deg); }
+          70% { transform: skewX(-60deg); }
+          71% { transform: skewX(60deg); }
+        }
+        .animate-galvanic { animation: animateGalvanic 4s ease-in-out infinite alternate; }
+        .w-full { width: 100%; }
+        .h-full { height: 100%; }
+        .h-\[10\%\] { height: 10%; }
+        .h-\[1000\%\] { height: 1000%; }
+        .left-0 { left: 0px; }
+        .relative { position: relative; }
+        .absolute { position: absolute; }
+        .overflow-hidden { overflow: hidden; }
+        .container {
+          height: 300px;
+          background: #000;
+        }
+        .logo {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-family: sans-serif;
+          color: #fff;
+          line-height: 1;
+          font-weight: 700;
+          font-size: 120px;
+          -webkit-mask-image: -webkit-linear-gradient(bottom, transparent 0, #000 50%, #000 100%);
+        }
+        .logo span {
+          display: inline-block;
+          margin-left: .1em;
+          padding: .25em .1em;
+          border-radius: .25em;
+          background: #ce1a19;
+          text-shadow: 0 .1em .1em rgba(0, 0, 0, 0.4);
+        }
+      </style>
+      <div class="container">
+        <div class="animate-galvanic relative overflow-hidden h-[10%]">
+          <div class="absolute left-0 w-full h-[1000%]" style="top: 0;">
+            <div class="logo w-full h-full">PVP<span>Bet</span></div>
+          </div>
+        </div>
+        <div class="animate-galvanic relative overflow-hidden h-[10%]">
+          <div class="absolute left-0 w-full h-[1000%]" style="top: -100%;">
+            <div class="logo w-full h-full">PVP<span>Bet</span></div>
+          </div>
+        </div>
+        <div class="animate-galvanic relative overflow-hidden h-[10%]">
+          <div class="absolute left-0 w-full h-[1000%]" style="top: -200%;">
+            <div class="logo w-full h-full">PVP<span>Bet</span></div>
+          </div>
+        </div>
+        <div class="animate-galvanic relative overflow-hidden h-[10%]">
+          <div class="absolute left-0 w-full h-[1000%]" style="top: -300%;">
+            <div class="logo w-full h-full">PVP<span>Bet</span></div>
+          </div>
+        </div>
+        <div class="animate-galvanic relative overflow-hidden h-[10%]">
+          <div class="absolute left-0 w-full h-[1000%]" style="top: -400%;">
+            <div class="logo w-full h-full">PVP<span>Bet</span></div>
+          </div>
+        </div>
+        <div class="animate-galvanic relative overflow-hidden h-[10%]">
+          <div class="absolute left-0 w-full h-[1000%]" style="top: -500%;">
+            <div class="logo w-full h-full">PVP<span>Bet</span></div>
+          </div>
+        </div>
+        <div class="animate-galvanic relative overflow-hidden h-[10%]">
+          <div class="absolute left-0 w-full h-[1000%]" style="top: -600%;">
+            <div class="logo w-full h-full">PVP<span>Bet</span></div>
+          </div>
+        </div>
+        <div class="animate-galvanic relative overflow-hidden h-[10%]">
+          <div class="absolute left-0 w-full h-[1000%]" style="top: -700%;">
+            <div class="logo w-full h-full">PVP<span>Bet</span></div>
+          </div>
+        </div>
+        <div class="animate-galvanic relative overflow-hidden h-[10%]">
+          <div class="absolute left-0 w-full h-[1000%]" style="top: -800%;">
+            <div class="logo w-full h-full">PVP<span>Bet</span></div>
+          </div>
+        </div>
+        <div class="animate-galvanic relative overflow-hidden h-[10%]">
+          <div class="absolute left-0 w-full h-[1000%]" style="top: -900%;">
+            <div class="logo w-full h-full">PVP<span>Bet</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </foreignObject>
+</svg>
