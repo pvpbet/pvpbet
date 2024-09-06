@@ -12,7 +12,7 @@ import {
 import { transfer } from '../utils'
 import {
   claimTestTokens,
-  deployBetGovToken,
+  deployGovToken,
   deployTestTokens,
 } from './common'
 import {
@@ -37,9 +37,10 @@ import {
 } from './common/chip'
 import {
   UnlockWaitingPeriod,
-  deployBetVotingEscrow,
+  deployGovTokenStaking,
   stake,
-} from './common/vote'
+} from './common/staking'
+import { deployBetVotingEscrow } from './common/vote'
 import {
   checkBalance,
   checkVoteLevel,
@@ -71,13 +72,15 @@ describe('Bet', () => {
       10n ** 12n,
     ]
     const BetChip = await deployBetChip(currencies, rates)
-    const BetGovToken = await deployBetGovToken()
-    const BetVotingEscrow = await deployBetVotingEscrow(BetGovToken.address)
-    const BetManager = await deployBetManager(BetChip.address, BetVotingEscrow.address, BetGovToken.address)
+    const GovToken = await deployGovToken()
+    const BetVotingEscrow = await deployBetVotingEscrow()
+    const GovTokenStaking = await deployGovTokenStaking(GovToken.address, BetVotingEscrow.address)
+    const BetManager = await deployBetManager(GovToken.address, BetChip.address, BetVotingEscrow.address)
 
     await BetVotingEscrow.write.setBetManager([BetManager.address])
-    await BetGovToken.write.transfer([user.account.address, parseUnits('1000000', 18)])
-    await BetGovToken.write.transfer([hacker.account.address, parseUnits('1000000', 18)])
+    await BetVotingEscrow.write.setGovTokenStaking([GovTokenStaking.address])
+    await GovToken.write.transfer([user.account.address, parseUnits('1000000', 18)])
+    await GovToken.write.transfer([hacker.account.address, parseUnits('1000000', 18)])
 
     await Promise.all(
       [
@@ -87,8 +90,8 @@ describe('Bet', () => {
       ].map(async wallet => {
         await stake(
           wallet,
-          BetGovToken,
-          BetVotingEscrow,
+          GovToken,
+          GovTokenStaking,
           UnlockWaitingPeriod.WEEK12,
           parseUnits('500000', 18),
         )
@@ -104,9 +107,10 @@ describe('Bet', () => {
     return {
       ...testTokens,
       BetChip,
-      BetGovToken,
       BetVotingEscrow,
       BetManager,
+      GovToken,
+      GovTokenStaking,
       publicClient,
       owner,
       user,
@@ -1602,6 +1606,7 @@ describe('Bet', () => {
         BetChip,
         BetVotingEscrow,
         BetManager,
+        GovTokenStaking,
         owner,
         user,
         hacker,
@@ -1676,6 +1681,7 @@ describe('Bet', () => {
         await isBetClosed(Bet, chip)
         await isCorrectStakeReward(
           BetVotingEscrow,
+          GovTokenStaking,
           chip,
           [
             owner.account.address,
@@ -1692,6 +1698,7 @@ describe('Bet', () => {
         BetChip,
         BetVotingEscrow,
         BetManager,
+        GovTokenStaking,
         owner,
         user,
         hacker,
@@ -1783,6 +1790,7 @@ describe('Bet', () => {
         await isBetClosed(Bet, chip)
         await isCorrectStakeReward(
           BetVotingEscrow,
+          GovTokenStaking,
           chip,
           [
             owner.account.address,
@@ -1799,6 +1807,7 @@ describe('Bet', () => {
         BetChip,
         BetVotingEscrow,
         BetManager,
+        GovTokenStaking,
         owner,
         user,
         hacker,
@@ -1887,6 +1896,7 @@ describe('Bet', () => {
         await isBetClosed(Bet, chip)
         await isCorrectStakeReward(
           BetVotingEscrow,
+          GovTokenStaking,
           chip,
           [
             owner.account.address,
@@ -1911,6 +1921,7 @@ describe('Bet', () => {
         BetChip,
         BetVotingEscrow,
         BetManager,
+        GovTokenStaking,
         owner,
         user,
         hacker,
@@ -1990,6 +2001,7 @@ describe('Bet', () => {
         await isBetClosed(Bet, chip)
         await isCorrectStakeReward(
           BetVotingEscrow,
+          GovTokenStaking,
           chip,
           [
             owner.account.address,
@@ -2010,10 +2022,11 @@ describe('Bet', () => {
 
     it('Release when confirmed after dispute occurred, and no one decided on the winning option', async () => {
       const {
-        BetGovToken,
         BetChip,
         BetVotingEscrow,
         BetManager,
+        GovToken,
+        GovTokenStaking,
         owner,
         user,
         hacker,
@@ -2107,15 +2120,16 @@ describe('Bet', () => {
             [owner.account.address, BetVotingEscrow.address, 0n],
             [user.account.address, BetVotingEscrow.address, userDecidedAmount],
             [hacker.account.address, BetVotingEscrow.address, hackerDecidedAmount],
-            [owner.account.address, BetGovToken.address, 0n],
-            [user.account.address, BetGovToken.address, userConfiscatedVoteReward],
-            [hacker.account.address, BetGovToken.address, hackerConfiscatedVoteReward],
+            [owner.account.address, GovToken.address, 0n],
+            [user.account.address, GovToken.address, userConfiscatedVoteReward],
+            [hacker.account.address, GovToken.address, hackerConfiscatedVoteReward],
           ],
         )
 
         await isBetClosed(Bet, chip)
         await isCorrectStakeReward(
           BetVotingEscrow,
+          GovTokenStaking,
           chip,
           [
             owner.account.address,
@@ -2136,6 +2150,7 @@ describe('Bet', () => {
         BetChip,
         BetVotingEscrow,
         BetManager,
+        GovTokenStaking,
         owner,
         user,
         hacker,
@@ -2237,6 +2252,7 @@ describe('Bet', () => {
         await isBetClosed(Bet, chip)
         await isCorrectStakeReward(
           BetVotingEscrow,
+          GovTokenStaking,
           chip,
           [
             owner.account.address,
@@ -2260,10 +2276,11 @@ describe('Bet', () => {
 
     it('Release when confirmed after dispute occurred, and punish decider', async () => {
       const {
-        BetGovToken,
         BetChip,
         BetVotingEscrow,
         BetManager,
+        GovToken,
+        GovTokenStaking,
         owner,
         user,
         hacker,
@@ -2361,15 +2378,16 @@ describe('Bet', () => {
             [owner.account.address, BetVotingEscrow.address, 0n],
             [user.account.address, BetVotingEscrow.address, userDecidedAmount],
             [hacker.account.address, BetVotingEscrow.address, hackerDecidedAmount],
-            [owner.account.address, BetGovToken.address, 0n],
-            [user.account.address, BetGovToken.address, userConfiscatedVoteReward],
-            [hacker.account.address, BetGovToken.address, hackerConfiscatedVoteReward],
+            [owner.account.address, GovToken.address, 0n],
+            [user.account.address, GovToken.address, userConfiscatedVoteReward],
+            [hacker.account.address, GovToken.address, hackerConfiscatedVoteReward],
           ],
         )
 
         await isBetClosed(Bet, chip)
         await isCorrectStakeReward(
           BetVotingEscrow,
+          GovTokenStaking,
           chip,
           [
             owner.account.address,

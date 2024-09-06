@@ -7,7 +7,7 @@ import {
   parseUnits,
   zeroAddress,
 } from 'viem'
-import { deployBetGovToken } from './common'
+import { deployGovToken } from './common'
 import {
   BetDetails,
   createBet,
@@ -30,18 +30,18 @@ describe('BetManager', () => {
     const [owner, user, hacker] = await viem.getWalletClients()
 
     const BetChip = await deployBetChip([], [])
-    const BetGovToken = await deployBetGovToken()
-    const BetVotingEscrow = await deployBetVotingEscrow(BetGovToken.address)
-    const BetManager = await deployBetManager(BetChip.address, BetVotingEscrow.address, BetGovToken.address)
+    const GovToken = await deployGovToken()
+    const BetVotingEscrow = await deployBetVotingEscrow()
+    const BetManager = await deployBetManager(GovToken.address, BetChip.address, BetVotingEscrow.address)
     await BetVotingEscrow.write.setBetManager([BetManager.address])
 
-    await BetGovToken.write.transfer([user.account.address, parseUnits('1000000', 18)])
+    await GovToken.write.transfer([user.account.address, parseUnits('1000000', 18)])
 
     return {
       BetChip,
-      BetGovToken,
       BetVotingEscrow,
       BetManager,
+      GovToken,
       publicClient,
       owner,
       user,
@@ -117,42 +117,6 @@ describe('BetManager', () => {
       )
     })
 
-    it('#chip() #setChip()', async () => {
-      const {
-        BetManager,
-        owner,
-        hacker,
-      } = await loadFixture(deployFixture)
-      await assert.isRejected(
-        BetManager.write.setChip([zeroAddress], { account: hacker.account }),
-        'OwnableUnauthorizedAccount',
-      )
-
-      await BetManager.write.setChip([zeroAddress], { account: owner.account })
-      assert.equal(
-        await BetManager.read.chip(),
-        zeroAddress,
-      )
-    })
-
-    it('#vote() #setVote()', async () => {
-      const {
-        BetManager,
-        owner,
-        hacker,
-      } = await loadFixture(deployFixture)
-      await assert.isRejected(
-        BetManager.write.setVote([zeroAddress], { account: hacker.account }),
-        'OwnableUnauthorizedAccount',
-      )
-
-      await BetManager.write.setVote([zeroAddress], { account: owner.account })
-      assert.equal(
-        await BetManager.read.vote(),
-        zeroAddress,
-      )
-    })
-
     it('#govToken() #setGovToken()', async () => {
       const {
         BetManager,
@@ -167,6 +131,42 @@ describe('BetManager', () => {
       await BetManager.write.setGovToken([zeroAddress], { account: owner.account })
       assert.equal(
         await BetManager.read.govToken(),
+        zeroAddress,
+      )
+    })
+
+    it('#chipToken() #setChipToken()', async () => {
+      const {
+        BetManager,
+        owner,
+        hacker,
+      } = await loadFixture(deployFixture)
+      await assert.isRejected(
+        BetManager.write.setChipToken([zeroAddress], { account: hacker.account }),
+        'OwnableUnauthorizedAccount',
+      )
+
+      await BetManager.write.setChipToken([zeroAddress], { account: owner.account })
+      assert.equal(
+        await BetManager.read.chipToken(),
+        zeroAddress,
+      )
+    })
+
+    it('#voteToken() #setVoteToken()', async () => {
+      const {
+        BetManager,
+        owner,
+        hacker,
+      } = await loadFixture(deployFixture)
+      await assert.isRejected(
+        BetManager.write.setVoteToken([zeroAddress], { account: hacker.account }),
+        'OwnableUnauthorizedAccount',
+      )
+
+      await BetManager.write.setVoteToken([zeroAddress], { account: owner.account })
+      assert.equal(
+        await BetManager.read.voteToken(),
         zeroAddress,
       )
     })
@@ -384,7 +384,7 @@ describe('BetManager', () => {
 
     it('Creating a bet requires a fee', async () => {
       const {
-        BetGovToken,
+        GovToken,
         BetManager,
         owner,
         user,
@@ -404,7 +404,7 @@ describe('BetManager', () => {
         'Underpayment',
       )
 
-      await BetGovToken.write.approve([BetManager.address, fee], { account: user.account })
+      await GovToken.write.approve([BetManager.address, fee], { account: user.account })
       const Bet = await createBet(
         user,
         BetManager,

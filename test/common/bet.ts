@@ -32,16 +32,16 @@ export const BetDetails = {
 }
 
 export async function deployBetManager(
-  chip: Address,
-  vote: Address,
   govToken: Address,
+  chipToken: Address,
+  voteToken: Address,
 ) {
   const { BetManager } = await ignition.deploy(BetManagerModule, {
     parameters: {
       BetManager: {
-        chip,
-        vote,
         govToken,
+        chipToken,
+        voteToken,
       },
     },
   })

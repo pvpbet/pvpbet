@@ -1,16 +1,16 @@
 import { buildModule } from '@nomicfoundation/hardhat-ignition/modules'
 
-export const BetFactoryModule = buildModule('BetFactory', (m) => {
+export const BetFactoryModule = buildModule('BetFactory', m => {
   const BetFactory = m.contract('BetFactory')
   return { BetFactory }
 })
 
-export const BetOptionFactoryModule = buildModule('BetOptionFactory', (m) => {
+export const BetOptionFactoryModule = buildModule('BetOptionFactory', m => {
   const BetOptionFactory = m.contract('BetOptionFactory')
   return { BetOptionFactory }
 })
 
-export default buildModule('BetManager', (m) => {
+export default buildModule('BetManager', m => {
   const { BetFactory } = m.useModule(BetFactoryModule)
   const { BetOptionFactory } = m.useModule(BetOptionFactoryModule)
 
@@ -19,7 +19,7 @@ export default buildModule('BetManager', (m) => {
     [],
     {
       id: 'BetManagerImpl',
-    }
+    },
   )
   const initialize = m.encodeFunctionCall(
     implementation,
@@ -27,9 +27,9 @@ export default buildModule('BetManager', (m) => {
     [
       BetFactory,
       BetOptionFactory,
-      m.getParameter('chip'),
-      m.getParameter('vote'),
       m.getParameter('govToken'),
+      m.getParameter('chipToken'),
+      m.getParameter('voteToken'),
     ],
   )
   const proxy = m.contract('ERC1967Proxy', [implementation, initialize])

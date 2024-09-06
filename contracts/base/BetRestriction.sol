@@ -24,7 +24,7 @@ abstract contract BetRestriction is IBetRestriction {
   uint256 private _maxDecidingPeriodDuration;
   string[] private _originWhitelist;
 
-  function _authorizeBetRestrictionUpdate(address sender)
+  function _authorizeUpdateBetRestriction(address sender)
   internal virtual;
 
   function initialize()
@@ -122,43 +122,43 @@ abstract contract BetRestriction is IBetRestriction {
 
   function setMinOptionsCount(uint256 newMinOptionsCount)
   public {
-    _authorizeBetRestrictionUpdate(msg.sender);
+    _authorizeUpdateBetRestriction(msg.sender);
     _minOptionsCount = newMinOptionsCount;
   }
 
   function setMaxOptionsCount(uint256 newMaxOptionsCount)
   public {
-    _authorizeBetRestrictionUpdate(msg.sender);
+    _authorizeUpdateBetRestriction(msg.sender);
     _maxOptionsCount = newMaxOptionsCount;
   }
 
   function setMinWageringPeriodDuration(uint256 newMinWageringPeriodDuration)
   public {
-    _authorizeBetRestrictionUpdate(msg.sender);
+    _authorizeUpdateBetRestriction(msg.sender);
     _minWageringPeriodDuration = newMinWageringPeriodDuration;
   }
 
   function setMaxWageringPeriodDuration(uint256 newMaxWageringPeriodDuration)
   public {
-    _authorizeBetRestrictionUpdate(msg.sender);
+    _authorizeUpdateBetRestriction(msg.sender);
     _maxWageringPeriodDuration = newMaxWageringPeriodDuration;
   }
 
   function setMinDecidingPeriodDuration(uint256 newMinDecidingPeriodDuration)
   public {
-    _authorizeBetRestrictionUpdate(msg.sender);
+    _authorizeUpdateBetRestriction(msg.sender);
     _minDecidingPeriodDuration = newMinDecidingPeriodDuration;
   }
 
   function setMaxDecidingPeriodDuration(uint256 newMaxDecidingPeriodDuration)
   public {
-    _authorizeBetRestrictionUpdate(msg.sender);
+    _authorizeUpdateBetRestriction(msg.sender);
     _maxDecidingPeriodDuration = newMaxDecidingPeriodDuration;
   }
 
   function setOriginWhitelist(string[] memory newOriginWhitelist)
   public {
-    _authorizeBetRestrictionUpdate(msg.sender);
+    _authorizeUpdateBetRestriction(msg.sender);
     _originWhitelist = newOriginWhitelist;
   }
 }

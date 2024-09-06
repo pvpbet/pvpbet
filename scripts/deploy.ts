@@ -1,7 +1,8 @@
 import { viem, ignition } from 'hardhat'
 import { parseUnits } from 'viem'
 import { exec } from '../utils'
-import BetGovTokenModule from '../ignition/modules/BetGovToken'
+import GovTokenModule from '../ignition/modules/GovToken'
+import GovTokenStakingModule from '../ignition/modules/GovTokenStaking'
 import BetChipModule from '../ignition/modules/BetChip'
 import BetVotingEscrowModule from '../ignition/modules/BetVotingEscrow'
 import BetManagerModule from '../ignition/modules/BetManager'
@@ -24,24 +25,28 @@ exec(async () => {
   })
   console.log(`BetChip deployed to: ${BetChip.address}`)
 
-  const { BetGovToken } = await ignition.deploy(BetGovTokenModule)
-  console.log(`BetGovToken deployed to: ${BetGovToken.address}`)
+  const { BetVotingEscrow } = await ignition.deploy(BetVotingEscrowModule)
+  console.log(`BetVotingEscrow deployed to: ${BetVotingEscrow.address}`)
 
-  const { BetVotingEscrow } = await ignition.deploy(BetVotingEscrowModule, {
+  const { GovToken } = await ignition.deploy(GovTokenModule)
+  console.log(`GovToken deployed to: ${GovToken.address}`)
+
+  const { GovTokenStaking } = await ignition.deploy(GovTokenStakingModule, {
     parameters: {
-      BetVotingEscrow: {
-        govToken: BetGovToken.address,
+      GovTokenStaking: {
+        govToken: GovToken.address,
+        voteToken: BetVotingEscrow.address,
       },
     },
   })
-  console.log(`BetVotingEscrow deployed to: ${BetVotingEscrow.address}`)
+  console.log(`GovTokenStaking deployed to: ${GovTokenStaking.address}`)
 
   const { BetManager } = await ignition.deploy(BetManagerModule, {
     parameters: {
       BetManager: {
-        chip: BetChip.address,
-        vote: BetVotingEscrow.address,
-        govToken: BetGovToken.address,
+        govToken: GovToken.address,
+        chipToken: BetChip.address,
+        voteToken: BetVotingEscrow.address,
       },
     },
   })
@@ -49,4 +54,6 @@ exec(async () => {
 
   await BetVotingEscrow.write.setBetManager([BetManager.address])
   console.log(`BetManager added to BetVotingEscrow`)
+  await BetVotingEscrow.write.setGovTokenStaking([GovTokenStaking.address])
+  console.log(`GovTokenStaking added to BetVotingEscrow`)
 })

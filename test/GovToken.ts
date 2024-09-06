@@ -5,18 +5,18 @@ import {
   getAddress,
   parseUnits,
 } from 'viem'
-import { deployBetGovToken } from './common'
+import { deployGovToken } from './common'
 import { checkBalance } from './asserts'
 
-describe('BetGovToken', () => {
+describe('GovToken', () => {
   async function deployFixture() {
     const publicClient = await viem.getPublicClient()
     const [owner, user, hacker] = await viem.getWalletClients()
 
-    const BetGovToken = await deployBetGovToken()
+    const GovToken = await deployGovToken()
 
     return {
-      BetGovToken,
+      GovToken,
       publicClient,
       owner,
       user,
@@ -27,29 +27,29 @@ describe('BetGovToken', () => {
   describe('Ownable', () => {
     it('#owner()', async () => {
       const {
-        BetGovToken,
+        GovToken,
         owner,
       } = await loadFixture(deployFixture)
       assert.equal(
-        await BetGovToken.read.owner(),
+        await GovToken.read.owner(),
         getAddress(owner.account.address),
       )
     })
 
     it('#transferOwnership()', async () => {
       const {
-        BetGovToken,
+        GovToken,
         owner,
         hacker,
       } = await loadFixture(deployFixture)
       await assert.isRejected(
-        BetGovToken.write.transferOwnership([hacker.account.address], { account: hacker.account }),
+        GovToken.write.transferOwnership([hacker.account.address], { account: hacker.account }),
         'OwnableUnauthorizedAccount',
       )
 
-      await BetGovToken.write.transferOwnership([hacker.account.address], { account: owner.account })
+      await GovToken.write.transferOwnership([hacker.account.address], { account: owner.account })
       assert.equal(
-        await BetGovToken.read.owner(),
+        await GovToken.read.owner(),
         getAddress(hacker.account.address),
       )
     })
@@ -58,33 +58,33 @@ describe('BetGovToken', () => {
   describe('Pausable', () => {
     it('#pause() #unpause()', async () => {
       const {
-        BetGovToken,
+        GovToken,
         owner,
         hacker,
       } = await loadFixture(deployFixture)
 
       await assert.isRejected(
-        BetGovToken.write.pause({ account: hacker.account }),
+        GovToken.write.pause({ account: hacker.account }),
         'OwnableUnauthorizedAccount',
       )
 
-      await BetGovToken.write.pause({ account: owner.account })
+      await GovToken.write.pause({ account: owner.account })
 
       const amount = parseUnits('1000', 18)
       await assert.isRejected(
-        BetGovToken.write.transfer([hacker.account.address, amount], { account: owner.account }),
+        GovToken.write.transfer([hacker.account.address, amount], { account: owner.account }),
         'EnforcedPause',
       )
 
-      await BetGovToken.write.unpause({ account: owner.account })
+      await GovToken.write.unpause({ account: owner.account })
 
       await checkBalance(
         async () => {
-          await BetGovToken.write.transfer([hacker.account.address, amount], { account: owner.account })
+          await GovToken.write.transfer([hacker.account.address, amount], { account: owner.account })
         },
         [
-          [owner.account.address, BetGovToken.address, -amount],
-          [hacker.account.address, BetGovToken.address, amount],
+          [owner.account.address, GovToken.address, -amount],
+          [hacker.account.address, GovToken.address, amount],
         ],
       )
     })

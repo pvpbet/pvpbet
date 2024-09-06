@@ -1,4 +1,4 @@
-import { loadFixture, time } from '@nomicfoundation/hardhat-toolbox-viem/network-helpers'
+import { loadFixture } from '@nomicfoundation/hardhat-toolbox-viem/network-helpers'
 import { assert } from 'chai'
 import { viem } from 'hardhat'
 import {
@@ -12,25 +12,21 @@ import {
 import { erc20Transfer } from '../utils'
 import {
   claimTestTokens,
-  deployBetGovToken,
+  deployGovToken,
   deployTestTokens,
 } from './common'
 import {
   UnlockWaitingPeriod,
-  deployBetVotingEscrow,
-  distribute,
+  deployGovTokenStaking,
   stake,
   unstake,
-  withdraw,
+} from './common/staking'
+import {
+  deployBetVotingEscrow,
+  distribute,
 } from './common/vote'
 import { checkBalance } from './asserts'
 import type { Address } from 'viem'
-
-const Time = {
-  [UnlockWaitingPeriod.NONE]: 0n,
-  [UnlockWaitingPeriod.WEEK]: 3600n * 24n * 7n,
-  [UnlockWaitingPeriod.WEEK12]: 3600n * 24n * 7n * 12n,
-}
 
 describe('BetVotingEscrow', () => {
   async function deployFixture() {
@@ -40,16 +36,19 @@ describe('BetVotingEscrow', () => {
     const testTokens = await deployTestTokens()
     await claimTestTokens(owner, testTokens)
 
-    const BetGovToken = await deployBetGovToken()
-    const BetVotingEscrow = await deployBetVotingEscrow(BetGovToken.address)
+    const GovToken = await deployGovToken()
+    const BetVotingEscrow = await deployBetVotingEscrow()
+    const GovTokenStaking = await deployGovTokenStaking(GovToken.address, BetVotingEscrow.address)
 
-    await BetGovToken.write.transfer([user.account.address, parseUnits('1000000', 18)])
-    await BetGovToken.write.transfer([hacker.account.address, parseUnits('1000000', 18)])
+    await BetVotingEscrow.write.setGovTokenStaking([GovTokenStaking.address])
+    await GovToken.write.transfer([user.account.address, parseUnits('1000000', 18)])
+    await GovToken.write.transfer([hacker.account.address, parseUnits('1000000', 18)])
 
     return {
       ...testTokens,
-      BetGovToken,
       BetVotingEscrow,
+      GovToken,
+      GovTokenStaking,
       publicClient,
       owner,
       user,
@@ -89,20 +88,20 @@ describe('BetVotingEscrow', () => {
   })
 
   describe('Config contracts', () => {
-    it('#govToken() #setGovToken()', async () => {
+    it('#govTokenStaking() #setGovTokenStaking()', async () => {
       const {
         BetVotingEscrow,
         owner,
         hacker,
       } = await loadFixture(deployFixture)
       await assert.isRejected(
-        BetVotingEscrow.write.setGovToken([zeroAddress], { account: hacker.account }),
+        BetVotingEscrow.write.setGovTokenStaking([zeroAddress], { account: hacker.account }),
         'OwnableUnauthorizedAccount',
       )
 
-      await BetVotingEscrow.write.setGovToken([zeroAddress], { account: owner.account })
+      await BetVotingEscrow.write.setGovTokenStaking([zeroAddress], { account: owner.account })
       assert.equal(
-        await BetVotingEscrow.read.govToken(),
+        await BetVotingEscrow.read.govTokenStaking(),
         zeroAddress,
       )
     })
@@ -126,11 +125,12 @@ describe('BetVotingEscrow', () => {
     })
   })
 
-  describe('Staking', async () => {
+  describe('Mint or Burn through staking', async () => {
     it('#balanceOf()', async () => {
       const {
-        BetGovToken,
         BetVotingEscrow,
+        GovToken,
+        GovTokenStaking,
         user,
       } = await loadFixture(deployFixture)
       assert.equal(
@@ -139,25 +139,25 @@ describe('BetVotingEscrow', () => {
       )
 
       const stakeAmount = parseUnits('80000', 18)
-      await stake(user, BetGovToken, BetVotingEscrow, UnlockWaitingPeriod.WEEK, stakeAmount)
+      await stake(user, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK, stakeAmount)
       assert.equal(
         await BetVotingEscrow.read.balanceOf([user.account.address]),
         stakeAmount,
       )
 
-      await stake(user, BetGovToken, BetVotingEscrow, UnlockWaitingPeriod.WEEK12, stakeAmount)
+      await stake(user, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK12, stakeAmount)
       assert.equal(
         await BetVotingEscrow.read.balanceOf([user.account.address]),
         stakeAmount * 2n,
       )
 
-      await unstake(user, BetVotingEscrow, UnlockWaitingPeriod.WEEK)
+      await unstake(user, GovTokenStaking, UnlockWaitingPeriod.WEEK)
       assert.equal(
         await BetVotingEscrow.read.balanceOf([user.account.address]),
         stakeAmount,
       )
 
-      await unstake(user, BetVotingEscrow, UnlockWaitingPeriod.WEEK12)
+      await unstake(user, GovTokenStaking, UnlockWaitingPeriod.WEEK12)
       assert.equal(
         await BetVotingEscrow.read.balanceOf([user.account.address]),
         0n,
@@ -166,8 +166,9 @@ describe('BetVotingEscrow', () => {
 
     it('#isAbleToDecide() #isAbleToArbitrate()', async () => {
       const {
-        BetGovToken,
         BetVotingEscrow,
+        GovToken,
+        GovTokenStaking,
         user,
       } = await loadFixture(deployFixture)
       assert.equal(
@@ -180,7 +181,7 @@ describe('BetVotingEscrow', () => {
       )
 
       const stakeAmount = parseUnits('80000', 18)
-      await stake(user, BetGovToken, BetVotingEscrow, UnlockWaitingPeriod.WEEK, stakeAmount)
+      await stake(user, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK, stakeAmount)
       assert.equal(
         await BetVotingEscrow.read.isAbleToDecide([user.account.address]),
         true,
@@ -190,7 +191,7 @@ describe('BetVotingEscrow', () => {
         false,
       )
 
-      await stake(user, BetGovToken, BetVotingEscrow, UnlockWaitingPeriod.WEEK12, stakeAmount)
+      await stake(user, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK12, stakeAmount)
       assert.equal(
         await BetVotingEscrow.read.isAbleToDecide([user.account.address]),
         true,
@@ -198,400 +199,6 @@ describe('BetVotingEscrow', () => {
       assert.equal(
         await BetVotingEscrow.read.isAbleToArbitrate([user.account.address]),
         true,
-      )
-    })
-
-    it('#stake() #stakedAmount() #stakedWeight() #stakedRecord() #stakedRecordCount()', async () => {
-      const {
-        BetGovToken,
-        BetVotingEscrow,
-        user,
-        hacker,
-      } = await loadFixture(deployFixture)
-      const stakeAmount = parseUnits('80000', 18)
-
-      await assert.isRejected(
-        stake(user, BetGovToken, BetVotingEscrow, 0, stakeAmount),
-        'InvalidUnlockWaitingPeriod',
-      )
-      await assert.isRejected(
-        stake(user, BetGovToken, BetVotingEscrow, UnlockWaitingPeriod.WEEK, 0n),
-        'InvalidAmount',
-      )
-
-      await stake(user, BetGovToken, BetVotingEscrow, UnlockWaitingPeriod.WEEK, stakeAmount)
-      await stake(user, BetGovToken, BetVotingEscrow, UnlockWaitingPeriod.WEEK12, stakeAmount)
-      await stake(user, BetGovToken, BetVotingEscrow, UnlockWaitingPeriod.WEEK12, stakeAmount)
-      await stake(hacker, BetGovToken, BetVotingEscrow, UnlockWaitingPeriod.WEEK, stakeAmount)
-      await stake(hacker, BetGovToken, BetVotingEscrow, UnlockWaitingPeriod.WEEK, stakeAmount)
-
-      const accounts = [
-        { wallet: user, stakedAmountForWeek: stakeAmount, stakedAmountForWeek12: stakeAmount * 2n },
-        { wallet: hacker, stakedAmountForWeek: stakeAmount * 2n, stakedAmountForWeek12: 0n },
-      ]
-
-      assert.equal(
-        await BetVotingEscrow.read.stakedAmount(),
-        accounts.reduce((acc, cur) => acc + cur.stakedAmountForWeek + cur.stakedAmountForWeek12, 0n),
-      )
-      assert.equal(
-        await BetVotingEscrow.read.stakedWeight(),
-        accounts.reduce((acc, cur) => acc + cur.stakedAmountForWeek + cur.stakedAmountForWeek12 * 2n, 0n),
-      )
-      assert.equal(
-        await BetVotingEscrow.read.stakedRecordCount(),
-        3n,
-      )
-
-      for (const { wallet, stakedAmountForWeek, stakedAmountForWeek12 } of accounts) {
-        assert.equal(
-          await BetVotingEscrow.read.stakedAmount([wallet.account.address]),
-          stakedAmountForWeek + stakedAmountForWeek12,
-        )
-        assert.equal(
-          await BetVotingEscrow.read.stakedAmount([wallet.account.address, UnlockWaitingPeriod.WEEK]),
-          stakedAmountForWeek,
-        )
-        assert.equal(
-          await BetVotingEscrow.read.stakedAmount([wallet.account.address, UnlockWaitingPeriod.WEEK12]),
-          stakedAmountForWeek12,
-        )
-        assert.equal(
-          await BetVotingEscrow.read.stakedAmount([wallet.account.address, 0]),
-          0n,
-        )
-
-        assert.equal(
-          await BetVotingEscrow.read.stakedWeight([wallet.account.address]),
-          stakedAmountForWeek + stakedAmountForWeek12 * 2n,
-        )
-
-        assert.deepEqual(
-          await BetVotingEscrow.read.stakedRecord([wallet.account.address, UnlockWaitingPeriod.WEEK]),
-          {
-            account: stakedAmountForWeek === 0n ? zeroAddress : getAddress(wallet.account.address),
-            unlockWaitingPeriod: UnlockWaitingPeriod.WEEK,
-            amount: stakedAmountForWeek,
-          },
-        )
-        assert.deepEqual(
-          await BetVotingEscrow.read.stakedRecord([wallet.account.address, UnlockWaitingPeriod.WEEK12]),
-          {
-            account: stakedAmountForWeek12 === 0n ? zeroAddress : getAddress(wallet.account.address),
-            unlockWaitingPeriod: UnlockWaitingPeriod.WEEK12,
-            amount: stakedAmountForWeek12,
-          },
-        )
-      }
-    })
-
-    it('#unstake() #unstakedRecords()', async () => {
-      const {
-        BetGovToken,
-        BetVotingEscrow,
-        user,
-        hacker,
-      } = await loadFixture(deployFixture)
-      const stakeAmount = parseUnits('80000', 18)
-      const accounts = [
-        { wallet: user, unlockWaitingPeriod: UnlockWaitingPeriod.WEEK12 },
-        { wallet: hacker, unlockWaitingPeriod: UnlockWaitingPeriod.WEEK },
-      ]
-
-      await stake(user, BetGovToken, BetVotingEscrow, UnlockWaitingPeriod.WEEK, stakeAmount)
-      await stake(hacker, BetGovToken, BetVotingEscrow, UnlockWaitingPeriod.WEEK12, stakeAmount)
-      for (const { wallet, unlockWaitingPeriod } of accounts) {
-        await stake(wallet, BetGovToken, BetVotingEscrow, unlockWaitingPeriod, stakeAmount)
-
-        await assert.isRejected(
-          unstake(wallet, BetVotingEscrow, 0, stakeAmount),
-          'NoStakedRecordFound',
-        )
-        await assert.isRejected(
-          unstake(wallet, BetVotingEscrow, unlockWaitingPeriod, stakeAmount + 1n),
-          'StakeInsufficientBalance',
-        )
-      }
-
-      const unstakeAmountArr: bigint[] = []
-      const unstakeStartTimeMap: Record<Address, number[]> = {
-        [user.account.address]: [],
-        [hacker.account.address]: [],
-      }
-      const length = 4
-      const count = new Array(length).fill(0).reduce((acc, cur, index) => acc + index + 1, 0)
-      for (let i = 0; i < length; i++) {
-        unstakeAmountArr.push(stakeAmount * BigInt(i + 1) / BigInt(count))
-        const stakedAmount = stakeAmount - unstakeAmountArr.reduce((acc, cur) => acc + cur, 0n)
-        for (const { wallet, unlockWaitingPeriod } of accounts) {
-          await unstake(wallet, BetVotingEscrow, unlockWaitingPeriod, unstakeAmountArr[i])
-          unstakeStartTimeMap[wallet.account.address].push(await time.latest())
-        }
-
-        let j = 0
-        for (const { wallet, unlockWaitingPeriod } of accounts) {
-          assert.equal(
-            await BetVotingEscrow.read.balanceOf([wallet.account.address]),
-            stakeAmount + stakedAmount,
-          )
-          assert.equal(
-            await BetVotingEscrow.read.stakedAmount([wallet.account.address, unlockWaitingPeriod]),
-            stakedAmount,
-          )
-          assert.deepEqual(
-            await BetVotingEscrow.read.stakedRecord([wallet.account.address, unlockWaitingPeriod]),
-            {
-              account: stakedAmount === 0n ? zeroAddress : getAddress(wallet.account.address),
-              unlockWaitingPeriod: unlockWaitingPeriod,
-              amount: stakedAmount,
-            },
-          )
-          assert.equal(
-            await BetVotingEscrow.read.stakedRecordCount(),
-            stakedAmount === 0n ? 2n : 4n,
-          )
-          assert.deepEqual(
-            await BetVotingEscrow.read.unstakedRecords([wallet.account.address, unlockWaitingPeriod]),
-            unstakeStartTimeMap[wallet.account.address].map((unstakeStartTime, index) => ({
-              account: getAddress(wallet.account.address),
-              unlockWaitingPeriod: unlockWaitingPeriod,
-              amount: unstakeAmountArr[index],
-              unlockTime: BigInt(unstakeStartTime) + Time[unlockWaitingPeriod],
-              index: BigInt(index * 2 + j),
-            })),
-          )
-          j++
-        }
-      }
-    })
-
-    it('#restake()', async () => {
-      const {
-        BetGovToken,
-        BetVotingEscrow,
-        user,
-        hacker,
-      } = await loadFixture(deployFixture)
-      const stakeAmount = parseUnits('80000', 18)
-      const accounts = [
-        { wallet: user, unlockWaitingPeriod: UnlockWaitingPeriod.WEEK12 },
-        { wallet: hacker, unlockWaitingPeriod: UnlockWaitingPeriod.WEEK },
-      ]
-
-      await stake(user, BetGovToken, BetVotingEscrow, UnlockWaitingPeriod.WEEK, stakeAmount)
-      await stake(hacker, BetGovToken, BetVotingEscrow, UnlockWaitingPeriod.WEEK12, stakeAmount)
-      for (const { wallet, unlockWaitingPeriod } of accounts) {
-        await stake(wallet, BetGovToken, BetVotingEscrow, unlockWaitingPeriod, stakeAmount)
-      }
-
-      const unstakeAmountArr: bigint[] = []
-      const unstakeStartTimeMap: Record<Address, number[]> = {
-        [user.account.address]: [],
-        [hacker.account.address]: [],
-      }
-      const length = 4
-      const count = new Array(length).fill(0).reduce((acc, cur, index) => acc + index + 1, 0)
-      for (let i = 0; i < length; i++) {
-        unstakeAmountArr.push(stakeAmount * BigInt(i + 1) / BigInt(count))
-        for (const { wallet, unlockWaitingPeriod } of accounts) {
-          await unstake(wallet, BetVotingEscrow, unlockWaitingPeriod, unstakeAmountArr[i])
-          unstakeStartTimeMap[wallet.account.address].push(await time.latest())
-        }
-      }
-
-      for (let i = 0; i < length; i++) {
-        const stakedAmount = unstakeAmountArr.slice(0, i + 1).reduce((acc, cur) => acc + cur, 0n)
-        for (const { wallet } of accounts) {
-          await BetVotingEscrow.write.restake([0n], { account: wallet.account })
-        }
-
-        let j = 0
-        for (const { wallet, unlockWaitingPeriod } of accounts) {
-          assert.equal(
-            await BetVotingEscrow.read.balanceOf([wallet.account.address]),
-            stakeAmount + stakedAmount,
-          )
-          assert.equal(
-            await BetVotingEscrow.read.stakedAmount([wallet.account.address, unlockWaitingPeriod]),
-            stakedAmount,
-          )
-          assert.deepEqual(
-            await BetVotingEscrow.read.stakedRecord([wallet.account.address, unlockWaitingPeriod]),
-            {
-              account: getAddress(wallet.account.address),
-              unlockWaitingPeriod: unlockWaitingPeriod,
-              amount: stakedAmount,
-            },
-          )
-          assert.equal(
-            await BetVotingEscrow.read.stakedRecordCount(),
-            4n,
-          )
-          assert.deepEqual(
-            await BetVotingEscrow.read.unstakedRecords([wallet.account.address, unlockWaitingPeriod]),
-            unstakeStartTimeMap[wallet.account.address].slice(i + 1).map((unstakeStartTime, index) => ({
-              account: getAddress(wallet.account.address),
-              unlockWaitingPeriod: unlockWaitingPeriod,
-              amount: unstakeAmountArr[i + 1 + index],
-              unlockTime: BigInt(unstakeStartTime) + Time[unlockWaitingPeriod],
-              index: BigInt(index * 2 + j),
-            })),
-          )
-          j++
-        }
-      }
-    })
-
-    it('#increaseUnlockWaitingPeriod()', async () => {
-      const {
-        BetGovToken,
-        BetVotingEscrow,
-        user,
-        hacker,
-      } = await loadFixture(deployFixture)
-      const stakeAmount = parseUnits('80000', 18)
-
-      const length = 4
-      for (let i = 0; i < length; i++) {
-        await stake(user, BetGovToken, BetVotingEscrow, UnlockWaitingPeriod.WEEK, stakeAmount)
-        assert.equal(
-          await BetVotingEscrow.read.stakedAmount([user.account.address, UnlockWaitingPeriod.WEEK]),
-          stakeAmount,
-        )
-        assert.equal(
-          await BetVotingEscrow.read.stakedAmount([user.account.address, UnlockWaitingPeriod.WEEK12]),
-          stakeAmount * BigInt(i),
-        )
-
-        await BetVotingEscrow.write.increaseUnlockWaitingPeriod({ account: user.account })
-        assert.equal(
-          await BetVotingEscrow.read.stakedAmount([user.account.address, UnlockWaitingPeriod.WEEK]),
-          0n,
-        )
-        assert.equal(
-          await BetVotingEscrow.read.stakedAmount([user.account.address, UnlockWaitingPeriod.WEEK12]),
-          stakeAmount * BigInt(i + 1),
-        )
-      }
-
-      await stake(hacker, BetGovToken, BetVotingEscrow, UnlockWaitingPeriod.WEEK, stakeAmount)
-      assert.equal(
-        await BetVotingEscrow.read.stakedAmount([hacker.account.address, UnlockWaitingPeriod.WEEK]),
-        stakeAmount,
-      )
-      assert.equal(
-        await BetVotingEscrow.read.stakedAmount([hacker.account.address, UnlockWaitingPeriod.WEEK12]),
-        0n,
-      )
-
-      const perAmount = stakeAmount / BigInt(length)
-      for (let i = 0; i < length; i++) {
-        await BetVotingEscrow.write.increaseUnlockWaitingPeriod([perAmount], { account: hacker.account })
-        const stakedAmountForWeek12 = perAmount * BigInt(i + 1)
-        assert.equal(
-          await BetVotingEscrow.read.stakedAmount([hacker.account.address, UnlockWaitingPeriod.WEEK]),
-          stakeAmount - stakedAmountForWeek12,
-        )
-        assert.equal(
-          await BetVotingEscrow.read.stakedAmount([hacker.account.address, UnlockWaitingPeriod.WEEK12]),
-          stakedAmountForWeek12,
-        )
-      }
-    })
-
-    it('#withdraw()', async () => {
-      const {
-        BetGovToken,
-        BetVotingEscrow,
-        user,
-        hacker,
-      } = await loadFixture(deployFixture)
-      const stakeAmount = parseUnits('80000', 18)
-      await stake(user, BetGovToken, BetVotingEscrow, UnlockWaitingPeriod.WEEK, stakeAmount)
-      await stake(user, BetGovToken, BetVotingEscrow, UnlockWaitingPeriod.WEEK12, stakeAmount)
-      await stake(hacker, BetGovToken, BetVotingEscrow, UnlockWaitingPeriod.WEEK, stakeAmount)
-      await stake(hacker, BetGovToken, BetVotingEscrow, UnlockWaitingPeriod.WEEK12, stakeAmount)
-
-      const unstakeAmount = stakeAmount / 2n
-      await unstake(user, BetVotingEscrow, UnlockWaitingPeriod.WEEK, unstakeAmount)
-      await unstake(user, BetVotingEscrow, UnlockWaitingPeriod.WEEK12, unstakeAmount)
-      await unstake(hacker, BetVotingEscrow, UnlockWaitingPeriod.WEEK, unstakeAmount)
-      await unstake(hacker, BetVotingEscrow, UnlockWaitingPeriod.WEEK12, unstakeAmount)
-
-      await checkBalance(
-        async () => {
-          await withdraw(user, BetVotingEscrow)
-        },
-        [
-          [user.account.address, BetGovToken.address, 0n],
-          [hacker.account.address, BetGovToken.address, 0n],
-        ],
-      )
-
-      await time.increase(Time[UnlockWaitingPeriod.WEEK])
-      await checkBalance(
-        async () => {
-          await withdraw(user, BetVotingEscrow)
-        },
-        [
-          [user.account.address, BetGovToken.address, unstakeAmount],
-          [hacker.account.address, BetGovToken.address, unstakeAmount],
-        ],
-      )
-
-      await unstake(user, BetVotingEscrow, UnlockWaitingPeriod.WEEK)
-      await unstake(user, BetVotingEscrow, UnlockWaitingPeriod.WEEK12)
-      await unstake(hacker, BetVotingEscrow, UnlockWaitingPeriod.WEEK)
-      await unstake(hacker, BetVotingEscrow, UnlockWaitingPeriod.WEEK12)
-      await time.increase(Time[UnlockWaitingPeriod.WEEK12])
-      await checkBalance(
-        async () => {
-          await withdraw(user, BetVotingEscrow)
-        },
-        [
-          [user.account.address, BetGovToken.address, stakeAmount * 2n - unstakeAmount],
-          [hacker.account.address, BetGovToken.address, stakeAmount * 2n - unstakeAmount],
-        ],
-      )
-    })
-
-    it('Preventing dust attacks', async () => {
-      const {
-        BetGovToken,
-        BetVotingEscrow,
-        user,
-      } = await loadFixture(deployFixture)
-      const stakeAmount = parseUnits('80000', 18)
-      const stakeMinValue = await BetVotingEscrow.read.stakeMinValue()
-
-      await assert.isRejected(
-        stake(user, BetGovToken, BetVotingEscrow, UnlockWaitingPeriod.WEEK, stakeMinValue - 1n),
-        'InvalidAmount',
-      )
-
-      await stake(user, BetGovToken, BetVotingEscrow, UnlockWaitingPeriod.WEEK, stakeAmount)
-      assert.equal(
-        await BetVotingEscrow.read.stakedRecordCount(),
-        1n,
-      )
-
-      await assert.isRejected(
-        unstake(user, BetVotingEscrow, UnlockWaitingPeriod.WEEK, stakeMinValue - 1n),
-        'InvalidAmount',
-      )
-
-      await checkBalance(
-        async () => {
-          await unstake(user, BetVotingEscrow, UnlockWaitingPeriod.WEEK, stakeAmount - stakeMinValue + 1n)
-        },
-        [
-          [user.account.address, BetVotingEscrow.address, -stakeAmount],
-        ],
-      )
-
-      assert.equal(
-        await BetVotingEscrow.read.stakedRecordCount(),
-        0n,
       )
     })
   })
@@ -599,9 +206,10 @@ describe('BetVotingEscrow', () => {
   describe('Distribute rewards', () => {
     it('#distribute() #rewards() #claimableRewards()', async () => {
       const {
-        DAI,
-        BetGovToken,
         BetVotingEscrow,
+        DAI,
+        GovToken,
+        GovTokenStaking,
         owner,
         user,
         hacker,
@@ -658,7 +266,7 @@ describe('BetVotingEscrow', () => {
       const stakingTotalAmount = parseUnits('100000', 18)
       const stakingCount = accounts.reduce((acc, cur) => acc + cur.stakingRatio, 0n)
       for (const { wallet, unlockWaitingPeriod, stakingRatio } of accounts) {
-        await stake(wallet, BetGovToken, BetVotingEscrow, unlockWaitingPeriod, stakingTotalAmount * stakingRatio / stakingCount)
+        await stake(wallet, GovToken, GovTokenStaking, unlockWaitingPeriod, stakingTotalAmount * stakingRatio / stakingCount)
       }
 
       for (const [token, amount] of tokens) {
@@ -686,9 +294,10 @@ describe('BetVotingEscrow', () => {
 
     it('#claim()', async () => {
       const {
-        DAI,
-        BetGovToken,
         BetVotingEscrow,
+        DAI,
+        GovToken,
+        GovTokenStaking,
         owner,
         user,
         hacker,
@@ -707,7 +316,7 @@ describe('BetVotingEscrow', () => {
       const stakingTotalAmount = parseUnits('100000', 18)
       const stakingCount = accounts.reduce((acc, cur) => acc + cur.stakingRatio, 0n)
       for (const { wallet, unlockWaitingPeriod, stakingRatio } of accounts) {
-        await stake(wallet, BetGovToken, BetVotingEscrow, unlockWaitingPeriod, stakingTotalAmount * stakingRatio / stakingCount)
+        await stake(wallet, GovToken, GovTokenStaking, unlockWaitingPeriod, stakingTotalAmount * stakingRatio / stakingCount)
       }
 
       for (const { wallet } of accounts) {
@@ -763,13 +372,14 @@ describe('BetVotingEscrow', () => {
   describe('Fixable', () => {
     it('#fix()', async () => {
       const {
-        BetGovToken,
         BetVotingEscrow,
+        GovToken,
+        GovTokenStaking,
         owner,
         user,
       } = await loadFixture(deployFixture)
       const stakeAmount = parseUnits('80000', 18)
-      await stake(user, BetGovToken, BetVotingEscrow, UnlockWaitingPeriod.WEEK, stakeAmount)
+      await stake(user, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK, stakeAmount)
       assert.equal(
         await BetVotingEscrow.read.balanceOf([user.account.address]),
         stakeAmount,
@@ -839,20 +449,21 @@ describe('BetVotingEscrow', () => {
 
       // Unstake should fail
       await assert.isRejected(
-        unstake(user, BetVotingEscrow, UnlockWaitingPeriod.WEEK, stakeAmount),
+        unstake(user, GovTokenStaking, UnlockWaitingPeriod.WEEK, stakeAmount),
         'VoteInsufficientAvailableBalance',
       )
     })
 
     it('#unfix()', async () => {
       const {
-        BetGovToken,
         BetVotingEscrow,
+        GovToken,
+        GovTokenStaking,
         owner,
         user,
       } = await loadFixture(deployFixture)
       const stakeAmount = parseUnits('80000', 18)
-      await stake(user, BetGovToken, BetVotingEscrow, UnlockWaitingPeriod.WEEK, stakeAmount)
+      await stake(user, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK, stakeAmount)
 
       const fixedAmount = parseUnits('10000', 18)
       const TestBet = await viem.deployContract('TestBet', [
@@ -914,7 +525,7 @@ describe('BetVotingEscrow', () => {
       )
 
       // Unstake should succeed.
-      await unstake(user, BetVotingEscrow, UnlockWaitingPeriod.WEEK, stakeAmount)
+      await unstake(user, GovTokenStaking, UnlockWaitingPeriod.WEEK, stakeAmount)
       assert.equal(
         await BetVotingEscrow.read.balanceOf([user.account.address]),
         0n,
@@ -927,13 +538,14 @@ describe('BetVotingEscrow', () => {
 
     it('#confiscate()', async () => {
       const {
-        BetGovToken,
         BetVotingEscrow,
+        GovToken,
+        GovTokenStaking,
         owner,
         user,
       } = await loadFixture(deployFixture)
       const stakeAmount = parseUnits('80000', 18)
-      await stake(user, BetGovToken, BetVotingEscrow, UnlockWaitingPeriod.WEEK, stakeAmount)
+      await stake(user, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK, stakeAmount)
 
       const fixedAmount = parseUnits('10000', 18)
       const TestBet = await viem.deployContract('TestBet', [
@@ -989,7 +601,7 @@ describe('BetVotingEscrow', () => {
           )
         },
         [
-          [owner.account.address, BetGovToken.address, fixedAmount],
+          [owner.account.address, GovToken.address, fixedAmount],
         ],
       )
       assert.equal(
@@ -1006,13 +618,14 @@ describe('BetVotingEscrow', () => {
   describe('Transfer', () => {
     it('#transfer() is unable to transfer', async () => {
       const {
-        BetGovToken,
         BetVotingEscrow,
+        GovToken,
+        GovTokenStaking,
         user,
         hacker,
       } = await loadFixture(deployFixture)
       const stakeAmount = parseUnits('80000', 18)
-      await stake(user, BetGovToken, BetVotingEscrow, UnlockWaitingPeriod.WEEK, stakeAmount)
+      await stake(user, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK, stakeAmount)
 
       await assert.isRejected(
         BetVotingEscrow.write.transfer([hacker.account.address, stakeAmount], { account: user.account }),
@@ -1022,13 +635,14 @@ describe('BetVotingEscrow', () => {
 
     it('#transferFrom() is unable to transfer', async () => {
       const {
-        BetGovToken,
         BetVotingEscrow,
+        GovToken,
+        GovTokenStaking,
         user,
         hacker,
       } = await loadFixture(deployFixture)
       const stakeAmount = parseUnits('80000', 18)
-      await stake(user, BetGovToken, BetVotingEscrow, UnlockWaitingPeriod.WEEK, stakeAmount)
+      await stake(user, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK, stakeAmount)
 
       await BetVotingEscrow.write.approve([hacker.account.address, stakeAmount], { account: user.account })
       await assert.isRejected(
@@ -1040,13 +654,14 @@ describe('BetVotingEscrow', () => {
 
     it('#transfer() is able to decide', async () => {
       const {
-        BetGovToken,
         BetVotingEscrow,
+        GovToken,
+        GovTokenStaking,
         user,
         hacker,
       } = await loadFixture(deployFixture)
       const stakeAmount = parseUnits('80000', 18)
-      await stake(user, BetGovToken, BetVotingEscrow, UnlockWaitingPeriod.WEEK, stakeAmount)
+      await stake(user, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK, stakeAmount)
 
       const decidedAmount = parseUnits('10000', 18)
 
@@ -1106,14 +721,15 @@ describe('BetVotingEscrow', () => {
 
     it('#transfer() is able to arbitrate', async () => {
       const {
-        BetGovToken,
         BetVotingEscrow,
+        GovToken,
+        GovTokenStaking,
         user,
         hacker,
       } = await loadFixture(deployFixture)
       const stakeAmount = parseUnits('80000', 18)
-      await stake(user, BetGovToken, BetVotingEscrow, UnlockWaitingPeriod.WEEK12, stakeAmount)
-      await stake(hacker, BetGovToken, BetVotingEscrow, UnlockWaitingPeriod.WEEK, stakeAmount)
+      await stake(user, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK12, stakeAmount)
+      await stake(hacker, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK, stakeAmount)
 
       {
         const TestBet = await viem.deployContract('TestBet', [

@@ -8,15 +8,15 @@
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Tests](https://github.com/pvpbet/pvpbet/actions/workflows/tests.yml/badge.svg)](https://github.com/pvpbet/pvpbet/actions/workflows/tests.yml)
 
-A decentralized PVP betting platform based on the [EVM](https://ethereum.org/zh/developers/docs/evm).
+A decentralized PVP betting platform based on the Ethereum Virtual Machine ([EVM](https://ethereum.org/zh/developers/docs/evm)).
 
 ## 👋 Introduction
 
 PVPBet is a decentralized betting platform leveraging Web3 technology to ensure fairness and transparency in wagering.
 
-Traditional betting often suffers from trust issues, especially in the enforcement of bets.
+Traditional betting often suffers from trust issues, especially in the enforcement of bets. PVPBet addresses this by using smart contracts to handle funds and determine winners based on community voting, powered by governance token holders.
 
-PVPBet addresses this by using smart contracts to handle funds and determine winners based on community voting, powered by governance token holders. These token holders are incentivized to vote fairly, as their long-term stakes in the platform align their interests with its integrity.
+These token holders are incentivized to vote fairly, as their long-term stakes in the platform align their interests with its integrity.
 
 Additionally, users can participate in the entire betting process—from wagering and deciding to disputing and arbitrating—without needing to connect their wallets. This is done through direct transfers, eliminating concerns over wallet security.
 

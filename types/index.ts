@@ -10,8 +10,9 @@ export interface ContractTypes {
   BetManager: GetContractReturnType<ArtifactsMap['BetManager']['abi']>
   BetOption: GetContractReturnType<ArtifactsMap['BetOption']['abi']>
   BetOptionFactory: GetContractReturnType<ArtifactsMap['BetOptionFactory']['abi']>
-  BetGovToken: GetContractReturnType<ArtifactsMap['BetGovToken']['abi']>
   BetVotingEscrow: GetContractReturnType<ArtifactsMap['BetVotingEscrow']['abi']>
+  GovToken: GetContractReturnType<ArtifactsMap['GovToken']['abi']>
+  GovTokenStaking: GetContractReturnType<ArtifactsMap['GovTokenStaking']['abi']>
   Receivable: GetContractReturnType<ArtifactsMap['Receivable']['abi']>
   Withdrawable: GetContractReturnType<ArtifactsMap['Withdrawable']['abi']>
 }

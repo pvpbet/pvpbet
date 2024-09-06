@@ -1,15 +1,31 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {IErrors} from "../interface/IErrors.sol";
-import {IStaking} from "../interface/IStaking.sol";
-import {MathLib} from "../lib/Math.sol";
-import {AddressLib} from "../lib/Address.sol";
-import {TransferLib} from "../lib/Transfer.sol";
-import {StakedRecord, StakedRecordLib, StakedRecordArrayLib, UnlockWaitingPeriod} from "../lib/StakedRecord.sol";
-import {UnstakedRecord, UnstakedRecordLib, UnstakedRecordArrayLib} from "../lib/UnstakedRecord.sol";
+import {Upgradeable} from "./base/Upgradeable.sol";
+import {UseGovToken} from "./base/UseGovToken.sol";
+import {UseVoteToken} from "./base/UseVoteToken.sol";
+import {IBetVotingEscrow} from "./interface/IBetVotingEscrow.sol";
+import {IErrors} from "./interface/IErrors.sol";
+import {IGovTokenStaking} from "./interface/IGovTokenStaking.sol";
+import {MathLib} from "./lib/Math.sol";
+import {AddressLib} from "./lib/Address.sol";
+import {TransferLib} from "./lib/Transfer.sol";
+import {StakedRecord, StakedRecordLib, StakedRecordArrayLib, UnlockWaitingPeriod} from "./lib/StakedRecord.sol";
+import {UnstakedRecord, UnstakedRecordLib, UnstakedRecordArrayLib} from "./lib/UnstakedRecord.sol";
 
-abstract contract Staking is IStaking, IErrors {
+contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseGovToken, UseVoteToken {
+  function name()
+  public pure override
+  returns (string memory) {
+    return "PVPBetGovTokenStaking";
+  }
+
+  function version()
+  public pure override
+  returns (string memory) {
+    return "1.0.0";
+  }
+
   using MathLib for uint256;
   using AddressLib for address;
   using TransferLib for address;
@@ -19,6 +35,7 @@ abstract contract Staking is IStaking, IErrors {
   using UnstakedRecordArrayLib for UnstakedRecord[];
 
   error CannotRestake();
+  error StakedAmountDeductionFailed();
   error InvalidUnlockWaitingPeriod();
   error NoStakedRecordFound();
   error NoUnstakedRecordFound();
@@ -28,29 +45,24 @@ abstract contract Staking is IStaking, IErrors {
   UnstakedRecord[] private _unstakedRecords;
   bool private _withdrawing;
 
-  function _mintStakingCertificate(address account, uint256 amount)
-  internal virtual;
-
-  function _burnStakingCertificate(address account, uint256 amount)
-  internal virtual;
-
-  function _unstakeAmountCheck(address account, uint256 amount)
-  internal view virtual {}
-
-  function govToken()
-  public view virtual
-  returns (address);
-
-  function stakeMinValue()
-  public view virtual
-  returns (uint256) {
-    return 10 ** govToken().decimals();
+  function initialize(address initialGovToken, address initialVoteToken)
+  public
+  initializer {
+    Upgradeable.initialize();
+    _setGovToken(initialGovToken);
+    _setVoteToken(initialVoteToken);
   }
 
-  function __stakedRecords()
-  internal view
-  returns (StakedRecord[] storage) {
-    return _stakedRecords;
+  function _authorizeUpdateGovToken(address sender)
+  internal view override(UseGovToken) onlyOwner {}
+
+  function _authorizeUpdateVoteToken(address sender)
+  internal view override(UseVoteToken) onlyOwner {}
+
+  function stakeMinValue()
+  public view
+  returns (uint256) {
+    return 10 ** govToken().decimals();
   }
 
   function _getStakedRecord(address account, UnlockWaitingPeriod unlockWaitingPeriod)
@@ -77,7 +89,7 @@ abstract contract Staking is IStaking, IErrors {
 
     address account = msg.sender;
     account.transferToSelf(govToken(), amount);
-    _mintStakingCertificate(account, amount);
+    IBetVotingEscrow(voteToken()).mint(account, amount);
     _stake(account, unlockWaitingPeriod, amount);
     emit Staked(account, unlockWaitingPeriod, amount);
   }
@@ -101,7 +113,7 @@ abstract contract Staking is IStaking, IErrors {
     uint256 amount = record.amount;
 
     record.removeFrom(_stakedRecords);
-    _burnStakingCertificate(account, amount);
+    IBetVotingEscrow(voteToken()).burn(account, amount);
     _unstakedRecords.add(
       UnstakedRecord(
         account,
@@ -120,11 +132,10 @@ abstract contract Staking is IStaking, IErrors {
 
     address account = msg.sender;
     (,uint256 index) = _getStakedRecord(account, unlockWaitingPeriod, amount);
-    _unstakeAmountCheck(account, amount);
     StakedRecord storage record = _stakedRecords[index.unsafeDec()];
 
     amount = amount.unsafeAdd(record.subAmount(amount, stakeMinValue(), _stakedRecords));
-    _burnStakingCertificate(account, amount);
+    IBetVotingEscrow(voteToken()).burn(account, amount);
     _unstakedRecords.add(
       UnstakedRecord(
         account,
@@ -146,7 +157,7 @@ abstract contract Staking is IStaking, IErrors {
     if (block.timestamp > record.unlockTime) revert CannotRestake();
 
     record.removeFrom(_unstakedRecords);
-    _mintStakingCertificate(record.account, record.amount);
+    IBetVotingEscrow(voteToken()).mint(record.account, record.amount);
     _stake(record.account, record.unlockWaitingPeriod, record.amount);
     emit Staked(record.account, record.unlockWaitingPeriod, record.amount);
   }
@@ -195,10 +206,55 @@ abstract contract Staking is IStaking, IErrors {
     _withdrawing = false;
   }
 
+  function deductStakedAmountAndTransfer(address account, uint256 amount, address custodian)
+  external
+  onlyVoteContract {
+    uint256 remainingAmount = amount;
+    remainingAmount = _deductStakedAmount(account, UnlockWaitingPeriod.WEEK, remainingAmount);
+    if (remainingAmount > 0) remainingAmount = _deductStakedAmount(account, UnlockWaitingPeriod.WEEK12, remainingAmount);
+    if (remainingAmount > 0) revert StakedAmountDeductionFailed();
+    custodian.receiveFromSelf(govToken(), amount);
+  }
+
+  function _deductStakedAmount(address account, UnlockWaitingPeriod unlockWaitingPeriod, uint256 amount)
+  private
+  returns (uint256 remainingAmount) {
+    (,uint256 index) = _stakedRecords.find(account, unlockWaitingPeriod);
+    if (index > 0) {
+      StakedRecord storage record = _stakedRecords[index.unsafeDec()];
+      if (record.amount >= amount) {
+        amount.unsafeAdd(record.subAmount(amount, stakeMinValue(), _stakedRecords));
+        remainingAmount = 0;
+      } else {
+        record.removeFrom(_stakedRecords);
+        remainingAmount = amount.unsafeSub(record.amount);
+      }
+    } else {
+      remainingAmount = amount;
+    }
+  }
+
+  function isStaked(address account)
+  external view
+  returns (bool) {
+    StakedRecord memory record;
+    (record,) = _stakedRecords.find(account, UnlockWaitingPeriod.WEEK);
+    if (record.account == account) return true;
+    (record,) = _stakedRecords.find(account, UnlockWaitingPeriod.WEEK12);
+    if (record.account == account) return true;
+    return false;
+  }
+
   function stakedAmount()
   external view
   returns (uint256) {
     return _stakedRecords.sumAmount();
+  }
+
+  function stakedAmount(UnlockWaitingPeriod unlockWaitingPeriod)
+  external view
+  returns (uint256) {
+    return _stakedRecords.sumAmount(unlockWaitingPeriod);
   }
 
   function stakedAmount(address account)
@@ -241,6 +297,18 @@ abstract contract Staking is IStaking, IErrors {
   external view
   returns (uint256) {
     return _stakedRecords.length;
+  }
+
+  function stakedRecordCount(UnlockWaitingPeriod unlockWaitingPeriod)
+  external view
+  returns (uint256) {
+    return _stakedRecords.find(unlockWaitingPeriod).length;
+  }
+
+  function stakedRecords()
+  external view
+  returns (StakedRecord[] memory) {
+    return _stakedRecords;
   }
 
   function unstakedRecords(address account)

@@ -36,19 +36,19 @@ export async function checkBalance(
 }
 
 export async function checkVoteLevel(
-  vote: ContractTypes['BetVotingEscrow'],
+  BetVotingEscrow: ContractTypes['BetVotingEscrow'],
   exec: () => Promise<void>,
   accounts: [owner: Address, diff: bigint][],
 ) {
   const levels = await Promise.all(
     accounts.map(([owner]) => {
-      return vote.read.level([owner])
+      return BetVotingEscrow.read.level([owner])
     }),
   )
   await exec()
   const newLevels = await Promise.all(
     accounts.map(([owner]) => {
-      return vote.read.level([owner])
+      return BetVotingEscrow.read.level([owner])
     }),
   )
   accounts.forEach(([, diff], i) => {
@@ -72,15 +72,16 @@ export async function isBetClosed(
 }
 
 export async function isCorrectStakeReward(
-  vote: ContractTypes['BetVotingEscrow'],
+  BetVotingEscrow: ContractTypes['BetVotingEscrow'],
+  GovTokenStaking: ContractTypes['GovTokenStaking'],
   chip: Address,
   owners: Address[],
   total: bigint,
 ) {
-  const stakedTotalWeight = await vote.read.stakedWeight()
+  const stakedTotalWeight = await GovTokenStaking.read.stakedWeight()
   for (const owner of owners) {
-    const claimableRewards = await vote.read.claimableRewards([owner, chip])
-    const stakedWeight = await vote.read.stakedWeight([owner])
+    const claimableRewards = await BetVotingEscrow.read.claimableRewards([owner, chip])
+    const stakedWeight = await GovTokenStaking.read.stakedWeight([owner])
     assert.equal(claimableRewards, total * stakedWeight / stakedTotalWeight)
   }
 }

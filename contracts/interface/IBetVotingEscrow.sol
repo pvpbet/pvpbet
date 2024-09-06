@@ -2,20 +2,23 @@
 pragma solidity ^0.8.20;
 
 interface IBetVotingEscrow {
-  event SetBetManager(address betManager);
   event Fixed(address indexed account, address indexed spender, uint256 value);
   event Unfixed(address indexed account, address indexed spender, uint256 value);
   event Confiscated(address indexed account, address indexed spender, uint256 value);
 
   /**
-   * @dev Returns the bet manager contract address.
+   * @dev Mint the votes to the account.
+   *
+   * Can only be called by the governance token staking contract.
    */
-  function betManager() external view returns (address);
+  function mint(address account, uint256 value) external;
 
   /**
-   * @dev Set the bet manager contract address.
+   * @dev Burn the votes from the account.
+   *
+   * Can only be called by the governance token staking contract.
    */
-  function setBetManager(address newBetManager) external;
+  function burn(address account, uint256 value) external;
 
   /**
    * @dev Returns the vote balance of the account.

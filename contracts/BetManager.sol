@@ -4,7 +4,9 @@ pragma solidity ^0.8.20;
 import {BetRestriction} from "./base/BetRestriction.sol";
 import {Receivable} from "./base/Receivable.sol";
 import {Upgradeable} from "./base/Upgradeable.sol";
+import {UseChipToken} from "./base/UseChipToken.sol";
 import {UseGovToken} from "./base/UseGovToken.sol";
+import {UseVoteToken} from "./base/UseVoteToken.sol";
 import {Withdrawable} from "./base/Withdrawable.sol";
 import {IBet} from "./interface/IBet.sol";
 import {IBetFactory} from "./interface/IBetFactory.sol";
@@ -14,7 +16,7 @@ import {StringLib} from "./lib/String.sol";
 import {TransferLib} from "./lib/Transfer.sol";
 import {AddressArrayLib} from "./lib/Address.sol";
 
-contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, BetRestriction, UseGovToken {
+contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, BetRestriction, UseChipToken, UseVoteToken, UseGovToken {
   function name()
   public pure override
   returns (string memory) {
@@ -32,12 +34,12 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, BetRe
   using TransferLib for address;
   using AddressArrayLib for address[];
 
+  error ServiceHasNotStartedYet();
+
   uint256 private _creationFee;
 
   address private _betFactory;
   address private _betOptionFactory;
-  address private _chip;
-  address private _vote;
 
   address[] private _activeBets;
   address[] private _bets;
@@ -54,27 +56,33 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, BetRe
   function initialize(
     address initialBetFactory,
     address initialBetOptionFactory,
-    address initialChip,
-    address initialVote,
-    address initialGovToken
+    address initialGovToken,
+    address initialChipToken,
+    address initialVoteToken
   )
   public
   initializer {
     initialize();
     _setBetFactory(initialBetFactory);
     _setBetOptionFactory(initialBetOptionFactory);
-    _setChip(initialChip);
-    _setVote(initialVote);
     _setGovToken(initialGovToken);
+    _setChipToken(initialChipToken);
+    _setVoteToken(initialVoteToken);
   }
 
   function _authorizeWithdraw(address sender)
   internal view override(Withdrawable) onlyOwner {}
 
-  function _authorizeBetRestrictionUpdate(address sender)
+  function _authorizeUpdateBetRestriction(address sender)
   internal view override(BetRestriction) onlyOwner {}
 
-  function _authorizeGovTokenUpdate(address sender)
+  function _authorizeUpdateChipToken(address sender)
+  internal view override(UseChipToken) onlyOwner {}
+
+  function _authorizeUpdateVoteToken(address sender)
+  internal view override(UseVoteToken) onlyOwner {}
+
+  function _authorizeUpdateGovToken(address sender)
   internal view override(UseGovToken) onlyOwner {}
 
   function betFactory()
@@ -111,42 +119,6 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, BetRe
   private {
     _betOptionFactory = newBetOptionFactory;
     emit SetBetOptionFactory(newBetOptionFactory);
-  }
-
-  function chip()
-  external view
-  returns (address) {
-    return _chip;
-  }
-
-  function setChip(address newChip)
-  external
-  onlyOwner {
-    _setChip(newChip);
-  }
-
-  function _setChip(address newChip)
-  private {
-    _chip = newChip;
-    emit SetChip(newChip);
-  }
-
-  function vote()
-  external view
-  returns (address) {
-    return _vote;
-  }
-
-  function setVote(address newVote)
-  external
-  onlyOwner {
-    _setVote(newVote);
-  }
-
-  function _setVote(address newVote)
-  private {
-    _vote = newVote;
-    emit SetVote(newVote);
   }
 
   function creationFee()
@@ -193,6 +165,9 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, BetRe
     bool useChipERC20
   ) private
   returns (address) {
+    if (chipToken() == address(0) && useChipERC20) revert ServiceHasNotStartedYet();
+    if (voteToken() == address(0)) revert ServiceHasNotStartedYet();
+
     validateTitle(details.title);
     validateDescription(details.description);
     validateOptions(details.options);
@@ -208,8 +183,8 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, BetRe
     address bet = IBetFactory(_betFactory).createBet(
       address(this),
       _betOptionFactory,
-      useChipERC20 ? _chip : address(0),
-      _vote,
+      useChipERC20 ? chipToken() : address(0),
+      voteToken(),
       msg.sender,
       details,
       wageringPeriodDuration,

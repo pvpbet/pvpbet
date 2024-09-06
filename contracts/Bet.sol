@@ -11,7 +11,7 @@ import {IBetActionDecide} from "./interface/IBetActionDecide.sol";
 import {IBetActionWager} from "./interface/IBetActionWager.sol";
 import {IBetManager} from "./interface/IBetManager.sol";
 import {IBetOptionFactory} from "./interface/IBetOptionFactory.sol";
-import {IStakingRewardDistributable} from "./interface/IStakingRewardDistributable.sol";
+import {IRewardDistributable} from "./interface/IRewardDistributable.sol";
 import {IUseGovToken} from "./interface/IUseGovToken.sol";
 import {MathLib} from "./lib/Math.sol";
 import {AddressLib} from "./lib/Address.sol";
@@ -308,7 +308,7 @@ contract Bet is IBet, BetActionArbitrate, BetActionDispute {
           // Punish decider
           IBetActionDecide action = IBetActionDecide(unconfirmedWinningOption_);
           action.confiscateDecidedVotes();
-          records.distribute(IUseGovToken(_vote).govToken(), action.decidedAmount());
+          records.distribute(IUseGovToken(_betManager).govToken(), action.decidedAmount());
           _deciderLevelDown(action.decidedRecords());
         }
       }
@@ -444,7 +444,7 @@ contract Bet is IBet, BetActionArbitrate, BetActionDispute {
       );
     } else {
       IERC20(_chip).approve(_vote, amount);
-      IStakingRewardDistributable(_vote).distribute(_chip, amount);
+      IRewardDistributable(_vote).distribute(_chip, amount);
     }
   }
 

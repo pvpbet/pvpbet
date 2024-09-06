@@ -1,5 +1,5 @@
 import { ignition, viem } from 'hardhat'
-import BetGovTokenModule from '../../ignition/modules/BetGovToken'
+import GovTokenModule from '../../ignition/modules/GovToken'
 import {
   parseEther,
   parseUnits,
@@ -52,7 +52,7 @@ export async function depositAssets(
   )
 }
 
-export async function deployBetGovToken() {
-  const { BetGovToken } = await ignition.deploy(BetGovTokenModule)
-  return BetGovToken
+export async function deployGovToken() {
+  const { GovToken } = await ignition.deploy(GovTokenModule)
+  return GovToken
 }

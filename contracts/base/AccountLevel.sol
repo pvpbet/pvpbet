@@ -9,7 +9,7 @@ abstract contract AccountLevel is IAccountLevel {
 
   mapping(address account => uint256) private _levels;
 
-  function _authorizeAccountLevelUpdate(address sender)
+  function _authorizeUpdateAccountLevel(address sender)
   internal virtual;
 
   function level(address account)
@@ -20,14 +20,14 @@ abstract contract AccountLevel is IAccountLevel {
 
   function levelUp(address account)
   external {
-    _authorizeAccountLevelUpdate(msg.sender);
+    _authorizeUpdateAccountLevel(msg.sender);
     _levels[account] = _levels[account].inc();
     emit LevelUpdate(account, _levels[account]);
   }
 
   function levelDown(address account)
   external {
-    _authorizeAccountLevelUpdate(msg.sender);
+    _authorizeUpdateAccountLevel(msg.sender);
     _levels[account] = _levels[account].sub(3);
     emit LevelUpdate(account, _levels[account]);
   }

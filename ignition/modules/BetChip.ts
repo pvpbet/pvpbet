@@ -1,12 +1,12 @@
 import { buildModule } from '@nomicfoundation/hardhat-ignition/modules'
 
-export default buildModule('BetChip', (m) => {
+export default buildModule('BetChip', m => {
   const implementation = m.contract(
     'BetChip',
     [],
     {
       id: 'BetChipImpl',
-    }
+    },
   )
   const initialize = m.encodeFunctionCall(
     implementation,

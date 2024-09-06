@@ -6,8 +6,6 @@ import {IBet} from "./IBet.sol";
 interface IBetManager {
   event SetBetFactory(address betFactory);
   event SetBetOptionFactory(address betOptionFactory);
-  event SetChip(address chip);
-  event SetVote(address vote);
   event SetCreationFee(uint256 fee);
   event BetCreated(address indexed bet, address indexed creator);
 
@@ -30,26 +28,6 @@ interface IBetManager {
   * @dev Set the bet option factory contract address.
    */
   function setBetOptionFactory(address newBetOptionFactory) external;
-
-  /**
-   * @dev Returns the chip token contract address.
-   */
-  function chip() external view returns (address);
-
-  /**
-   * @dev Set the chip contract address.
-   */
-  function setChip(address newChip) external;
-
-  /**
-   * @dev Returns the vote token contract address.
-   */
-  function vote() external view returns (address);
-
-  /**
-   * @dev Set the vote contract address.
-   */
-  function setVote(address newVote) external;
 
   /**
    * @dev Returns the fee charged for creating a bet.

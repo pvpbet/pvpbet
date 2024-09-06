@@ -124,6 +124,31 @@ library StakedRecordArrayLib {
     return (foundRecord, index);
   }
 
+  function find(StakedRecord[] memory records, UnlockWaitingPeriod unlockWaitingPeriod)
+  internal pure
+  returns (StakedRecord[] memory) {
+    uint256 length = records.length;
+
+    uint256 count = 0;
+    for (uint256 i = 0; i < length; i = i.unsafeInc()) {
+      if (records[i].unlockWaitingPeriod == unlockWaitingPeriod) {
+        count++;
+      }
+    }
+
+    StakedRecord[] memory unlockWaitingPeriodRecords = new StakedRecord[](count);
+    uint256 j = 0;
+    for (uint256 i = 0; i < length; i = i.unsafeInc()) {
+      StakedRecord memory record = records[i];
+      if (record.unlockWaitingPeriod == unlockWaitingPeriod) {
+        unlockWaitingPeriodRecords[j] = record;
+        j = j.unsafeInc();
+      }
+    }
+
+    return unlockWaitingPeriodRecords;
+  }
+
   function sumAmount(StakedRecord[] memory records)
   internal pure
   returns (uint256) {
@@ -131,6 +156,20 @@ library StakedRecordArrayLib {
     uint256 length = records.length;
     for (uint256 i = 0; i < length; i = i.unsafeInc()) {
       sum = sum.unsafeAdd(records[i].amount);
+    }
+    return sum;
+  }
+
+  function sumAmount(StakedRecord[] memory records, UnlockWaitingPeriod unlockWaitingPeriod)
+  internal pure
+  returns (uint256) {
+    uint256 sum = 0;
+    uint256 length = records.length;
+    for (uint256 i = 0; i < length; i = i.unsafeInc()) {
+      StakedRecord memory record = records[i];
+      if (record.unlockWaitingPeriod == unlockWaitingPeriod) {
+        sum = sum.unsafeAdd(record.amount);
+      }
     }
     return sum;
   }

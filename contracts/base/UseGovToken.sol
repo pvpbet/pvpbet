@@ -6,7 +6,7 @@ import {IUseGovToken} from "../interface/IUseGovToken.sol";
 abstract contract UseGovToken is IUseGovToken {
   address private _govToken;
 
-  function _authorizeGovTokenUpdate(address sender)
+  function _authorizeUpdateGovToken(address sender)
   internal virtual;
 
   function govToken()
@@ -16,8 +16,8 @@ abstract contract UseGovToken is IUseGovToken {
   }
 
   function setGovToken(address newGovToken)
-  public virtual {
-    _authorizeGovTokenUpdate(msg.sender);
+  external virtual {
+    _authorizeUpdateGovToken(msg.sender);
     _setGovToken(newGovToken);
   }
 

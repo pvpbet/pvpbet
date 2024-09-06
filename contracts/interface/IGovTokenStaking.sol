@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import {StakedRecord, UnlockWaitingPeriod} from "../lib/StakedRecord.sol";
 import {UnstakedRecord} from "../lib/UnstakedRecord.sol";
 
-interface IStaking {
+interface IGovTokenStaking {
   event Staked(address indexed account, UnlockWaitingPeriod, uint256 amount);
   event Unstaked(address indexed account, UnlockWaitingPeriod, uint256 amount);
   event Withdrawn(address indexed account, UnlockWaitingPeriod, uint256 amount);
@@ -60,9 +60,26 @@ interface IStaking {
   function withdraw() external;
 
   /**
+   * @dev Deduct the staked amount and transfer the governance token to the custodian.
+   *
+   * Can only be called by the vote token contract.
+   */
+  function deductStakedAmountAndTransfer(address account, uint256 amount, address custodian) external;
+
+  /**
+   * @dev Returns whether the account is staked.
+   */
+  function isStaked(address account) external view returns (bool);
+
+  /**
   * @dev Returns the total staked amount.
    */
   function stakedAmount() external view returns (uint256);
+
+  /**
+   * @dev Returns the total staked amount by the unlock waiting period.
+   */
+  function stakedAmount(UnlockWaitingPeriod) external view returns (uint256);
 
   /**
    * @dev Returns the staked amount of the account.
@@ -95,12 +112,22 @@ interface IStaking {
   function stakedRecordCount() external view returns (uint256);
 
   /**
-   * @dev Returns this unstaked records of the account.
+   * @dev Returns the total number of staked records by the unlock waiting period.
+   */
+  function stakedRecordCount(UnlockWaitingPeriod) external view returns (uint256);
+
+  /**
+   * @dev Returns the staked records.
+   */
+  function stakedRecords() external view returns (StakedRecord[] memory);
+
+  /**
+   * @dev Returns the unstaked records of the account.
    */
   function unstakedRecords(address account) external view returns (UnstakedRecord[] memory);
 
   /**
-   * @dev Returns this unstaked records of the account by the unlock waiting period.
+   * @dev Returns the unstaked records of the account by the unlock waiting period.
    */
   function unstakedRecords(address account, UnlockWaitingPeriod) external view returns (UnstakedRecord[] memory);
 }

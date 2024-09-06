@@ -1,25 +1,27 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {IStakingRewardDistributable} from "../interface/IStakingRewardDistributable.sol";
+import {IRewardDistributable} from "../interface/IRewardDistributable.sol";
 import {MathLib} from "../lib/Math.sol";
 import {TransferLib} from "../lib/Transfer.sol";
-import {StakedRecord, StakedRecordLib, StakedRecordArrayLib} from "../lib/StakedRecord.sol";
 
-abstract contract StakingRewardDistributable is IStakingRewardDistributable {
+abstract contract RewardDistributable is IRewardDistributable {
   using MathLib for uint256;
   using TransferLib for address;
-  using StakedRecordLib for StakedRecord;
-  using StakedRecordArrayLib for StakedRecord[];
 
   error NoClaimableRewards();
 
   mapping(address account => mapping(address token => uint256 amount)) private _rewards;
   mapping(address account => mapping(address token => uint256 amount)) private _claimableRewards;
 
-  function _getStakedRecords()
-  internal view virtual
-  returns (StakedRecord[] memory);
+  function _rewardDistribute(address token, uint256 amount)
+  internal virtual;
+
+  function _rewardDistributeTo(address account, address token, uint256 amount)
+  internal {
+    _rewards[account][token] = _rewards[account][token].unsafeAdd(amount);
+    _claimableRewards[account][token] = _claimableRewards[account][token].unsafeAdd(amount);
+  }
 
   function distribute()
   external payable virtual {
@@ -35,15 +37,7 @@ abstract contract StakingRewardDistributable is IStakingRewardDistributable {
   internal {
     address sender = msg.sender;
     sender.transferToSelf(token, amount);
-    StakedRecord[] memory stakedRecords = _getStakedRecords();
-    uint256 total = stakedRecords.sumWeight();
-    uint256 length = stakedRecords.length;
-    for (uint256 i = 0; i < length; i = i.unsafeInc()) {
-      StakedRecord memory record = stakedRecords[i];
-      uint256 value = amount.mulDiv(record.getWeight(), total);
-      _rewards[record.account][token] = _rewards[record.account][token].unsafeAdd(value);
-      _claimableRewards[record.account][token] = _claimableRewards[record.account][token].unsafeAdd(value);
-    }
+    _rewardDistribute(token, amount);
     emit Distributed(sender, token, amount);
   }
 
