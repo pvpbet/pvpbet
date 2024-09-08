@@ -28,7 +28,7 @@ const Time = {
   [UnlockWaitingPeriod.WEEK12]: 3600n * 24n * 7n * 12n,
 }
 
-describe('BetVotingEscrow', () => {
+describe('GovTokenStaking', () => {
   async function deployFixture() {
     const publicClient = await viem.getPublicClient()
     const [owner, user, hacker] = await viem.getWalletClients()
@@ -136,7 +136,11 @@ describe('BetVotingEscrow', () => {
       const stakeAmount = parseUnits('80000', 18)
 
       await assert.isRejected(
-        stake(user, GovToken, GovTokenStaking, 0, stakeAmount),
+        stake(user, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK12 + 1, stakeAmount),
+        'Transaction reverted and Hardhat couldn\'t infer the reason.',
+      )
+      await assert.isRejected(
+        stake(user, GovToken, GovTokenStaking, UnlockWaitingPeriod.NONE, stakeAmount),
         'InvalidUnlockWaitingPeriod',
       )
       await assert.isRejected(
@@ -424,7 +428,7 @@ describe('BetVotingEscrow', () => {
       }
     })
 
-    it('#increaseUnlockWaitingPeriod()', async () => {
+    it('#extendUnlockWaitingPeriod()', async () => {
       const {
         GovToken,
         GovTokenStaking,
@@ -445,7 +449,31 @@ describe('BetVotingEscrow', () => {
           stakeAmount * BigInt(i),
         )
 
-        await GovTokenStaking.write.increaseUnlockWaitingPeriod({ account: user.account })
+        await assert.isRejected(
+          GovTokenStaking.write.extendUnlockWaitingPeriod(
+            [UnlockWaitingPeriod.WEEK, UnlockWaitingPeriod.WEEK12 + 1],
+            { account: user.account },
+          ),
+          'Transaction reverted and Hardhat couldn\'t infer the reason.',
+        )
+        await assert.isRejected(
+          GovTokenStaking.write.extendUnlockWaitingPeriod(
+            [UnlockWaitingPeriod.WEEK12, UnlockWaitingPeriod.WEEK],
+            { account: user.account },
+          ),
+          'InvalidUnlockWaitingPeriod',
+        )
+        await assert.isRejected(
+          GovTokenStaking.write.extendUnlockWaitingPeriod(
+            [UnlockWaitingPeriod.NONE, UnlockWaitingPeriod.WEEK12],
+            { account: user.account },
+          ),
+          'NoStakedRecordFound',
+        )
+        await GovTokenStaking.write.extendUnlockWaitingPeriod(
+          [UnlockWaitingPeriod.WEEK, UnlockWaitingPeriod.WEEK12],
+          { account: user.account },
+        )
         assert.equal(
           await GovTokenStaking.read.stakedAmount([user.account.address, UnlockWaitingPeriod.WEEK]),
           0n,
@@ -468,7 +496,31 @@ describe('BetVotingEscrow', () => {
 
       const perAmount = stakeAmount / BigInt(length)
       for (let i = 0; i < length; i++) {
-        await GovTokenStaking.write.increaseUnlockWaitingPeriod([perAmount], { account: hacker.account })
+        await assert.isRejected(
+          GovTokenStaking.write.extendUnlockWaitingPeriod(
+            [UnlockWaitingPeriod.WEEK, UnlockWaitingPeriod.WEEK12 + 1, perAmount],
+            { account: hacker.account },
+          ),
+          'Transaction reverted and Hardhat couldn\'t infer the reason.',
+        )
+        await assert.isRejected(
+          GovTokenStaking.write.extendUnlockWaitingPeriod(
+            [UnlockWaitingPeriod.WEEK12, UnlockWaitingPeriod.WEEK, perAmount],
+            { account: hacker.account },
+          ),
+          'InvalidUnlockWaitingPeriod',
+        )
+        await assert.isRejected(
+          GovTokenStaking.write.extendUnlockWaitingPeriod(
+            [UnlockWaitingPeriod.NONE, UnlockWaitingPeriod.WEEK12, perAmount],
+            { account: hacker.account },
+          ),
+          'NoStakedRecordFound',
+        )
+        await GovTokenStaking.write.extendUnlockWaitingPeriod(
+          [UnlockWaitingPeriod.WEEK, UnlockWaitingPeriod.WEEK12, perAmount],
+          { account: hacker.account },
+        )
         const stakedAmountForWeek12 = perAmount * BigInt(i + 1)
         assert.equal(
           await GovTokenStaking.read.stakedAmount([hacker.account.address, UnlockWaitingPeriod.WEEK]),

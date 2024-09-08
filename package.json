@@ -1,13 +1,13 @@
 {
   "name": "@pvpbet/pvpbet",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "A decentralized PVP betting platform based on the Ethereum Virtual Machine (EVM).",
   "license": "MIT",
   "scripts": {
     "build": "npx hardhat clean && npx hardhat compile",
     "net": "npx hardhat node",
     "test": "npx hardhat test",
-    "release": "npm run test && npm run build && npm publish --access public",
+    "release": "npm run build && npm run test && npm publish --access public",
     "deploy:test": "npx hardhat run scripts/deploy.ts --network hardhat",
     "deploy:localhost": "npx hardhat run scripts/deploy.ts --network localhost"
   },

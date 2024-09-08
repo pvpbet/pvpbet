@@ -43,16 +43,14 @@ interface IGovTokenStaking {
   function restake(uint256 index) external;
 
   /**
-   * @dev Increase unlock waiting period.
-   *
-   * Modify the stake record with `UnlockWaitingPeriod.WEEK` to `UnlockWaitingPeriod.WEEK12`.
+   * @dev Extend the unlock waiting period for the staking record.
    */
-  function increaseUnlockWaitingPeriod() external;
+  function extendUnlockWaitingPeriod(UnlockWaitingPeriod from, UnlockWaitingPeriod to) external;
 
   /**
-   * @dev Increase unlock waiting period for the specified staked amount.
+   * @dev Extend the unlock waiting period for the staking record of the specified amount.
    */
-  function increaseUnlockWaitingPeriod(uint256 amount) external;
+  function extendUnlockWaitingPeriod(UnlockWaitingPeriod from, UnlockWaitingPeriod to, uint256 amount) external;
 
   /**
    * @dev Withdraw unlocked governance tokens.

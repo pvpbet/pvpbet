@@ -65,31 +65,14 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseGovToken,
     return 10 ** govToken().decimals();
   }
 
-  function _getStakedRecord(address account, UnlockWaitingPeriod unlockWaitingPeriod)
-  private view
-  returns (StakedRecord memory, uint256) {
-    (StakedRecord memory record, uint256 index) = _stakedRecords.find(account, unlockWaitingPeriod);
-    if (index == 0) revert NoStakedRecordFound();
-    return (record, index);
-  }
-
-  function _getStakedRecord(address account, UnlockWaitingPeriod unlockWaitingPeriod, uint256 amount)
-  private view
-  returns (StakedRecord memory, uint256) {
-    (StakedRecord memory record, uint256 index) = _stakedRecords.find(account, unlockWaitingPeriod);
-    if (index == 0) revert NoStakedRecordFound();
-    if (record.amount < amount) revert StakeInsufficientBalance(record.account, record.unlockWaitingPeriod, record.amount, amount);
-    return (record, index);
-  }
-
   function stake(UnlockWaitingPeriod unlockWaitingPeriod, uint256 amount)
   external {
-    if (unlockWaitingPeriod == UnlockWaitingPeriod.NONE || unlockWaitingPeriod > type(UnlockWaitingPeriod).max) revert InvalidUnlockWaitingPeriod();
+    if (unlockWaitingPeriod == UnlockWaitingPeriod.NONE) revert InvalidUnlockWaitingPeriod();
     if (amount < stakeMinValue()) revert InvalidAmount();
 
     address account = msg.sender;
     account.transferToSelf(govToken(), amount);
-    IBetVotingEscrow(voteToken()).mint(account, amount);
+    _mintStakingCertificate(account, amount);
     _stake(account, unlockWaitingPeriod, amount);
     emit Staked(account, unlockWaitingPeriod, amount);
   }
@@ -113,7 +96,7 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseGovToken,
     uint256 amount = record.amount;
 
     record.removeFrom(_stakedRecords);
-    IBetVotingEscrow(voteToken()).burn(account, amount);
+    _burnStakingCertificate(account, amount);
     _unstakedRecords.add(
       UnstakedRecord(
         account,
@@ -135,7 +118,7 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseGovToken,
     StakedRecord storage record = _stakedRecords[index.unsafeDec()];
 
     amount = amount.unsafeAdd(record.subAmount(amount, stakeMinValue(), _stakedRecords));
-    IBetVotingEscrow(voteToken()).burn(account, amount);
+    _burnStakingCertificate(account, amount);
     _unstakedRecords.add(
       UnstakedRecord(
         account,
@@ -157,34 +140,39 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseGovToken,
     if (block.timestamp > record.unlockTime) revert CannotRestake();
 
     record.removeFrom(_unstakedRecords);
-    IBetVotingEscrow(voteToken()).mint(record.account, record.amount);
+    _mintStakingCertificate(record.account, record.amount);
     _stake(record.account, record.unlockWaitingPeriod, record.amount);
     emit Staked(record.account, record.unlockWaitingPeriod, record.amount);
   }
 
-  function increaseUnlockWaitingPeriod()
+  function extendUnlockWaitingPeriod(UnlockWaitingPeriod from, UnlockWaitingPeriod to)
   external {
+    if (to == UnlockWaitingPeriod.NONE) revert InvalidUnlockWaitingPeriod();
+    if (from >= to) revert InvalidUnlockWaitingPeriod();
+
     address account = msg.sender;
-    (StakedRecord memory record,) = _getStakedRecord(account, UnlockWaitingPeriod.WEEK);
+    (StakedRecord memory record,) = _getStakedRecord(account, from);
 
     record.removeFrom(_stakedRecords);
-    emit Unstaked(account, UnlockWaitingPeriod.WEEK, record.amount);
-    _stake(account, UnlockWaitingPeriod.WEEK12, record.amount);
-    emit Staked(account, UnlockWaitingPeriod.WEEK12, record.amount);
+    emit Unstaked(account, from, record.amount);
+    _stake(account, to, record.amount);
+    emit Staked(account, to, record.amount);
   }
 
-  function increaseUnlockWaitingPeriod(uint256 amount)
+  function extendUnlockWaitingPeriod(UnlockWaitingPeriod from, UnlockWaitingPeriod to, uint256 amount)
   external {
+    if (to == UnlockWaitingPeriod.NONE) revert InvalidUnlockWaitingPeriod();
+    if (from >= to) revert InvalidUnlockWaitingPeriod();
     if (amount < stakeMinValue()) revert InvalidAmount();
 
     address account = msg.sender;
-    (,uint256 index) = _getStakedRecord(account, UnlockWaitingPeriod.WEEK, amount);
+    (,uint256 index) = _getStakedRecord(account, from, amount);
     StakedRecord storage record = _stakedRecords[index.unsafeDec()];
 
     amount = amount.unsafeAdd(record.subAmount(amount, stakeMinValue(), _stakedRecords));
-    emit Unstaked(account, UnlockWaitingPeriod.WEEK, amount);
-    _stake(account, UnlockWaitingPeriod.WEEK12, amount);
-    emit Staked(account, UnlockWaitingPeriod.WEEK12, amount);
+    emit Unstaked(account, from, amount);
+    _stake(account, to, amount);
+    emit Staked(account, to, amount);
   }
 
   function withdraw()
@@ -232,6 +220,33 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseGovToken,
     } else {
       remainingAmount = amount;
     }
+  }
+
+  function _mintStakingCertificate(address account, uint256 amount)
+  private {
+    IBetVotingEscrow(voteToken()).mint(account, amount);
+  }
+
+  function _burnStakingCertificate(address account, uint256 amount)
+  private {
+    IBetVotingEscrow(voteToken()).burn(account, amount);
+  }
+
+  function _getStakedRecord(address account, UnlockWaitingPeriod unlockWaitingPeriod)
+  private view
+  returns (StakedRecord memory, uint256) {
+    (StakedRecord memory record, uint256 index) = _stakedRecords.find(account, unlockWaitingPeriod);
+    if (index == 0) revert NoStakedRecordFound();
+    return (record, index);
+  }
+
+  function _getStakedRecord(address account, UnlockWaitingPeriod unlockWaitingPeriod, uint256 amount)
+  private view
+  returns (StakedRecord memory, uint256) {
+    (StakedRecord memory record, uint256 index) = _stakedRecords.find(account, unlockWaitingPeriod);
+    if (index == 0) revert NoStakedRecordFound();
+    if (record.amount < amount) revert StakeInsufficientBalance(record.account, record.unlockWaitingPeriod, record.amount, amount);
+    return (record, index);
   }
 
   function isStaked(address account)
