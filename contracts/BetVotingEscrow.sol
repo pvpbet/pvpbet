@@ -38,10 +38,10 @@ contract BetVotingEscrow is IBetVotingEscrow, IErrors, ERC20Upgradeable, Upgrade
 
   error InvalidStatus(IBet.Status status);
   error InvalidTarget(address target);
-  error VoteConditionsNotMet(address account);
   error VoteInsufficientAvailableBalance(address account, uint256 balance, uint256 value);
   error VoteInsufficientFixedAllowance(address account, uint256 allowance, uint256 value);
   error VoteNotTransferable();
+  error VotingConditionsNotMet(address account);
 
   mapping(address account => uint256 value) private _fixedBalances;
   mapping(address account => mapping(address spender => uint256 value)) private _fixedAllowances;
@@ -156,7 +156,7 @@ contract BetVotingEscrow is IBetVotingEscrow, IErrors, ERC20Upgradeable, Upgrade
       _approve(account, target, value);
       IBetActionDecide(target).decide(account, value);
     } else {
-      revert VoteConditionsNotMet(account);
+      revert VotingConditionsNotMet(account);
     }
   }
 
@@ -166,7 +166,7 @@ contract BetVotingEscrow is IBetVotingEscrow, IErrors, ERC20Upgradeable, Upgrade
     if (stakedAmount > 0) {
       IBetActionArbitrate(target).arbitrate(account, value > 0 ? stakedAmount : 0);
     } else {
-      revert VoteConditionsNotMet(account);
+      revert VotingConditionsNotMet(account);
     }
   }
 

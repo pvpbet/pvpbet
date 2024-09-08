@@ -35,11 +35,11 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseGovToken,
   using UnstakedRecordArrayLib for UnstakedRecord[];
 
   error CannotRestake();
-  error StakedAmountDeductionFailed();
   error InvalidUnlockWaitingPeriod();
   error NoStakedRecordFound();
   error NoUnstakedRecordFound();
-  error StakeInsufficientBalance(address account, UnlockWaitingPeriod, uint256 balance, uint256 value);
+  error StakedAmountDeductionFailed();
+  error StakedAmountInsufficientBalance(address account, UnlockWaitingPeriod, uint256 balance, uint256 value);
 
   StakedRecord[] private _stakedRecords;
   UnstakedRecord[] private _unstakedRecords;
@@ -245,7 +245,7 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseGovToken,
   returns (StakedRecord memory, uint256) {
     (StakedRecord memory record, uint256 index) = _stakedRecords.find(account, unlockWaitingPeriod);
     if (index == 0) revert NoStakedRecordFound();
-    if (record.amount < amount) revert StakeInsufficientBalance(record.account, record.unlockWaitingPeriod, record.amount, amount);
+    if (record.amount < amount) revert StakedAmountInsufficientBalance(record.account, record.unlockWaitingPeriod, record.amount, amount);
     return (record, index);
   }
 

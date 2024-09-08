@@ -699,7 +699,7 @@ describe('BetVotingEscrow', () => {
         const TestBetOption = await viem.deployContract('TestBetOption', [TestBet.address])
         await assert.isRejected(
           erc20Transfer(hacker, BetVotingEscrow.address, TestBetOption.address, decidedAmount),
-          'VoteConditionsNotMet',
+          'VotingConditionsNotMet',
         )
         await assert.isRejected(
           erc20Transfer(user, BetVotingEscrow.address, TestBetOption.address, stakeAmount + 1n),
@@ -756,12 +756,12 @@ describe('BetVotingEscrow', () => {
         ])
         await assert.isRejected(
           erc20Transfer(hacker, BetVotingEscrow.address, TestBet.address, 1n),
-          'VoteConditionsNotMet',
+          'VotingConditionsNotMet',
         )
         const TestBetOption = await viem.deployContract('TestBetOption', [TestBet.address])
         await assert.isRejected(
           erc20Transfer(hacker, BetVotingEscrow.address, TestBetOption.address, 1n),
-          'VoteConditionsNotMet',
+          'VotingConditionsNotMet',
         )
 
         assert.equal(await TestBet.read.arbitrated(), false)

@@ -279,7 +279,7 @@ describe('GovTokenStaking', () => {
         )
         await assert.isRejected(
           unstake(wallet, GovTokenStaking, unlockWaitingPeriod, stakeAmount + 1n),
-          'StakeInsufficientBalance',
+          'StakedAmountInsufficientBalance',
         )
       }
 
