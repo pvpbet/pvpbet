@@ -8,32 +8,45 @@ library TransferLib {
   error Underpayment(uint256 paid, uint256 needed);
 
   function receiveFromSelf(address target, address token, uint256 amount)
-  internal {
+  internal
+  returns (bool) {
+    return receiveFromSelf(target, token, amount, false);
+  }
+
+  function receiveFromSelf(address target, address token, uint256 amount, bool ignoreFailure)
+  internal
+  returns (bool) {
     if (token == address(0)) {
       if (amount == type(uint256).max) amount = address(this).balance;
-      if (amount == 0) return;
+      if (amount == 0) return false;
       (bool success,) = payable(target).call{value: amount}("");
-      if (!success) revert TransferFailed(amount);
+      if (!success) {
+        if (!ignoreFailure) revert TransferFailed(amount);
+        return false;
+      }
     } else {
       IERC20 token_ = IERC20(token);
       if (amount == type(uint256).max) amount = token_.balanceOf(address(this));
-      if (amount == 0) return;
+      if (amount == 0) return false;
       token_.transfer(target, amount);
     }
+    return true;
   }
 
   function transferToSelf(address target, address token, uint256 amount)
-  internal {
+  internal
+  returns (bool) {
     if (token == address(0)) {
       if (amount == type(uint256).max) amount = target.balance;
       if (msg.value < amount) revert Underpayment(msg.value, amount);
     } else {
       IERC20 token_ = IERC20(token);
       if (amount == type(uint256).max) amount = token_.balanceOf(target);
-      if (amount == 0) return;
+      if (amount == 0) return false;
       uint256 value = token_.allowance(target, address(this));
       if (value < amount) revert Underpayment(value, amount);
       token_.transferFrom(target, address(this), amount);
     }
+    return true;
   }
 }

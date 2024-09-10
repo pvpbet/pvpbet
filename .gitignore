@@ -1,10 +1,10 @@
 node_modules
+.DS_Store
 .env
 .idea
-.DS_Store
 .openzeppelin
-dist
-networks.json
+/contracts.json
+/networks.json
 
 # Hardhat files
 /cache

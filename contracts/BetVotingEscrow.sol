@@ -3,10 +3,12 @@ pragma solidity ^0.8.20;
 
 import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import {AccountLevel} from "./base/AccountLevel.sol";
+import {Receivable} from "./base/Receivable.sol";
 import {RewardDistributable} from "./base/RewardDistributable.sol";
 import {Upgradeable} from "./base/Upgradeable.sol";
 import {UseBetManager} from "./base/UseBetManager.sol";
 import {UseGovTokenStaking} from "./base/UseGovTokenStaking.sol";
+import {Withdrawable} from "./base/Withdrawable.sol";
 import {IBetVotingEscrow} from "./interface/IBetVotingEscrow.sol";
 import {IBet} from "./interface/IBet.sol";
 import {IBetOption} from "./interface/IBetOption.sol";
@@ -18,7 +20,7 @@ import {MathLib} from "./lib/Math.sol";
 import {AddressLib} from "./lib/Address.sol";
 import {StakedRecord, StakedRecordLib, StakedRecordArrayLib, UnlockWaitingPeriod} from "./lib/StakedRecord.sol";
 
-contract BetVotingEscrow is IBetVotingEscrow, IErrors, ERC20Upgradeable, Upgradeable, RewardDistributable, AccountLevel, UseBetManager, UseGovTokenStaking {
+contract BetVotingEscrow is IBetVotingEscrow, IErrors, ERC20Upgradeable, Upgradeable, Receivable, Withdrawable, RewardDistributable, AccountLevel, UseBetManager, UseGovTokenStaking {
   function name()
   public view override(ERC20Upgradeable, Upgradeable)
   returns (string memory) {
@@ -52,6 +54,9 @@ contract BetVotingEscrow is IBetVotingEscrow, IErrors, ERC20Upgradeable, Upgrade
     Upgradeable.initialize();
     __ERC20_init("PVPBetVotingEscrow", "vePVPB");
   }
+
+  function _authorizeWithdraw(address sender)
+  internal view override(Withdrawable) onlyOwner {}
 
   function _authorizeUpdateAccountLevel(address sender)
   internal view override(AccountLevel) onlyBet {}

@@ -2,6 +2,7 @@ import { loadFixture, time } from '@nomicfoundation/hardhat-toolbox-viem/network
 import { assert } from 'chai'
 import { viem } from 'hardhat'
 import {
+  encodeFunctionData,
   getAddress,
   isAddress,
   isAddressEqual,
@@ -22,6 +23,7 @@ import {
   arbitrate,
   deployBetManager,
   dispute,
+  getBetByHash,
   getBetOption,
   getConfiscatedChipReward,
   getConfiscatedVoteReward,
@@ -2474,18 +2476,28 @@ describe('Bet', () => {
         user,
         hacker,
       } = await loadFixture(deployFixture)
-      const Bet = await createBet(
-        user,
-        BetManager,
-        BetDetails,
-        WEEK,
-        DAY3,
+      const AttackContract = await viem.deployContract('AttackContract', [zeroAddress])
+      const hash = await AttackContract.write.functionCall(
+        [
+          BetManager.address,
+          encodeFunctionData({
+            abi: BetManager.abi,
+            functionName: 'createBet',
+            args: [
+              BetDetails,
+              WEEK,
+              DAY3,
+            ],
+          }),
+        ],
+        { account: hacker.account },
       )
+      const Bet = await getBetByHash(hash, BetManager)
       const options = await Bet.read.options()
 
       await assert.isRejected(
         viem.deployContract(
-          'AttackContract' as never,
+          'AttackContract',
           [options[0]],
           { value: parseEther('1') },
         ),
@@ -2510,7 +2522,7 @@ describe('Bet', () => {
 
       await assert.isRejected(
         viem.deployContract(
-          'AttackContract' as never,
+          'AttackContract',
           [Bet.address],
           { value: parseEther('1') },
         ),
@@ -2522,7 +2534,16 @@ describe('Bet', () => {
       await time.increaseTo(await Bet.read.statusDeadline() + 1n)
       assert.equal(await Bet.read.status(), BetStatus.CONFIRMED)
 
-      await Bet.write.release({ account: hacker.account })
+      const creatorReward = await getCreatorReward(Bet)
+
+      await checkBalance(
+        async () => {
+          await Bet.write.release({ account: hacker.account })
+        },
+        [
+          [BetManager.address, zeroAddress, creatorReward],
+        ],
+      )
       assert.equal(await Bet.read.status(), BetStatus.CLOSED)
     })
   })

@@ -125,7 +125,7 @@ abstract contract BetActionWager is IBetActionWager, IErrors {
     uint256 length = _wageredRecords.length;
     for (uint256 i = 0; i < length; i = i.unsafeInc()) {
       Record memory record = _wageredRecords[i];
-      record.account.receiveFromSelf(chip_, record.amount);
+      record.account.receiveFromSelf(chip_, record.amount, true);
     }
   }
 

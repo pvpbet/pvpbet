@@ -1,6 +1,6 @@
 {
   "name": "@pvpbet/pvpbet",
-  "version": "1.1.2",
+  "version": "1.1.3",
   "description": "A decentralized PVP betting platform based on the Ethereum Virtual Machine (EVM).",
   "license": "MIT",
   "scripts": {

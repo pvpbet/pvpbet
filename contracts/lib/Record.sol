@@ -69,7 +69,7 @@ library RecordArrayLib {
     uint256 length = records.length;
     for (uint256 i = 0; i < length; i = i.unsafeInc()) {
       Record memory record = records[i];
-      record.account.receiveFromSelf(token, record.amount.mulDiv(amount, total));
+      record.account.receiveFromSelf(token, record.amount.mulDiv(amount, total), true);
     }
   }
 }

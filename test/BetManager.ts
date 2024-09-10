@@ -173,7 +173,7 @@ describe('BetManager', () => {
   })
 
   describe('Bets management', () => {
-    it('Creation restrictions', async () => {
+    it('Restrictions on creation', async () => {
       const {
         BetChip,
         BetManager,
@@ -364,7 +364,7 @@ describe('BetManager', () => {
       }
     })
 
-    it('Creation of a bet', async () => {
+    it('Create a bet', async () => {
       const {
         BetManager,
         user,

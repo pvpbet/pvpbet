@@ -1,3 +1,4 @@
+import { readFile, writeFile } from 'fs/promises'
 import { viem, ethers, upgrades } from 'hardhat'
 import { erc20Abi, getAddress, getContract, isAddressEqual, zeroAddress } from 'viem'
 import type { Address, ContractFunctionName, ContractFunctionArgs } from 'viem'
@@ -125,4 +126,14 @@ export function exec(callback: () => Promise<void>) {
 
 export function numberFixed(number: string | number, fixed = 2) {
   return Number(Number(number).toFixed(fixed))
+}
+
+export async function writeJson(path: string, data: unknown) {
+  const jsonData = JSON.stringify(data, null, 2)
+  return writeFile(path, jsonData, 'utf8')
+}
+
+export async function readJson(path: string) {
+  const jsonData = await readFile(path, 'utf8')
+  return JSON.parse(jsonData)
 }

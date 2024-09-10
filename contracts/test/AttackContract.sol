@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import {AddressLib} from "../lib/Address.sol";
 import {TransferLib} from "../lib/Transfer.sol";
 
 contract AttackContract {
@@ -9,7 +10,15 @@ contract AttackContract {
   error IsAttacker();
 
   constructor(address bet) payable {
-    bet.receiveFromSelf(address(0), msg.value);
+    if (msg.value > 0) {
+      bet.receiveFromSelf(address(0), msg.value);
+    }
+  }
+
+  function functionCall(address target, bytes memory data)
+  external
+  returns (bytes memory) {
+    return AddressLib.functionCallWithValue(target, data, 0);
   }
 
   receive() external payable {

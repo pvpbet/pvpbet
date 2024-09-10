@@ -26,7 +26,10 @@ import {
   distribute,
 } from './common/vote'
 import { checkBalance } from './asserts'
+import { testReceivable } from './asserts/Receivable'
+import { testWithdrawable } from './asserts/Withdrawable'
 import type { Address } from 'viem'
+import type { ContractTypes } from '../types'
 
 describe('BetVotingEscrow', () => {
   async function deployFixture() {
@@ -836,5 +839,21 @@ describe('BetVotingEscrow', () => {
       await levelDown()
       assert.equal(await BetVotingEscrow.read.level([user.account.address]), 0n)
     })
+  })
+
+  testReceivable(async () => {
+    const { BetVotingEscrow, owner } = await loadFixture(deployFixture)
+    return {
+      Receivable: BetVotingEscrow as unknown as ContractTypes['Receivable'],
+      owner,
+    }
+  })
+
+  testWithdrawable(async () => {
+    const { BetVotingEscrow, owner } = await loadFixture(deployFixture)
+    return {
+      Withdrawable: BetVotingEscrow as unknown as ContractTypes['Withdrawable'],
+      owner,
+    }
   })
 })

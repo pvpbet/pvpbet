@@ -318,6 +318,7 @@ contract Bet is IBet, BetActionArbitrate, BetActionDispute {
 
     _refund();
     IBetManager(_betManager).close();
+    _destroy();
   }
 
   function released()
@@ -415,7 +416,7 @@ contract Bet is IBet, BetActionArbitrate, BetActionDispute {
     uint256 deciderReward = total.mulDiv(DECIDER_REWARD_RATIO, 100);
     uint256 winnerReward = total.unsafeSub(protocolReward).unsafeSub(creatorReward).unsafeSub(deciderReward);
 
-    _creator.receiveFromSelf(_chip, creatorReward);
+    _creator.receiveFromSelf(_chip, creatorReward, true);
 
     Record[] memory decidedRecords = IBetActionDecide(winingOption).decidedRecords();
     if (decidedRecords.length > 0) {
@@ -462,6 +463,12 @@ contract Bet is IBet, BetActionArbitrate, BetActionDispute {
     for (uint256 i = 0; i < length; i = i.unsafeInc()) {
       IAccountLevel(_vote).levelDown(records[i].account);
     }
+  }
+
+  function _destroy()
+  private {
+    // Recycle funds from failed transfers.
+    _betManager.receiveFromSelf(_chip, type(uint256).max, true);
   }
 
   receive() external payable {

@@ -5,6 +5,7 @@ import { transfer } from '../../utils'
 import type {
   AbiEvent,
   Address,
+  Hash,
 } from 'viem'
 import type { WalletClient } from '@nomicfoundation/hardhat-viem/types'
 import type { ContractTypes } from '../../types'
@@ -65,6 +66,13 @@ export async function createBet(
     ],
     { account: owner.account },
   )
+  return getBetByHash(hash, BetManager)
+}
+
+export async function getBetByHash(
+  hash: Hash,
+  BetManager: ContractTypes['BetManager'],
+) {
   const publicClient = await viem.getPublicClient()
   const receipt = await publicClient.waitForTransactionReceipt({ hash })
   const logs = await publicClient.getLogs({
@@ -78,10 +86,7 @@ export async function createBet(
   const log = logs.find(log => log.transactionHash === receipt.transactionHash)
   // @ts-expect-error
   const address = log?.args?.bet as Address
-  return viem.getContractAt(
-    'Bet',
-    address,
-  )
+  return viem.getContractAt('Bet', address)
 }
 
 export async function getBetOption(
