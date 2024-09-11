@@ -16,24 +16,24 @@ interface IRewardDistributable {
   function distribute(address token, uint256 amount) external;
 
   /**
-   * @dev Returns the ETH rewards of the account.
+   * @dev Returns the claimed ETH rewards of the account.
    */
-  function rewards(address account) external view returns (uint256);
+  function claimedRewards(address account) external view returns (uint256);
 
   /**
-   * @dev Returns the ERC20 token rewards of the account.
+   * @dev Returns the claimed ERC20 token rewards of the account.
    */
-  function rewards(address account, address token) external view returns (uint256);
+  function claimedRewards(address account, address token) external view returns (uint256);
 
   /**
-   * @dev Returns the claimable ETH rewards of the account.
+   * @dev Returns the unclaimed ETH rewards of the account.
    */
-  function claimableRewards(address account) external view returns (uint256);
+  function unclaimedRewards(address account) external view returns (uint256);
 
   /**
-   * @dev Returns the claimable ERC20 token rewards of the account.
+   * @dev Returns the unclaimed ERC20 token rewards of the account.
    */
-  function claimableRewards(address account, address token) external view returns (uint256);
+  function unclaimedRewards(address account, address token) external view returns (uint256);
 
   /**
    * @dev Claim the ETH rewards.

@@ -207,7 +207,7 @@ describe('BetVotingEscrow', () => {
   })
 
   describe('Distribute rewards', () => {
-    it('#distribute() #rewards() #claimableRewards()', async () => {
+    it('#distribute() #claimedRewards() #unclaimedRewards()', async () => {
       const {
         BetVotingEscrow,
         DAI,
@@ -231,14 +231,14 @@ describe('BetVotingEscrow', () => {
         for (const [token] of tokens) {
           assert.equal(
             isAddressEqual(zeroAddress, token)
-              ? await BetVotingEscrow.read.rewards([wallet.account.address])
-              : await BetVotingEscrow.read.rewards([wallet.account.address, token]),
+              ? await BetVotingEscrow.read.claimedRewards([wallet.account.address])
+              : await BetVotingEscrow.read.claimedRewards([wallet.account.address, token]),
             0n,
           )
           assert.equal(
             isAddressEqual(zeroAddress, token)
-              ? await BetVotingEscrow.read.claimableRewards([wallet.account.address])
-              : await BetVotingEscrow.read.claimableRewards([wallet.account.address, token]),
+              ? await BetVotingEscrow.read.unclaimedRewards([wallet.account.address])
+              : await BetVotingEscrow.read.unclaimedRewards([wallet.account.address, token]),
             0n,
           )
         }
@@ -252,14 +252,14 @@ describe('BetVotingEscrow', () => {
         for (const [token] of tokens) {
           assert.equal(
             isAddressEqual(zeroAddress, token)
-              ? await BetVotingEscrow.read.rewards([wallet.account.address])
-              : await BetVotingEscrow.read.rewards([wallet.account.address, token]),
+              ? await BetVotingEscrow.read.claimedRewards([wallet.account.address])
+              : await BetVotingEscrow.read.claimedRewards([wallet.account.address, token]),
             0n,
           )
           assert.equal(
             isAddressEqual(zeroAddress, token)
-              ? await BetVotingEscrow.read.claimableRewards([wallet.account.address])
-              : await BetVotingEscrow.read.claimableRewards([wallet.account.address, token]),
+              ? await BetVotingEscrow.read.unclaimedRewards([wallet.account.address])
+              : await BetVotingEscrow.read.unclaimedRewards([wallet.account.address, token]),
             0n,
           )
         }
@@ -281,14 +281,14 @@ describe('BetVotingEscrow', () => {
         for (const [token, amount] of tokens) {
           assert.equal(
             isAddressEqual(zeroAddress, token)
-              ? await BetVotingEscrow.read.rewards([wallet.account.address])
-              : await BetVotingEscrow.read.rewards([wallet.account.address, token]),
-            amount * rewardRatio / rewardCount,
+              ? await BetVotingEscrow.read.claimedRewards([wallet.account.address])
+              : await BetVotingEscrow.read.claimedRewards([wallet.account.address, token]),
+            0n,
           )
           assert.equal(
             isAddressEqual(zeroAddress, token)
-              ? await BetVotingEscrow.read.claimableRewards([wallet.account.address])
-              : await BetVotingEscrow.read.claimableRewards([wallet.account.address, token]),
+              ? await BetVotingEscrow.read.unclaimedRewards([wallet.account.address])
+              : await BetVotingEscrow.read.unclaimedRewards([wallet.account.address, token]),
             amount * rewardRatio / rewardCount,
           )
         }
@@ -357,14 +357,14 @@ describe('BetVotingEscrow', () => {
         for (const [token, amount] of tokens) {
           assert.equal(
             isAddressEqual(zeroAddress, token)
-              ? await BetVotingEscrow.read.rewards([wallet.account.address])
-              : await BetVotingEscrow.read.rewards([wallet.account.address, token]),
+              ? await BetVotingEscrow.read.claimedRewards([wallet.account.address])
+              : await BetVotingEscrow.read.claimedRewards([wallet.account.address, token]),
             amount * rewardRatio / rewardCount,
           )
           assert.equal(
             isAddressEqual(zeroAddress, token)
-              ? await BetVotingEscrow.read.claimableRewards([wallet.account.address])
-              : await BetVotingEscrow.read.claimableRewards([wallet.account.address, token]),
+              ? await BetVotingEscrow.read.unclaimedRewards([wallet.account.address])
+              : await BetVotingEscrow.read.unclaimedRewards([wallet.account.address, token]),
             0n,
           )
         }

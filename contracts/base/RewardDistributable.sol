@@ -11,16 +11,15 @@ abstract contract RewardDistributable is IRewardDistributable {
 
   error NoClaimableRewards();
 
-  mapping(address account => mapping(address token => uint256 amount)) private _rewards;
-  mapping(address account => mapping(address token => uint256 amount)) private _claimableRewards;
+  mapping(address account => mapping(address token => uint256 amount)) private _claimedRewards;
+  mapping(address account => mapping(address token => uint256 amount)) private _unclaimedRewards;
 
   function _rewardDistribute(address token, uint256 amount)
   internal virtual;
 
   function _rewardDistributeTo(address account, address token, uint256 amount)
   internal {
-    _rewards[account][token] = _rewards[account][token].unsafeAdd(amount);
-    _claimableRewards[account][token] = _claimableRewards[account][token].unsafeAdd(amount);
+    _unclaimedRewards[account][token] = _unclaimedRewards[account][token].unsafeAdd(amount);
   }
 
   function distribute()
@@ -41,28 +40,28 @@ abstract contract RewardDistributable is IRewardDistributable {
     emit Distributed(sender, token, amount);
   }
 
-  function rewards(address account)
+  function claimedRewards(address account)
   external view
   returns (uint256) {
-    return _rewards[account][address(0)];
+    return _claimedRewards[account][address(0)];
   }
 
-  function rewards(address account, address token)
+  function claimedRewards(address account, address token)
   external view
   returns (uint256) {
-    return _rewards[account][token];
+    return _claimedRewards[account][token];
   }
 
-  function claimableRewards(address account)
+  function unclaimedRewards(address account)
   external view
   returns (uint256) {
-    return _claimableRewards[account][address(0)];
+    return _unclaimedRewards[account][address(0)];
   }
 
-  function claimableRewards(address account, address token)
+  function unclaimedRewards(address account, address token)
   external view
   returns (uint256) {
-    return _claimableRewards[account][token];
+    return _unclaimedRewards[account][token];
   }
 
   function claim()
@@ -78,9 +77,10 @@ abstract contract RewardDistributable is IRewardDistributable {
   function _claim(address token)
   internal {
     address account = msg.sender;
-    uint256 amount = _claimableRewards[account][token];
+    uint256 amount = _unclaimedRewards[account][token];
     if (amount == 0) revert NoClaimableRewards();
-    _claimableRewards[account][token] = 0;
+    _unclaimedRewards[account][token] = 0;
+    _claimedRewards[account][token] = _claimedRewards[account][token].unsafeAdd(amount);
     account.receiveFromSelf(token, amount);
     emit Claimed(account, token, amount);
   }
