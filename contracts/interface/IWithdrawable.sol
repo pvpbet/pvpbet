@@ -2,8 +2,8 @@
 pragma solidity ^0.8.20;
 
 interface IWithdrawable {
-  event Withdrawal(address indexed sender, uint256 amount);
-  event WithdrawalERC20(address indexed sender, address indexed token, uint256 amount);
+  event Withdrawn(address indexed sender, uint256 amount);
+  event WithdrawnERC20(address indexed sender, address indexed token, uint256 amount);
 
   /**
    * @dev Withdraw all ETH.

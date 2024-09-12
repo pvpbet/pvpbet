@@ -7,12 +7,12 @@ interface IBetActionArbitrate {
   event Arbitrated(address indexed arbitrator, uint256 amount);
 
   /**
-   * @dev Returns the bet contract address.
+   * @dev Returns contract address of the bet.
    */
   function bet() external view returns (address);
 
   /**
-   * @dev Returns the vote token contract address.
+   * @dev Returns contract address of the vote token.
    */
   function vote() external view returns (address);
 

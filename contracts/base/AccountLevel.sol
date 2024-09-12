@@ -22,13 +22,13 @@ abstract contract AccountLevel is IAccountLevel {
   external {
     _authorizeUpdateAccountLevel(msg.sender);
     _levels[account] = _levels[account].inc();
-    emit LevelUpdate(account, _levels[account]);
+    emit LevelUpdated(account, _levels[account]);
   }
 
   function levelDown(address account)
   external {
     _authorizeUpdateAccountLevel(msg.sender);
     _levels[account] = _levels[account].sub(3);
-    emit LevelUpdate(account, _levels[account]);
+    emit LevelUpdated(account, _levels[account]);
   }
 }

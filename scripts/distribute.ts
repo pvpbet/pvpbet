@@ -14,9 +14,8 @@ exec(async () => {
 
   const decimals = await BetChip.read.decimals()
   const chipAmount = parseUnits('10000', decimals)
-  const usdcAmount = await BetChip.read.getTokenAmount([USDC.address, chipAmount])
-  await USDC.write.approve([BetChip.address, usdcAmount])
-  await BetChip.write.buy([USDC.address, chipAmount])
+  await USDC.write.approve([BetChip.address, chipAmount])
+  await BetChip.write.deposit([chipAmount])
   await BetChip.write.approve([BetVotingEscrow.address, chipAmount])
   await BetVotingEscrow.write.distribute([BetChip.address, chipAmount])
   console.log('Distribution completed.')

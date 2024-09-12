@@ -29,7 +29,7 @@ describe('BetManager', () => {
     const publicClient = await viem.getPublicClient()
     const [owner, user, hacker] = await viem.getWalletClients()
 
-    const BetChip = await deployBetChip([], [])
+    const BetChip = await deployBetChip(zeroAddress)
     const GovToken = await deployGovToken()
     const BetVotingEscrow = await deployBetVotingEscrow()
     const BetManager = await deployBetManager(GovToken.address, BetChip.address, BetVotingEscrow.address)

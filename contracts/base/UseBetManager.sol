@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {IUseBetManager} from "../interface/IUseBetManager.sol";
 import {IBetManager} from "../interface/IBetManager.sol";
 import {IErrors} from "../interface/IErrors.sol";
+import {IUseBetManager} from "../interface/IUseBetManager.sol";
 
 abstract contract UseBetManager is IUseBetManager, IErrors {
   address private _betManager;
@@ -33,6 +33,6 @@ abstract contract UseBetManager is IUseBetManager, IErrors {
   function _setBetManager(address newBetManager)
   private {
     _betManager = newBetManager;
-    emit SetBetManager(newBetManager);
+    emit BetManagerSet(newBetManager);
   }
 }

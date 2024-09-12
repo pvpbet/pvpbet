@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 interface IAccountLevel {
-  event LevelUpdate(address indexed account, uint256 level);
+  event LevelUpdated(address indexed account, uint256 level);
 
   /**
    * @dev Returns the level of account.

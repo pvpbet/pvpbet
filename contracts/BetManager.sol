@@ -11,10 +11,10 @@ import {Withdrawable} from "./base/Withdrawable.sol";
 import {IBet} from "./interface/IBet.sol";
 import {IBetFactory} from "./interface/IBetFactory.sol";
 import {IBetManager} from "./interface/IBetManager.sol";
+import {AddressArrayLib} from "./lib/Address.sol";
 import {MathLib} from "./lib/Math.sol";
 import {StringLib} from "./lib/String.sol";
 import {TransferLib} from "./lib/Transfer.sol";
-import {AddressArrayLib} from "./lib/Address.sol";
 
 contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, BetRestriction, UseChipToken, UseVoteToken, UseGovToken {
   function name()
@@ -100,7 +100,7 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, BetRe
   function _setBetFactory(address newBetFactory)
   private {
     _betFactory = newBetFactory;
-    emit SetBetFactory(newBetFactory);
+    emit BetFactorySet(newBetFactory);
   }
 
   function betOptionFactory()
@@ -118,7 +118,7 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, BetRe
   function _setBetOptionFactory(address newBetOptionFactory)
   private {
     _betOptionFactory = newBetOptionFactory;
-    emit SetBetOptionFactory(newBetOptionFactory);
+    emit BetOptionFactorySet(newBetOptionFactory);
   }
 
   function creationFee()
@@ -136,7 +136,7 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, BetRe
   function _setCreationFee(uint256 fee)
   internal {
     _creationFee = fee;
-    emit SetCreationFee(fee);
+    emit CreationFeeSet(fee);
   }
 
   function createBet(

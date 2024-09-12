@@ -7,12 +7,12 @@ interface IBetActionWager {
   event Wagered(address indexed player, uint256 amount);
 
   /**
-   * @dev Returns the bet contract address.
+   * @dev Returns contract address of the bet.
    */
   function bet() external view returns (address);
 
   /**
-   * @dev Returns the chip token contract address.
+   * @dev Returns contract address of the chip token.
    */
   function chip() external view returns (address);
 

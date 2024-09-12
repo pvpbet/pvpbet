@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {IUseGovTokenStaking} from "../interface/IUseGovTokenStaking.sol";
 import {IErrors} from "../interface/IErrors.sol";
+import {IUseGovTokenStaking} from "../interface/IUseGovTokenStaking.sol";
 
 abstract contract UseGovTokenStaking is IUseGovTokenStaking, IErrors {
   address private _govTokenStaking;
@@ -32,6 +32,6 @@ abstract contract UseGovTokenStaking is IUseGovTokenStaking, IErrors {
   function _setGovTokenStaking(address newGovTokenStaking)
   internal {
     _govTokenStaking = newGovTokenStaking;
-    emit SetGovTokenStaking(newGovTokenStaking);
+    emit GovTokenStakingSet(newGovTokenStaking);
   }
 }

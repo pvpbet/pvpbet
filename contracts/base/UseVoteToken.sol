@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {IUseVoteToken} from "../interface/IUseVoteToken.sol";
 import {IErrors} from "../interface/IErrors.sol";
+import {IUseVoteToken} from "../interface/IUseVoteToken.sol";
 
 abstract contract UseVoteToken is IUseVoteToken, IErrors {
   address private _voteToken;
@@ -32,6 +32,6 @@ abstract contract UseVoteToken is IUseVoteToken, IErrors {
   function _setVoteToken(address newVoteToken)
   internal {
     _voteToken = newVoteToken;
-    emit SetVoteToken(newVoteToken);
+    emit VoteTokenSet(newVoteToken);
   }
 }

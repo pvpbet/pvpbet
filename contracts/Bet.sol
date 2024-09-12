@@ -13,10 +13,10 @@ import {IBetManager} from "./interface/IBetManager.sol";
 import {IBetOptionFactory} from "./interface/IBetOptionFactory.sol";
 import {IRewardDistributable} from "./interface/IRewardDistributable.sol";
 import {IUseGovToken} from "./interface/IUseGovToken.sol";
-import {MathLib} from "./lib/Math.sol";
 import {AddressLib} from "./lib/Address.sol";
-import {TransferLib} from "./lib/Transfer.sol";
+import {MathLib} from "./lib/Math.sol";
 import {Record, RecordArrayLib} from "./lib/Record.sol";
+import {TransferLib} from "./lib/Transfer.sol";
 
 contract Bet is IBet, BetActionArbitrate, BetActionDispute {
   function name()

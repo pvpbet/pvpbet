@@ -8,12 +8,12 @@ interface IBetOption {
   function isBetOption() external pure returns (bool);
 
   /**
-   * @dev Returns the bet contract address.
+   * @dev Returns contract address of the bet.
    */
   function bet() external view returns (address);
 
   /**
-   * @dev Returns the chip token contract address.
+   * @dev Returns contract address of the chip token.
    */
   function chip() external view returns (address);
 
@@ -25,7 +25,7 @@ interface IBetOption {
   function chipMinValue() external view returns (uint256);
 
   /**
-   * @dev Returns the vote token contract address.
+   * @dev Returns contract address of the vote token.
    */
   function vote() external view returns (address);
 

@@ -2,15 +2,15 @@
 pragma solidity ^0.8.20;
 
 interface IUseGovTokenStaking {
-  event SetGovTokenStaking(address govTokenStaking);
+  event GovTokenStakingSet(address govTokenStaking);
 
   /**
-   * @dev Returns the governance token staking contract address.
+   * @dev Returns contract address of the governance token staking.
    */
   function govTokenStaking() external view returns (address);
 
   /**
-   * @dev Set the governance token staking contract address.
+   * @dev Set contract address of the governance token staking.
    */
   function setGovTokenStaking(address newGovTokenStaking) external;
 }

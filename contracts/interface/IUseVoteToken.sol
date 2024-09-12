@@ -2,15 +2,15 @@
 pragma solidity ^0.8.20;
 
 interface IUseVoteToken {
-  event SetVoteToken(address voteToken);
+  event VoteTokenSet(address voteToken);
 
   /**
-   * @dev Returns the vote token contract address.
+   * @dev Returns contract address of the vote token.
    */
   function voteToken() external view returns (address);
 
   /**
-   * @dev Set the vote token contract address.
+   * @dev Set contract address of the vote token.
    */
   function setVoteToken(address newVote) external;
 }

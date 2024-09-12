@@ -4,28 +4,28 @@ pragma solidity ^0.8.20;
 import {IBet} from "./IBet.sol";
 
 interface IBetManager {
-  event SetBetFactory(address betFactory);
-  event SetBetOptionFactory(address betOptionFactory);
-  event SetCreationFee(uint256 fee);
+  event BetFactorySet(address betFactory);
+  event BetOptionFactorySet(address betOptionFactory);
+  event CreationFeeSet(uint256 fee);
   event BetCreated(address indexed bet, address indexed creator);
 
   /**
-   * @dev Returns the bet factory contract address.
+   * @dev Returns contract address of the bet factory.
    */
   function betFactory() external view returns (address);
 
   /**
-  * @dev Set the bet factory contract address.
+  * @dev Set contract address of the bet factory.
    */
   function setBetFactory(address newBetFactory) external;
 
   /**
-   * @dev Returns the bet option factory contract address.
+   * @dev Returns contract address of the bet option factory.
    */
   function betOptionFactory() external view returns (address);
 
   /**
-  * @dev Set the bet option factory contract address.
+  * @dev Set contract address of the bet option factory.
    */
   function setBetOptionFactory(address newBetOptionFactory) external;
 
@@ -71,7 +71,7 @@ interface IBetManager {
   function isBet(address bet) external view returns (bool);
 
   /**
-   * @dev Returns the index of the bet contract address.
+   * @dev Returns the contract address for the bet’s index.
    *
    * Index counts from 1.
    */
@@ -100,7 +100,7 @@ interface IBetManager {
   function bets(uint256 offset, uint256 limit, IBet.Status[] memory status) external view returns (address[] memory);
 
   /**
-   * @dev Returns the index of the active bet contract address.
+   * @dev Returns the contract address for the active bet’s index.
    *
    * Index counts from 1.
    */

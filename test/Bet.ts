@@ -64,16 +64,8 @@ describe('Bet', () => {
     await claimTestTokens(user, testTokens)
     await claimTestTokens(hacker, testTokens)
 
-    const { DAI, USDC } = testTokens
-    const currencies = [
-      getAddress(DAI.address),
-      getAddress(USDC.address),
-    ]
-    const rates = [
-      1n,
-      10n ** 12n,
-    ]
-    const BetChip = await deployBetChip(currencies, rates)
+    const { USDC } = testTokens
+    const BetChip = await deployBetChip(USDC.address)
     const GovToken = await deployGovToken()
     const BetVotingEscrow = await deployBetVotingEscrow()
     const GovTokenStaking = await deployGovTokenStaking(GovToken.address, BetVotingEscrow.address)
@@ -100,8 +92,8 @@ describe('Bet', () => {
         await buyChip(
           wallet,
           BetChip,
-          DAI.address,
-          parseUnits('100000', 18),
+          USDC.address,
+          parseUnits('100000', await USDC.read.decimals()),
         )
       }),
     )

@@ -16,14 +16,10 @@ exec(async () => {
   contracts.USDC = USDC.address
   console.log(`USDC deployed to: ${USDC.address}`)
 
-  const currencies = [USDC.address]
-  const rates = [10n ** 12n]
-
   const { BetChip } = await ignition.deploy(BetChipModule, {
     parameters: {
       BetChip: {
-        currencies,
-        rates,
+        currency: USDC.address,
       },
     },
   })

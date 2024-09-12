@@ -9,15 +9,15 @@ import {Upgradeable} from "./base/Upgradeable.sol";
 import {UseBetManager} from "./base/UseBetManager.sol";
 import {UseGovTokenStaking} from "./base/UseGovTokenStaking.sol";
 import {Withdrawable} from "./base/Withdrawable.sol";
-import {IBetVotingEscrow} from "./interface/IBetVotingEscrow.sol";
 import {IBet} from "./interface/IBet.sol";
-import {IBetOption} from "./interface/IBetOption.sol";
 import {IBetActionArbitrate} from "./interface/IBetActionArbitrate.sol";
 import {IBetActionDecide} from "./interface/IBetActionDecide.sol";
+import {IBetOption} from "./interface/IBetOption.sol";
+import {IBetVotingEscrow} from "./interface/IBetVotingEscrow.sol";
 import {IErrors} from "./interface/IErrors.sol";
 import {IGovTokenStaking} from "./interface/IGovTokenStaking.sol";
-import {MathLib} from "./lib/Math.sol";
 import {AddressLib} from "./lib/Address.sol";
+import {MathLib} from "./lib/Math.sol";
 import {StakedRecord, StakedRecordLib, StakedRecordArrayLib, UnlockWaitingPeriod} from "./lib/StakedRecord.sol";
 
 contract BetVotingEscrow is IBetVotingEscrow, IErrors, ERC20Upgradeable, Upgradeable, Receivable, Withdrawable, RewardDistributable, AccountLevel, UseBetManager, UseGovTokenStaking {

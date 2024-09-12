@@ -47,9 +47,9 @@ abstract contract Withdrawable is IWithdrawable {
     account.receiveFromSelf(token, amount);
 
     if (token == address(0)) {
-      emit Withdrawal(account, amount);
+      emit Withdrawn(account, amount);
     } else {
-      emit WithdrawalERC20(account, token, amount);
+      emit WithdrawnERC20(account, token, amount);
     }
   }
 }

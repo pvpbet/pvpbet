@@ -5,15 +5,11 @@ import type { Address } from 'viem'
 import type { WalletClient } from '@nomicfoundation/hardhat-viem/types'
 import type { ContractTypes } from '../../types'
 
-export async function deployBetChip(
-  currencies: Address[],
-  rates: bigint[],
-) {
+export async function deployBetChip(currency: Address) {
   const { BetChip } = await ignition.deploy(BetChipModule, {
     parameters: {
       BetChip: {
-        currencies,
-        rates,
+        currency,
       },
     },
   })
@@ -24,9 +20,8 @@ export async function buyChip(
   owner: WalletClient,
   BetChip: ContractTypes['BetChip'],
   currency: Address,
-  quantity: bigint,
+  amount: bigint,
 ) {
-  const amount = await BetChip.read.getTokenAmount([currency, quantity])
   await erc20Approve(owner, currency, BetChip.address, amount)
-  await BetChip.write.buy([currency, quantity], { account: owner.account })
+  await BetChip.write.deposit([amount], { account: owner.account })
 }
