@@ -81,46 +81,34 @@ library AddressArrayLib {
   using MathLib for uint256;
 
   function search(address[] memory target, uint256 offset, uint256 limit)
-  internal pure
-  returns (address[] memory) {
-    address[] memory matchedBets = new address[](limit);
-
-    uint256 count = 0;
-    for (uint256 i = target.length.sub(offset); i > 0; i = i.unsafeDec()) {
-      matchedBets[count] = target[i.unsafeDec()];
-      count = count.unsafeInc();
-      if (count == limit) break;
-    }
-
-    if (count < limit) {
-      assembly {
-        mstore(matchedBets, count)
-      }
-    }
-
-    return matchedBets;
-  }
-
-  function search(address[] memory target, uint256 offset, uint256 limit, IBet.Status[] memory status)
   internal view
   returns (address[] memory) {
-    if (status.length == 0) {
-      return search(target, offset, limit);
-    }
+    return search(target, offset, limit, new IBet.Status[](0));
+  }
 
+  function search(address[] memory target, uint256 offset, uint256 limit, IBet.Status[] memory statuses)
+  internal view
+  returns (address[] memory) {
+    uint256 statusLength = statuses.length;
     address[] memory matchedBets = new address[](limit);
 
     uint256 count = 0;
     for (uint256 i = target.length.sub(offset); i > 0; i = i.unsafeDec()) {
       address bet = target[i.unsafeDec()];
-      uint256 l = status.length;
-      for (uint256 j = 0; j < l; j = j.unsafeInc()) {
-        if (IBet(bet).status() == status[j]) {
-          matchedBets[count] = bet;
-          count = count.unsafeInc();
-          break;
+      if (statusLength > 0) {
+        IBet.Status status = IBet(bet).status();
+        for (uint256 j = 0; j < statusLength; j = j.unsafeInc()) {
+          if (status == statuses[j]) {
+            matchedBets[count] = bet;
+            count = count.unsafeInc();
+            break;
+          }
         }
+      } else {
+        matchedBets[count] = bet;
+        count = count.unsafeInc();
       }
+
       if (count == limit) break;
     }
 
