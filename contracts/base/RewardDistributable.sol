@@ -35,7 +35,7 @@ abstract contract RewardDistributable is IRewardDistributable {
   function _distribute(address token, uint256 amount)
   internal {
     address sender = msg.sender;
-    sender.transferToSelf(token, amount);
+    sender.transferToContract(token, amount);
     _rewardDistribute(token, amount);
     emit Distributed(sender, token, amount);
   }
@@ -81,7 +81,7 @@ abstract contract RewardDistributable is IRewardDistributable {
     if (amount == 0) revert NoClaimableRewards();
     _unclaimedRewards[account][token] = 0;
     _claimedRewards[account][token] = _claimedRewards[account][token].unsafeAdd(amount);
-    account.receiveFromSelf(token, amount);
+    account.transferFromContract(token, amount);
     emit Claimed(account, token, amount);
   }
 }

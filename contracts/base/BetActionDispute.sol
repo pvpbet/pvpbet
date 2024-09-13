@@ -67,12 +67,12 @@ abstract contract BetActionDispute is IBetActionDispute, IErrors {
 
     uint256 disputedAmount_ = _disputedRecords.remove(disputer).amount;
     if (disputedAmount_ > 0) {
-      disputer.receiveFromSelf(chip(), disputedAmount_);
+      disputer.transferFromContract(chip(), disputedAmount_);
     }
 
     if (amount > 0) {
       if (amount < chipMinValue()) revert InvalidAmount();
-      disputer.transferToSelf(chip(), amount);
+      disputer.transferToContract(chip(), amount);
       _disputedRecords.add(
         Record(disputer, amount)
       );
@@ -110,7 +110,7 @@ abstract contract BetActionDispute is IBetActionDispute, IErrors {
 
     _disputedChipsReleased = true;
     if (bet_ != address(this)) {
-      bet_.receiveFromSelf(chip(), type(uint256).max);
+      bet_.transferFromContract(chip(), type(uint256).max);
     }
   }
 
@@ -127,7 +127,7 @@ abstract contract BetActionDispute is IBetActionDispute, IErrors {
     uint256 length = _disputedRecords.length;
     for (uint256 i = 0; i < length; i = i.unsafeInc()) {
       Record memory record = _disputedRecords[i];
-      record.account.receiveFromSelf(chip_, record.amount, true);
+      record.account.transferFromContract(chip_, record.amount, true);
     }
   }
 

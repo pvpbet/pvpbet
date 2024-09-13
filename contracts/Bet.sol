@@ -416,7 +416,7 @@ contract Bet is IBet, BetActionArbitrate, BetActionDispute {
     uint256 deciderReward = total.mulDiv(DECIDER_REWARD_RATIO, 100);
     uint256 winnerReward = total.unsafeSub(protocolReward).unsafeSub(creatorReward).unsafeSub(deciderReward);
 
-    _creator.receiveFromSelf(_chip, creatorReward, true);
+    _creator.transferFromContract(_chip, creatorReward, true);
 
     Record[] memory decidedRecords = IBetActionDecide(winingOption).decidedRecords();
     if (decidedRecords.length > 0) {
@@ -468,7 +468,7 @@ contract Bet is IBet, BetActionArbitrate, BetActionDispute {
   function _destroy()
   private {
     // Recycle funds from failed transfers.
-    _betManager.receiveFromSelf(_chip, type(uint256).max, true);
+    _betManager.transferFromContract(_chip, type(uint256).max, true);
   }
 
   receive() external payable {

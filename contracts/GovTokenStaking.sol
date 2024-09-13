@@ -71,7 +71,7 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseGovToken,
     if (amount < stakeMinValue()) revert InvalidAmount();
 
     address account = msg.sender;
-    account.transferToSelf(govToken(), amount);
+    account.transferToContract(govToken(), amount);
     _mintStakingCertificate(account, amount);
     _stake(account, unlockWaitingPeriod, amount);
     emit Staked(account, unlockWaitingPeriod, amount);
@@ -186,7 +186,7 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseGovToken,
       UnstakedRecord memory record = _unstakedRecords[i.unsafeDec()];
       if (blockTimestamp > record.unlockTime) {
         record.removeFrom(_unstakedRecords);
-        record.account.receiveFromSelf(govToken(), record.amount);
+        record.account.transferFromContract(govToken(), record.amount);
         emit Withdrawn(record.account, record.unlockWaitingPeriod, record.amount);
       }
     }
@@ -201,7 +201,7 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseGovToken,
     remainingAmount = _deductStakedAmount(account, UnlockWaitingPeriod.WEEK, remainingAmount);
     if (remainingAmount > 0) remainingAmount = _deductStakedAmount(account, UnlockWaitingPeriod.WEEK12, remainingAmount);
     if (remainingAmount > 0) revert StakedAmountDeductionFailed();
-    custodian.receiveFromSelf(govToken(), amount);
+    custodian.transferFromContract(govToken(), amount);
   }
 
   function _deductStakedAmount(address account, UnlockWaitingPeriod unlockWaitingPeriod, uint256 amount)

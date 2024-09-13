@@ -65,12 +65,12 @@ abstract contract BetActionWager is IBetActionWager, IErrors {
 
     uint256 wageredAmount_ = _wageredRecords.remove(player).amount;
     if (wageredAmount_ > 0) {
-      player.receiveFromSelf(chip(), wageredAmount_);
+      player.transferFromContract(chip(), wageredAmount_);
     }
 
     if (amount > 0) {
       if (amount < chipMinValue()) revert InvalidAmount();
-      player.transferToSelf(chip(), amount);
+      player.transferToContract(chip(), amount);
       _wageredRecords.add(
         Record(player, amount)
       );
@@ -108,7 +108,7 @@ abstract contract BetActionWager is IBetActionWager, IErrors {
 
     _wageredChipsReleased = true;
     if (bet_ != address(this)) {
-      bet_.receiveFromSelf(chip(), type(uint256).max);
+      bet_.transferFromContract(chip(), type(uint256).max);
     }
   }
 
@@ -125,7 +125,7 @@ abstract contract BetActionWager is IBetActionWager, IErrors {
     uint256 length = _wageredRecords.length;
     for (uint256 i = 0; i < length; i = i.unsafeInc()) {
       Record memory record = _wageredRecords[i];
-      record.account.receiveFromSelf(chip_, record.amount, true);
+      record.account.transferFromContract(chip_, record.amount, true);
     }
   }
 

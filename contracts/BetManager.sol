@@ -177,7 +177,7 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, BetRe
     validateDuration(wageringPeriodDuration, decidingPeriodDuration);
 
     if (_creationFee > 0) {
-      msg.sender.transferToSelf(govToken(), _creationFee);
+      msg.sender.transferToContract(govToken(), _creationFee);
     }
 
     address bet = IBetFactory(_betFactory).createBet(

@@ -7,33 +7,37 @@ library TransferLib {
   error TransferFailed(uint256 amount);
   error Underpayment(uint256 paid, uint256 needed);
 
-  function receiveFromSelf(address target, address token, uint256 amount)
+  function transferFromContract(address target, address token, uint256 amount)
   internal
   returns (bool) {
-    return receiveFromSelf(target, token, amount, false);
+    return transferFromContract(target, token, amount, false);
   }
 
-  function receiveFromSelf(address target, address token, uint256 amount, bool ignoreFailure)
+  function transferFromContract(address target, address token, uint256 amount, bool ignoreFailure)
   internal
   returns (bool) {
+    bool success = false;
+
     if (token == address(0)) {
       if (amount == type(uint256).max) amount = address(this).balance;
       if (amount == 0) return false;
-      (bool success,) = payable(target).call{value: amount}("");
-      if (!success) {
-        if (!ignoreFailure) revert TransferFailed(amount);
-        return false;
-      }
+      (success,) = payable(target).call{value: amount}("");
     } else {
       IERC20 token_ = IERC20(token);
       if (amount == type(uint256).max) amount = token_.balanceOf(address(this));
       if (amount == 0) return false;
-      token_.transfer(target, amount);
+      success = token_.transfer(target, amount);
     }
+
+    if (!success) {
+      if (!ignoreFailure) revert TransferFailed(amount);
+      return false;
+    }
+
     return true;
   }
 
-  function transferToSelf(address target, address token, uint256 amount)
+  function transferToContract(address target, address token, uint256 amount)
   internal
   returns (bool) {
     if (token == address(0)) {

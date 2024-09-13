@@ -28,7 +28,7 @@ contract TestBet {
 
   function dispute(address disputer, uint256 amount)
   external {
-    disputer.transferToSelf(chip, amount);
+    disputer.transferToContract(chip, amount);
     disputed = true;
   }
 

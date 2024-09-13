@@ -121,13 +121,13 @@ contract BetChip is IBetChip, IErrors, ERC20 {
 
   function _mintToAccount(address account, uint256 amount)
   private {
-    account.transferToSelf(_currency, amount);
+    account.transferToContract(_currency, amount);
     _mint(account, amount);
   }
 
   function _burnFromAccount(address account, uint256 amount)
   private {
     _burn(account, amount);
-    account.receiveFromSelf(_currency, amount);
+    account.transferFromContract(_currency, amount);
   }
 }

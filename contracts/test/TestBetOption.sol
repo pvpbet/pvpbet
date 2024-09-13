@@ -38,7 +38,7 @@ contract TestBetOption {
 
   function wager(address player, uint256 amount)
   external {
-    player.transferToSelf(chip(), amount);
+    player.transferToContract(chip(), amount);
     wagered = true;
   }
 

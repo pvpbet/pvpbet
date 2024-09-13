@@ -11,7 +11,7 @@ contract AttackContract {
 
   constructor(address bet) payable {
     if (msg.value > 0) {
-      bet.receiveFromSelf(address(0), msg.value);
+      bet.transferFromContract(address(0), msg.value);
     }
   }
 

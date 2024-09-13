@@ -44,7 +44,7 @@ abstract contract Withdrawable is IWithdrawable {
   function _withdraw(address token, uint256 amount)
   internal {
     address account = msg.sender;
-    account.receiveFromSelf(token, amount);
+    account.transferFromContract(token, amount);
 
     if (token == address(0)) {
       emit Withdrawn(account, amount);
