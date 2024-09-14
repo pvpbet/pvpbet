@@ -181,9 +181,10 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseGovToken,
     _withdrawing = true;
 
     uint256 blockTimestamp = block.timestamp;
-    uint256 length = _unstakedRecords.length;
-    for (uint256 i = length; i > 0; i = i.unsafeDec()) {
-      UnstakedRecord memory record = _unstakedRecords[i.unsafeDec()];
+    uint256 i = _unstakedRecords.length;
+    while (i > 0) {
+      i = i.unsafeDec();
+      UnstakedRecord memory record = _unstakedRecords[i];
       if (blockTimestamp > record.unlockTime) {
         record.removeFrom(_unstakedRecords);
         record.account.transferFromContract(govToken(), record.amount);

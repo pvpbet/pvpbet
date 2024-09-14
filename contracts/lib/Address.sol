@@ -93,8 +93,10 @@ library AddressArrayLib {
     address[] memory matchedBets = new address[](limit);
 
     uint256 count = 0;
-    for (uint256 i = target.length.sub(offset); i > 0; i = i.unsafeDec()) {
-      address bet = target[i.unsafeDec()];
+    uint256 i = target.length.sub(offset);
+    while (i > 0 && count < limit) {
+      i = i.unsafeDec();
+      address bet = target[i];
       if (statusLength > 0) {
         IBet.Status status = IBet(bet).status();
         for (uint256 j = 0; j < statusLength; j = j.unsafeInc()) {
@@ -108,8 +110,6 @@ library AddressArrayLib {
         matchedBets[count] = bet;
         count = count.unsafeInc();
       }
-
-      if (count == limit) break;
     }
 
     if (count < limit) {
