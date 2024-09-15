@@ -8,7 +8,7 @@ interface IBetRestriction {
   function maxWageringPeriodDuration() external view returns (uint256);
   function minDecidingPeriodDuration() external view returns (uint256);
   function maxDecidingPeriodDuration() external view returns (uint256);
-  function originWhitelist() external view returns (string[] memory);
+  function originAllowlist() external view returns (string[] memory);
 
   function setMinOptionsCount(uint256 newMinOptionsCount) external;
   function setMaxOptionsCount(uint256 newMaxOptionsCount) external;
@@ -16,5 +16,5 @@ interface IBetRestriction {
   function setMaxWageringPeriodDuration(uint256 newMaxWageringPeriodDuration) external;
   function setMinDecidingPeriodDuration(uint256 newMinDecidingPeriodDuration) external;
   function setMaxDecidingPeriodDuration(uint256 newMaxDecidingPeriodDuration) external;
-  function setOriginWhitelist(string[] memory newOriginWhitelist) external;
+  function setOriginAllowlist(string[] memory newOriginAllowlist) external;
 }

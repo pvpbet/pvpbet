@@ -22,7 +22,7 @@ abstract contract BetRestriction is IBetRestriction {
   uint256 private _maxWageringPeriodDuration;
   uint256 private _minDecidingPeriodDuration;
   uint256 private _maxDecidingPeriodDuration;
-  string[] private _originWhitelist;
+  string[] private _originAllowlist;
 
   function _authorizeUpdateBetRestriction(address sender)
   internal virtual;
@@ -56,9 +56,9 @@ abstract contract BetRestriction is IBetRestriction {
   function validateUrl(string calldata url)
   internal view virtual {
     bool isAllowedOrigin = false;
-    uint256 length = _originWhitelist.length;
+    uint256 length = _originAllowlist.length;
     for (uint256 i = 0; i < length; i = i.unsafeInc()) {
-      if (url.startsWith(_originWhitelist[i])) {
+      if (url.startsWith(_originAllowlist[i])) {
         isAllowedOrigin = true;
         break;
       }
@@ -114,10 +114,10 @@ abstract contract BetRestriction is IBetRestriction {
     return _maxDecidingPeriodDuration;
   }
 
-  function originWhitelist()
+  function originAllowlist()
   external view
   returns (string[] memory) {
-    return _originWhitelist;
+    return _originAllowlist;
   }
 
   function setMinOptionsCount(uint256 newMinOptionsCount)
@@ -156,9 +156,9 @@ abstract contract BetRestriction is IBetRestriction {
     _maxDecidingPeriodDuration = newMaxDecidingPeriodDuration;
   }
 
-  function setOriginWhitelist(string[] memory newOriginWhitelist)
+  function setOriginAllowlist(string[] memory newOriginAllowlist)
   public {
     _authorizeUpdateBetRestriction(msg.sender);
-    _originWhitelist = newOriginWhitelist;
+    _originAllowlist = newOriginAllowlist;
   }
 }

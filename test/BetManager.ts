@@ -192,7 +192,7 @@ describe('BetManager', () => {
       const MIN_DECISION_PERIOD_DURATION = await BetManager.read.minDecidingPeriodDuration()
       const MAX_DECISION_PERIOD_DURATION = await BetManager.read.maxDecidingPeriodDuration()
 
-      const originWhitelist = [
+      const originAllowlist = [
         'https://example.com',
       ]
       const forumURL = 'https://example.com/foo'
@@ -339,10 +339,10 @@ describe('BetManager', () => {
       }
 
       await assert.isRejected(
-        BetManager.write.setOriginWhitelist([originWhitelist], { account: user.account }),
+        BetManager.write.setOriginAllowlist([originAllowlist], { account: user.account }),
         'OwnableUnauthorizedAccount',
       )
-      await BetManager.write.setOriginWhitelist([originWhitelist], { account: owner.account })
+      await BetManager.write.setOriginAllowlist([originAllowlist], { account: owner.account })
 
       for (const chip of chips) {
         const useChipERC20 = isAddressEqual(chip, BetChip.address)
