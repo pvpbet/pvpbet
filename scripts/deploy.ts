@@ -6,6 +6,8 @@ import GovTokenStakingModule from '../ignition/modules/GovTokenStaking'
 import BetChipModule from '../ignition/modules/BetChip'
 import BetVotingEscrowModule from '../ignition/modules/BetVotingEscrow'
 import BetManagerModule from '../ignition/modules/BetManager'
+import ContractSetupModule from '../ignition/modules/ContractSetup'
+import parameters from '../ignition/parameters.json'
 import type { Address } from 'viem'
 
 exec(async () => {
@@ -57,13 +59,18 @@ exec(async () => {
   contracts.BetManager = BetManager.address
   console.log(`BetManager deployed to: ${BetManager.address}`)
 
-  await BetManager.write.setCreationFee([parseUnits('100', 18)])
-  console.log(`Bet creation fee has been set for BetManager.`)
-
-  await BetVotingEscrow.write.setBetManager([BetManager.address])
-  console.log(`BetManager added to BetVotingEscrow.`)
-  await BetVotingEscrow.write.setGovTokenStaking([GovTokenStaking.address])
-  console.log(`GovTokenStaking added to BetVotingEscrow.`)
+  await ignition.deploy(ContractSetupModule, {
+    parameters: {
+      ContractSetup: {
+        BetManager: BetManager.address,
+        BetVotingEscrow: BetVotingEscrow.address,
+        GovTokenStaking: GovTokenStaking.address,
+        creationFee: parameters.ContractSetup.creationFee,
+        originAllowlist: parameters.ContractSetup.originAllowlist,
+      },
+    },
+  })
+  console.log('Contract setup executed.')
 
   await writeJson('./contracts.json', contracts)
 })

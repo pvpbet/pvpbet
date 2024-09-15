@@ -7,6 +7,20 @@
     "chipToken": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
     "voteToken": "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707"
   },
+  "ContractSetup": {
+    "BetManager": "",
+    "BetVotingEscrow": "",
+    "GovTokenStaking": "",
+    "creationFee": "100000000000000000000",
+    "originAllowlist": [
+      "https://reddit.com",
+      "https://www.reddit.com",
+      "https://twitter.com",
+      "https://www.twitter.com",
+      "https://x.com",
+      "https://www.x.com"
+    ]
+  },
   "GovTokenStaking": {
     "govToken": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
     "voteToken": "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707"
