@@ -202,17 +202,42 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, BetRe
   external {
     address sender = msg.sender;
     uint256 index = _activeBetMap[sender];
-    if (index > 0) {
-      _activeBetMap[sender] = 0;
-      uint256 length = _activeBets.length;
-      if (index > length) return;
-      uint256 max = length.unsafeDec();
-      for (uint256 i = index.unsafeDec(); i < max; i = i.unsafeInc()) {
-        address bet = _activeBets[i.unsafeInc()];
-        _activeBets[i] = bet;
-        _activeBetMap[bet] = i;
+    if (index == 0) return;
+    _activeBetMap[sender] = 0;
+    uint256 length = _activeBets.length;
+    if (index > length) return;
+    uint256 max = length.unsafeDec();
+    for (uint256 i = index.unsafeDec(); i < max; i = i.unsafeInc()) {
+      uint256 j = i.unsafeInc();
+      address bet = _activeBets[j];
+      _activeBets[i] = bet;
+      _activeBetMap[bet] = j;
+    }
+    _activeBets.pop();
+  }
+
+  function clear()
+  external {
+    uint256 count = 0;
+    uint256 length = _activeBets.length;
+    for (uint256 i = 0; i < length; i = i.unsafeInc()) {
+      address betAddress = _activeBets[i];
+      IBet bet = IBet(betAddress);
+      if (bet.status() == IBet.Status.CANCELLED) {
+        bet.release();
+        _activeBetMap[betAddress] = 0;
+        count = count.unsafeInc();
+      } else if (count > 0) {
+        uint256 index = i.unsafeSub(count);
+        _activeBets[index] = betAddress;
+        _activeBetMap[betAddress] = index.unsafeInc();
       }
-      _activeBets.pop();
+    }
+
+    if (count > 0) {
+      for (uint256 i = 0; i < count; i = i.unsafeInc()) {
+        _activeBets.pop();
+      }
     }
   }
 

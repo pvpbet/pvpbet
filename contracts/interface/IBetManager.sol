@@ -66,6 +66,11 @@ interface IBetManager {
   function close() external;
 
   /**
+   * @dev Release all bets with the status "CANCELLED".
+   */
+  function clear() external;
+
+  /**
    * @dev Returns true if the address is a bet contract.
    */
   function isBet(address bet) external view returns (bool);

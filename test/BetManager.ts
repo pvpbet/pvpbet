@@ -463,6 +463,72 @@ describe('BetManager', () => {
         .filter(bet => bet !== FirstBet && bet !== MiddleBet && bet !== LastBet)
         .map(bet => bet.address)
       assert.deepEqual(await BetManager.read.activeBets([0n, BigInt(activeBets.length)]), activeBets)
+
+      for (let i = 0; i < count - 3; i++) {
+        const bet = activeBets[i]
+        assert.equal(await BetManager.read.activeBetIndex([bet]), BigInt(i + 1))
+      }
+    })
+
+    it('Clear active bets', async () => {
+      const {
+        BetManager,
+        user,
+      } = await loadFixture(deployFixture)
+
+      const count = 30
+      const cancelledCount = 10
+      const uncancelledCount = count - cancelledCount
+      const activeBets: Address[] = []
+      const uncancelledBets: Address[] = []
+      for (let i = 0; i < count; i++) {
+        const Bet = await createBet(
+          user,
+          BetManager,
+          BetDetails,
+          WEEK,
+          DAY3,
+          true,
+        )
+        if (i < cancelledCount) {
+          await time.increase(WEEK)
+        } else {
+          uncancelledBets.push(Bet.address)
+        }
+        activeBets.push(Bet.address)
+      }
+
+      activeBets.reverse()
+      uncancelledBets.reverse()
+
+      assert.equal(activeBets.length, count)
+      assert.equal(uncancelledBets.length, uncancelledCount)
+
+      assert.equal(await BetManager.read.betCount(), BigInt(count))
+      assert.equal(await BetManager.read.activeBetCount(), BigInt(count))
+      assert.deepEqual(await BetManager.read.activeBets([0n, BigInt(count)]), activeBets)
+      assert.deepEqual(await BetManager.read.activeBets([0n, BigInt(count), [0]]), uncancelledBets)
+
+      for (let i = 0; i < count; i++) {
+        const bet = activeBets[i]
+        assert.equal(await BetManager.read.activeBetIndex([bet]), BigInt(i + 1))
+        assert.equal(await BetManager.read.activeBetAt([BigInt(i + 1)]), bet)
+      }
+
+      await BetManager.write.clear()
+
+      assert.equal(await BetManager.read.activeBetCount(), BigInt(uncancelledCount))
+      assert.deepEqual(await BetManager.read.activeBets([0n, BigInt(count)]), uncancelledBets)
+      assert.deepEqual(await BetManager.read.activeBets([0n, BigInt(count), [0, 5]]), uncancelledBets)
+      for (let i = 0; i < count; i++) {
+        const bet = activeBets[i]
+        if (i < uncancelledCount) {
+          assert.equal(await BetManager.read.activeBetIndex([bet]), BigInt(i + 1))
+          assert.equal(await BetManager.read.activeBetAt([BigInt(i + 1)]), bet)
+        } else {
+          assert.equal(await BetManager.read.activeBetIndex([bet]), 0n)
+        }
+      }
     })
 
     it('Search for bets', async () => {

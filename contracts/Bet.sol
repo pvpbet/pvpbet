@@ -317,8 +317,10 @@ contract Bet is IBet, BetActionArbitrate, BetActionDispute {
     }
 
     _refund();
-    IBetManager(_betManager).close();
     _destroy();
+    if (msg.sender != _betManager) {
+      IBetManager(_betManager).close();
+    }
   }
 
   function released()
