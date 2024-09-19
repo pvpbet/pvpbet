@@ -147,8 +147,8 @@ export async function dispute(
   Bet: ContractTypes['Bet'],
 ) {
   const wageredTotalAmount = await Bet.read.wageredTotalAmount()
-  const DISPUTE_TRIGGER_AMOUNT_RATIO = await Bet.read.DISPUTE_TRIGGER_AMOUNT_RATIO()
-  const total = wageredTotalAmount * DISPUTE_TRIGGER_AMOUNT_RATIO / 100n
+  const CONFIRM_DISPUTE_AMOUNT_RATIO = await Bet.read.CONFIRM_DISPUTE_AMOUNT_RATIO()
+  const total = wageredTotalAmount * CONFIRM_DISPUTE_AMOUNT_RATIO / 100n
   const amounts = []
   for (const [wallet, ratio] of accounts) {
     const amount = total * ratio / 10n

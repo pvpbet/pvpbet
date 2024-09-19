@@ -36,6 +36,8 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, BetRe
 
   error ServiceHasNotStartedYet();
 
+  address private constant ZERO_ADDRESS = address(0);
+
   uint256 private _creationFee;
 
   address private _betFactory;
@@ -165,8 +167,8 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, BetRe
     bool useChipERC20
   ) private
   returns (address) {
-    if (chipToken() == address(0) && useChipERC20) revert ServiceHasNotStartedYet();
-    if (voteToken() == address(0)) revert ServiceHasNotStartedYet();
+    if (chipToken() == ZERO_ADDRESS && useChipERC20) revert ServiceHasNotStartedYet();
+    if (voteToken() == ZERO_ADDRESS) revert ServiceHasNotStartedYet();
 
     validateTitle(details.title);
     validateDescription(details.description);
@@ -183,12 +185,12 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, BetRe
     address bet = IBetFactory(_betFactory).createBet(
       address(this),
       _betOptionFactory,
-      useChipERC20 ? chipToken() : address(0),
+      useChipERC20 ? chipToken() : ZERO_ADDRESS,
       voteToken(),
       msg.sender,
-      details,
       wageringPeriodDuration,
-      decidingPeriodDuration
+      decidingPeriodDuration,
+      details
     );
     emit BetCreated(bet, msg.sender);
     _activeBets.push(bet);
@@ -259,7 +261,7 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, BetRe
   external view
   returns (address) {
     uint256 length = _bets.length;
-    return index > 0 && index <= length ? _bets[length.unsafeSub(index)] : address(0);
+    return index > 0 && index <= length ? _bets[length.unsafeSub(index)] : ZERO_ADDRESS;
   }
 
   function betCount()
@@ -292,7 +294,7 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, BetRe
   external view
   returns (address) {
     uint256 length = _activeBets.length;
-    return index > 0 && index <= length ? _activeBets[length.unsafeSub(index)] : address(0);
+    return index > 0 && index <= length ? _activeBets[length.unsafeSub(index)] : ZERO_ADDRESS;
   }
 
   function activeBetCount()

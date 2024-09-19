@@ -132,7 +132,7 @@ library StakedRecordArrayLib {
     uint256 count = 0;
     for (uint256 i = 0; i < length; i = i.unsafeInc()) {
       if (records[i].unlockWaitingPeriod == unlockWaitingPeriod) {
-        count++;
+        count = count.unsafeInc();
       }
     }
 

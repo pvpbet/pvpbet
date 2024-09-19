@@ -13,8 +13,8 @@ interface IBetFactory {
     address chip,
     address vote,
     address creator,
-    IBet.BetDetails calldata details,
     uint256 wageringPeriodDuration,
-    uint256 decidingPeriodDuration
+    uint256 decidingPeriodDuration,
+    IBet.BetDetails calldata details
   ) external returns (address);
 }

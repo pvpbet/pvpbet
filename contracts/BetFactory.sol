@@ -11,9 +11,9 @@ contract BetFactory is IBetFactory {
     address chip,
     address vote,
     address creator,
-    Bet.BetDetails calldata details,
     uint256 wageringPeriodDuration,
-    uint256 decidingPeriodDuration
+    uint256 decidingPeriodDuration,
+    Bet.BetDetails calldata details
   ) external returns (address) {
     return address(
       new Bet(
@@ -22,9 +22,9 @@ contract BetFactory is IBetFactory {
         chip,
         vote,
         creator,
-        details,
         wageringPeriodDuration,
-        decidingPeriodDuration
+        decidingPeriodDuration,
+        details
       )
     );
   }

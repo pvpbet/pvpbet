@@ -44,19 +44,20 @@ contract Bet is IBet, BetActionArbitrate, BetActionDispute {
   uint256 public constant ANNOUNCEMENT_PERIOD_DURATION = 2 days;
   uint256 public constant ARBITRATING_PERIOD_DURATION = 3 days;
   uint256 public constant SINGLE_OPTION_MAX_AMOUNT_RATIO = 85;
-  uint256 public constant DISPUTE_TRIGGER_AMOUNT_RATIO = 5;
+  uint256 public constant CONFIRM_DISPUTE_AMOUNT_RATIO = 5;
   uint256 public constant PROTOCOL_REWARD_RATIO = 1;
   uint256 public constant CREATOR_REWARD_RATIO = 1;
   uint256 public constant DECIDER_REWARD_RATIO = 5;
-  address public constant ZERO_ADDRESS = address(0);
 
-  address private immutable _creator;
+  address private constant ZERO_ADDRESS = address(0);
+
   address private immutable _betManager;
   address private immutable _chip;
   address private immutable _vote;
-  BetDetails private _details;
+  address private immutable _creator;
   uint256 private immutable _wageringPeriodDeadline;
   uint256 private immutable _decidingPeriodDeadline;
+  BetDetails private _details;
   address[] private _options;
 
   uint256 private _arbitratingPeriodStartTime;
@@ -70,9 +71,9 @@ contract Bet is IBet, BetActionArbitrate, BetActionDispute {
     address chip_,
     address vote_,
     address creator_,
-    BetDetails memory details_,
     uint256 wageringPeriodDuration,
-    uint256 decidingPeriodDuration
+    uint256 decidingPeriodDuration,
+    BetDetails memory details_
   ) {
     _betManager = betManager;
     _chip = chip_;
@@ -98,7 +99,7 @@ contract Bet is IBet, BetActionArbitrate, BetActionDispute {
   }
 
   function bet()
-  public view override(IBet, BetActionArbitrate, BetActionDispute)
+  public view override(BetActionArbitrate, BetActionDispute)
   returns (address) {
     return address(this);
   }
@@ -194,6 +195,12 @@ contract Bet is IBet, BetActionArbitrate, BetActionDispute {
     } else {
       return 10000 * 10 ** _chip.decimals();
     }
+  }
+
+  function minDisputedTotalAmount()
+  public view
+  returns (uint256) {
+    return wageredTotalAmount().mulDiv(CONFIRM_DISPUTE_AMOUNT_RATIO, 100);
   }
 
   function status()
@@ -332,24 +339,32 @@ contract Bet is IBet, BetActionArbitrate, BetActionDispute {
   function _isValidWager()
   private view
   returns (bool) {
-    uint256 total = wageredTotalAmount();
+    uint256 total = 0;
+    uint256 length = _options.length;
+    uint256[] memory optionAmounts = new uint256[](length);
+    for (uint256 i = 0; i < length; i = i.unsafeInc()) {
+      optionAmounts[i] = IBetActionWager(_options[i]).wageredAmount();
+      total = total.unsafeAdd(optionAmounts[i]);
+    }
+
     if (total < minWageredTotalAmount()) {
       return false;
     }
-    uint256 optionMaxAmount = total.mulDiv(SINGLE_OPTION_MAX_AMOUNT_RATIO, 100);
-    uint256 length = _options.length;
+
+    uint256 singleOptionMaxAmount = total.mulDiv(SINGLE_OPTION_MAX_AMOUNT_RATIO, 100);
     for (uint256 i = 0; i < length; i = i.unsafeInc()) {
-      if (IBetActionWager(_options[i]).wageredAmount() > optionMaxAmount) {
+      if (optionAmounts[i] > singleOptionMaxAmount) {
         return false;
       }
     }
+
     return true;
   }
 
   function _isValidDispute()
   private view
   returns (bool) {
-    return disputedAmount() >= wageredTotalAmount().mulDiv(DISPUTE_TRIGGER_AMOUNT_RATIO, 100);
+    return disputedAmount() >= minDisputedTotalAmount();
   }
 
   function _getDecidedWinningOption()

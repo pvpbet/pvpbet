@@ -7,23 +7,6 @@ interface IBetActionDispute {
   event Disputed(address indexed disputer, uint256 amount);
 
   /**
-   * @dev Returns contract address of the bet.
-   */
-  function bet() external view returns (address);
-
-  /**
-   * @dev Returns contract address of the chip token.
-   */
-  function chip() external view returns (address);
-
-  /**
-   * @dev Returns the chip minimum value.
-   *
-   * If it is below this value, it will be considered a dust attack.
-   */
-  function chipMinValue() external view returns (uint256);
-
-  /**
    * @dev Disputers to dispute.
    */
   function dispute(uint256 amount) external;

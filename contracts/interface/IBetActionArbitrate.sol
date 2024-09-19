@@ -7,23 +7,6 @@ interface IBetActionArbitrate {
   event Arbitrated(address indexed arbitrator, uint256 amount);
 
   /**
-   * @dev Returns contract address of the bet.
-   */
-  function bet() external view returns (address);
-
-  /**
-   * @dev Returns contract address of the vote token.
-   */
-  function vote() external view returns (address);
-
-  /**
-   * @dev Returns the vote minimum value.
-   *
-   * If it is below this value, it will be considered a dust attack.
-   */
-  function voteMinValue() external view returns (uint256);
-
-  /**
    * @dev Arbitrators to arbitrate.
    */
   function arbitrate(uint256 amount) external;

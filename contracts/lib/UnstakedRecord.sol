@@ -56,7 +56,7 @@ library UnstakedRecordArrayLib {
     uint256 count = 0;
     for (uint256 i = 0; i < length; i = i.unsafeInc()) {
       if (records[i].account == account) {
-        count++;
+        count = count.unsafeInc();
       }
     }
 
@@ -81,7 +81,7 @@ library UnstakedRecordArrayLib {
     uint256 count = 0;
     for (uint256 i = 0; i < length; i = i.unsafeInc()) {
       if (records[i].account == account) {
-        count++;
+        count = count.unsafeInc();
       }
     }
 

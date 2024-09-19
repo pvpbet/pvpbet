@@ -7,16 +7,6 @@ interface IBetActionDecide {
   event Decided(address indexed decider, uint256 amount);
 
   /**
-   * @dev Returns contract address of the bet.
-   */
-  function bet() external view returns (address);
-
-  /**
-   * @dev Returns contract address of the vote token.
-   */
-  function vote() external view returns (address);
-
-  /**
    * @dev Deciders to decide.
    */
   function decide(uint256 amount) external;
