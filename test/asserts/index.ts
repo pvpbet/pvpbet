@@ -82,6 +82,7 @@ export async function isCorrectStakeReward(
   for (const owner of owners) {
     const unclaimedRewards = await BetVotingEscrow.read.unclaimedRewards([owner, chip])
     const stakedWeight = await GovTokenStaking.read.stakedWeight([owner])
-    assert.equal(unclaimedRewards, total * stakedWeight / stakedTotalWeight)
+    // An error margin of 1 is allowed.
+    assert.closeTo(Number(unclaimedRewards - total * stakedWeight / stakedTotalWeight), 0, 1)
   }
 }

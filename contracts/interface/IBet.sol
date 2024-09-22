@@ -83,6 +83,26 @@ interface IBet {
    * @dev Returns the confirmed winning option.
    */
   function confirmedWinningOption() external view returns (address);
+  
+  /**
+   * @dev Returns the minimum wagered total amount.
+   */
+  function minWageredTotalAmount() external view returns (uint256);
+
+  /**
+   * @dev Returns the minimum decided total amount.
+   */
+  function minDecidedTotalAmount() external view returns (uint256);
+
+  /**
+   * @dev Returns the minimum disputed total amount.
+   */
+  function minDisputedTotalAmount() external view returns (uint256);
+
+  /**
+   * @dev Returns the minimum arbitrated total amount.
+   */
+  function minArbitratedTotalAmount() external view returns (uint256);
 
   /**
    * @dev Returns the wagered total amount.
@@ -90,14 +110,19 @@ interface IBet {
   function wageredTotalAmount() external view returns (uint256);
 
   /**
-   * @dev Returns the minimum wagered total amount.
+   * @dev Returns the decided total amount.
    */
-  function minWageredTotalAmount() external view returns (uint256);
+  function decidedTotalAmount() external view returns (uint256);
 
   /**
-   * @dev Returns the minimum disputed total amount.
+   * @dev Returns the disputed total amount.
    */
-  function minDisputedTotalAmount() external view returns (uint256);
+  function disputedTotalAmount() external view returns (uint256);
+
+  /**
+   * @dev Returns the arbitrated total amount.
+   */
+  function arbitratedTotalAmount() external view returns (uint256);
 
   /**
 	 * @dev Returns the status of the bet.

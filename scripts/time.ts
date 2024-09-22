@@ -1,7 +1,9 @@
 import { time } from '@nomicfoundation/hardhat-toolbox-viem/network-helpers'
 import { exec } from '../utils'
 
-const WEEK = 3600 * 24 * 7
+const HOUR = 3600
+const DAY = HOUR * 24
+const WEEK = DAY * 7
 const WEEK12 = WEEK * 12
 
 exec(async () => {

@@ -6,20 +6,38 @@ import {BetActionDecide} from "./base/BetActionDecide.sol";
 import {BetActionWager} from "./base/BetActionWager.sol";
 import {IBet} from "./interface/IBet.sol";
 import {IBetOption} from "./interface/IBetOption.sol";
+import {IMetadata} from "./interface/IMetadata.sol";
 import {AddressLib} from "./lib/Address.sol";
 
-contract BetOption is IBetOption, BetActionArbitrate, BetActionDecide, BetActionWager {
+contract BetOption is IBetOption, IMetadata, BetActionArbitrate, BetActionDecide, BetActionWager {
+  function name()
+  public pure virtual
+  returns (string memory) {
+    return "PVPBetOption";
+  }
+
+  function version()
+  public view virtual
+  returns (string memory) {
+    return _version;
+  }
+
   using AddressLib for address;
 
-  error CannotReceive();
   error InvalidChip();
 
   address private immutable _bet;
   string private _description;
+  string private _version;
 
-  constructor (address bet_, string memory description_) {
+  constructor (
+    address bet_,
+    string memory description_,
+    string memory version_
+  ) {
     _bet = bet_;
     _description = description_;
+    _version = version_;
   }
 
   modifier onlyBet() override(BetActionDecide, BetActionWager) {
@@ -82,8 +100,7 @@ contract BetOption is IBetOption, BetActionArbitrate, BetActionDecide, BetAction
     IBet bet_ = IBet(_bet);
     IBet.Status status = bet_.status();
     if (status == IBet.Status.CLOSED) revert CannotReceive();
-
-    if (status == IBet.Status.CONFIRMED || status == IBet.Status.CANCELLED) {
+    else if (status == IBet.Status.CONFIRMED || status == IBet.Status.CANCELLED) {
       if (msg.value > 0) revert CannotReceive();
       bet_.release();
       return;

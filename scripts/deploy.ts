@@ -70,7 +70,7 @@ exec(async () => {
       },
     },
   })
-  console.log('Contract setup executed.')
+  console.log('The contract setup has been completed.')
 
   await writeJson('./contracts.json', contracts)
 })

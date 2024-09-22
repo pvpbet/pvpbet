@@ -183,8 +183,8 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, BetRe
     }
 
     address bet = IBetFactory(_betFactory).createBet(
-      address(this),
       _betOptionFactory,
+      address(this),
       useChipERC20 ? chipToken() : ZERO_ADDRESS,
       voteToken(),
       msg.sender,

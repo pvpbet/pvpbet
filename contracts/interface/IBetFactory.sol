@@ -8,8 +8,8 @@ interface IBetFactory {
 	 * @dev Create a bet.
 	 */
   function createBet(
-    address betManager,
     address betOptionFactory,
+    address betManager,
     address chip,
     address vote,
     address creator,

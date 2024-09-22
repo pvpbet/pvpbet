@@ -13,8 +13,12 @@
     "GovTokenStaking": "",
     "creationFee": "100000000000000000000",
     "originAllowlist": [
+      "https://discord.com",
+      "https://www.discord.com",
       "https://reddit.com",
       "https://www.reddit.com",
+      "https://t.me",
+      "https://www.t.me",
       "https://twitter.com",
       "https://www.twitter.com",
       "https://x.com",

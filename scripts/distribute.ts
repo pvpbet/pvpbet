@@ -18,5 +18,5 @@ exec(async () => {
   await BetChip.write.deposit([chipAmount])
   await BetChip.write.approve([BetVotingEscrow.address, chipAmount])
   await BetVotingEscrow.write.distribute([BetChip.address, chipAmount])
-  console.log('Distribution completed.')
+  console.log('The rewards distribution has been completed.')
 })

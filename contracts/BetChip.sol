@@ -17,7 +17,6 @@ contract BetChip is IBetChip, IErrors, ERC20 {
   using AddressLib for address;
   using TransferLib for address;
 
-  error CannotReceive();
   error ChipInsufficientBalance(address account, uint256 balance, uint256 value);
   error ChipNotExchangeable();
   error InvalidChip();
@@ -38,28 +37,12 @@ contract BetChip is IBetChip, IErrors, ERC20 {
   public override
   returns (bool) {
     address owner = _msgSender();
-    _transferFrom(owner, to, value);
-    return true;
-  }
-
-  function transferFrom(address from, address to, uint256 value)
-  public override
-  returns (bool) {
-    address spender = _msgSender();
-    _spendAllowance(from, spender, value);
-    _transferFrom(from, to, value);
-    return true;
-  }
-
-  function _transferFrom(address from, address to, uint256 value)
-  private {
-    address sender = _msgSender();
     bool isBet = to.isBet();
     bool isBetOption = to.isBetOption();
 
     if (to == address(this)) {
-      _burnFromAccount(from, value);
-    } else if (!sender.isBet() && !sender.isBetOption() && (isBet || isBetOption)) {
+      _burnFromAccount(owner, value);
+    } else if (isBet || isBetOption) {
       IBet bet;
       if (isBet) {
         bet = IBet(to);
@@ -68,28 +51,35 @@ contract BetChip is IBetChip, IErrors, ERC20 {
       }
 
       IBet.Status status = bet.status();
-      if (status == IBet.Status.CLOSED) revert CannotReceive();
-      if (status == IBet.Status.CONFIRMED || status == IBet.Status.CANCELLED) {
+      if (status == IBet.Status.CLOSED) {
+        if (owner.isBetOption()) {
+          _transfer(owner, to, value);
+          return true;
+        }
+        revert CannotReceive();
+      } else if (status == IBet.Status.CONFIRMED || status == IBet.Status.CANCELLED) {
         if (value > 0) revert CannotReceive();
         bet.release();
-        return;
+        return true;
       }
 
       if (bet.chip() != address(this)) revert InvalidChip();
 
-      uint256 balance = balanceOf(from);
-      if (balance < value) revert ChipInsufficientBalance(from, balance, value);
+      uint256 balance = balanceOf(owner);
+      if (balance < value) revert ChipInsufficientBalance(owner, balance, value);
 
       if (isBet) {
-        _approve(from, to, value);
-        IBetActionDispute(to).dispute(from, value);
+        _approve(owner, to, value);
+        IBetActionDispute(to).dispute(owner, value);
       } else if (isBetOption) {
-        _approve(from, to, value);
-        IBetActionWager(to).wager(from, value);
+        _approve(owner, to, value);
+        IBetActionWager(to).wager(owner, value);
       }
     } else {
-      _transfer(from, to, value);
+      _transfer(owner, to, value);
     }
+
+    return true;
   }
 
   function currency()

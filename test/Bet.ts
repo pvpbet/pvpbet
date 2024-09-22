@@ -41,6 +41,7 @@ import {
   UnlockWaitingPeriod,
   deployGovTokenStaking,
   stake,
+  unstake,
 } from './common/staking'
 import { deployBetVotingEscrow } from './common/vote'
 import {
@@ -86,8 +87,15 @@ describe('Bet', () => {
           wallet,
           GovToken,
           GovTokenStaking,
+          UnlockWaitingPeriod.WEEK,
+          parseUnits('200000', 18),
+        )
+        await stake(
+          wallet,
+          GovToken,
+          GovTokenStaking,
           UnlockWaitingPeriod.WEEK12,
-          parseUnits('500000', 18),
+          parseUnits('200000', 18),
         )
         await buyChip(
           wallet,
@@ -448,7 +456,10 @@ describe('Bet', () => {
           await Bet.read.wageredTotalAmount(),
           ownerWageredAmount + userWageredAmount + hackerWageredAmount,
         )
-        assert.equal(await BetOption1.read.wageredAmount(), ownerWageredAmount)
+        assert.equal(
+          await BetOption1.read.wageredAmount(),
+          ownerWageredAmount,
+        )
         assert.equal(
           await BetOption2.read.wageredAmount(),
           userWageredAmount + hackerWageredAmount,
@@ -551,7 +562,7 @@ describe('Bet', () => {
       }
     })
 
-    it('Successful Decision', async () => {
+    it('Successful decision', async () => {
       const {
         BetChip,
         BetVotingEscrow,
@@ -585,16 +596,16 @@ describe('Bet', () => {
         assert.equal(await Bet.read.status(), BetStatus.DECIDING)
 
         await decide(BetVotingEscrow.address, [
-          [owner, options[0], 5n],
+          [owner, options[0], 6n],
           [user, options[1], 3n],
-          [hacker, options[1], 1n],
-        ])
+          [hacker, options[1], 2n],
+        ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.ANNOUNCEMENT)
       }
     })
 
-    it('Invalid Decision', async () => {
+    it('Invalid decision', async () => {
       const {
         BetChip,
         BetVotingEscrow,
@@ -608,6 +619,7 @@ describe('Bet', () => {
         BetChip.address,
       ]
 
+      // Insufficient deciding ratio
       for (const chip of chips) {
         const useChipERC20 = isAddressEqual(chip, BetChip.address)
         const Bet = await createBet(
@@ -631,13 +643,42 @@ describe('Bet', () => {
           [owner, options[0], 5n],
           [user, options[1], 3n],
           [hacker, options[1], 2n],
-        ])
+        ], Bet)
+        await time.increaseTo(await Bet.read.statusDeadline() + 1n)
+        assert.equal(await Bet.read.status(), BetStatus.CANCELLED)
+      }
+
+      // Insufficient deciding amount
+      for (const chip of chips) {
+        const useChipERC20 = isAddressEqual(chip, BetChip.address)
+        const Bet = await createBet(
+          user,
+          BetManager,
+          BetDetails,
+          WEEK,
+          DAY3,
+          useChipERC20,
+        )
+        const options = await Bet.read.options()
+        await wager(chip, [
+          [owner, options[0], 2n],
+          [user, options[1], 9n],
+          [hacker, options[1], 1n],
+        ], Bet)
+        await time.increaseTo(await Bet.read.statusDeadline() + 1n)
+        assert.equal(await Bet.read.status(), BetStatus.DECIDING)
+
+        await decide(BetVotingEscrow.address, [
+          [owner, options[0], 5n],
+          [user, options[1], 3n],
+          [hacker, options[1], 1n],
+        ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.CANCELLED)
       }
     })
 
-    it('Failed Decision', async () => {
+    it('Failed decision', async () => {
       const {
         BetChip,
         BetVotingEscrow,
@@ -678,7 +719,11 @@ describe('Bet', () => {
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.DECIDING)
 
-        await transfer(user, BetVotingEscrow.address, options[1], decidedAmount)
+        await decide(BetVotingEscrow.address, [
+          [owner, options[0], 6n],
+          [user, options[1], 3n],
+          [hacker, options[1], 2n],
+        ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.ANNOUNCEMENT)
 
@@ -689,7 +734,7 @@ describe('Bet', () => {
       }
     })
 
-    it('Expired Decision', async () => {
+    it('Expired decision', async () => {
       const {
         BetChip,
         BetManager,
@@ -764,14 +809,21 @@ describe('Bet', () => {
           userDecidedAmount,
           hackerDecidedAmount,
         ] = await decide(BetVotingEscrow.address, [
-          [owner, options[0], 5n],
+          [owner, options[0], 6n],
           [user, options[1], 3n],
-          [hacker, options[1], 1n],
-        ])
+          [hacker, options[1], 2n],
+        ], Bet)
         const BetOption1 = await getBetOption(options[0])
         const BetOption2 = await getBetOption(options[1])
 
-        assert.equal(await BetOption1.read.decidedAmount(), ownerDecidedAmount)
+        assert.equal(
+          await Bet.read.decidedTotalAmount(),
+          ownerDecidedAmount + userDecidedAmount + hackerDecidedAmount,
+        )
+        assert.equal(
+          await BetOption1.read.decidedAmount(),
+          ownerDecidedAmount,
+        )
         assert.equal(
           await BetOption2.read.decidedAmount(),
           userDecidedAmount + hackerDecidedAmount,
@@ -863,10 +915,10 @@ describe('Bet', () => {
         assert.equal(await Bet.read.status(), BetStatus.DECIDING)
 
         await decide(BetVotingEscrow.address, [
-          [owner, options[0], 5n],
+          [owner, options[0], 6n],
           [user, options[1], 3n],
-          [hacker, options[1], 1n],
-        ])
+          [hacker, options[1], 2n],
+        ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.ANNOUNCEMENT)
 
@@ -911,10 +963,10 @@ describe('Bet', () => {
         assert.equal(await Bet.read.status(), BetStatus.DECIDING)
 
         await decide(BetVotingEscrow.address, [
-          [owner, options[0], 5n],
+          [owner, options[0], 6n],
           [user, options[1], 3n],
-          [hacker, options[1], 1n],
-        ])
+          [hacker, options[1], 2n],
+        ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.ANNOUNCEMENT)
 
@@ -964,10 +1016,10 @@ describe('Bet', () => {
         assert.equal(await Bet.read.status(), BetStatus.DECIDING)
 
         await decide(BetVotingEscrow.address, [
-          [owner, options[0], 5n],
+          [owner, options[0], 6n],
           [user, options[1], 3n],
-          [hacker, options[1], 1n],
-        ])
+          [hacker, options[1], 2n],
+        ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.ANNOUNCEMENT)
 
@@ -979,7 +1031,7 @@ describe('Bet', () => {
       }
     })
 
-    it('Expired dispute', async () => {
+    it('Invalid dispute', async () => {
       const {
         BetChip,
         BetVotingEscrow,
@@ -1013,10 +1065,10 @@ describe('Bet', () => {
         assert.equal(await Bet.read.status(), BetStatus.DECIDING)
 
         await decide(BetVotingEscrow.address, [
-          [owner, options[0], 5n],
+          [owner, options[0], 6n],
           [user, options[1], 3n],
-          [hacker, options[1], 1n],
-        ])
+          [hacker, options[1], 2n],
+        ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.ANNOUNCEMENT)
 
@@ -1028,6 +1080,69 @@ describe('Bet', () => {
 
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.CONFIRMED)
+      }
+    })
+
+    it('Failed dispute', async () => {
+      const {
+        BetChip,
+        BetVotingEscrow,
+        BetManager,
+        owner,
+        user,
+        hacker,
+      } = await loadFixture(deployFixture)
+      const chips = [
+        zeroAddress,
+        BetChip.address,
+      ]
+
+      for (const chip of chips) {
+        const useChipERC20 = isAddressEqual(chip, BetChip.address)
+        const Bet = await createBet(
+          user,
+          BetManager,
+          BetDetails,
+          WEEK,
+          DAY3,
+          useChipERC20,
+        )
+        const options = await Bet.read.options()
+        await wager(chip, [
+          [owner, options[0], 2n],
+          [user, options[1], 9n],
+          [hacker, options[1], 1n],
+        ], Bet)
+        assert.equal(await Bet.read.status(), BetStatus.WAGERING)
+
+        await time.increaseTo(await Bet.read.statusDeadline() + 1n)
+        assert.equal(await Bet.read.status(), BetStatus.DECIDING)
+
+        await decide(BetVotingEscrow.address, [
+          [owner, options[0], 6n],
+          [user, options[1], 3n],
+          [hacker, options[1], 2n],
+        ], Bet)
+
+        await assert.isRejected(
+          dispute(chip, [
+            [user, 8n],
+          ], Bet),
+          'AnnouncementPeriodHasNotStartedYet',
+        )
+
+        await time.increaseTo(await Bet.read.statusDeadline() + 1n)
+        assert.equal(await Bet.read.status(), BetStatus.ANNOUNCEMENT)
+
+        await time.increaseTo(await Bet.read.statusDeadline() + 1n)
+        assert.equal(await Bet.read.status(), BetStatus.CONFIRMED)
+
+        await assert.isRejected(
+          dispute(chip, [
+            [user, 8n],
+          ], Bet),
+          'CannotReceive',
+        )
       }
     })
 
@@ -1065,10 +1180,10 @@ describe('Bet', () => {
         assert.equal(await Bet.read.status(), BetStatus.DECIDING)
 
         await decide(BetVotingEscrow.address, [
-          [owner, options[0], 5n],
+          [owner, options[0], 6n],
           [user, options[1], 3n],
-          [hacker, options[1], 1n],
-        ])
+          [hacker, options[1], 2n],
+        ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.ANNOUNCEMENT)
 
@@ -1080,6 +1195,10 @@ describe('Bet', () => {
           [hacker, 1n],
         ], Bet)
 
+        assert.equal(
+          await Bet.read.disputedTotalAmount(),
+          userDisputedAmount + hackerDisputedAmount,
+        )
         assert.equal(
           await Bet.read.disputedAmount(),
           userDisputedAmount + hackerDisputedAmount,
@@ -1161,10 +1280,10 @@ describe('Bet', () => {
         assert.equal(await Bet.read.status(), BetStatus.DECIDING)
 
         await decide(BetVotingEscrow.address, [
-          [owner, options[0], 5n],
+          [owner, options[0], 6n],
           [user, options[1], 3n],
-          [hacker, options[1], 1n],
-        ])
+          [hacker, options[1], 2n],
+        ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.ANNOUNCEMENT)
 
@@ -1218,10 +1337,10 @@ describe('Bet', () => {
         assert.equal(await Bet.read.status(), BetStatus.DECIDING)
 
         await decide(BetVotingEscrow.address, [
-          [owner, options[0], 5n],
+          [owner, options[0], 6n],
           [user, options[1], 3n],
-          [hacker, options[1], 1n],
-        ])
+          [hacker, options[1], 2n],
+        ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.ANNOUNCEMENT)
 
@@ -1246,6 +1365,7 @@ describe('Bet', () => {
         BetChip,
         BetVotingEscrow,
         BetManager,
+        GovTokenStaking,
         owner,
         user,
         hacker,
@@ -1255,6 +1375,7 @@ describe('Bet', () => {
         BetChip.address,
       ]
 
+      // Insufficient deciding ratio
       for (const chip of chips) {
         const useChipERC20 = isAddressEqual(chip, BetChip.address)
         const Bet = await createBet(
@@ -1275,10 +1396,10 @@ describe('Bet', () => {
         assert.equal(await Bet.read.status(), BetStatus.DECIDING)
 
         await decide(BetVotingEscrow.address, [
-          [owner, options[0], 5n],
+          [owner, options[0], 6n],
           [user, options[1], 3n],
-          [hacker, options[1], 1n],
-        ])
+          [hacker, options[1], 2n],
+        ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.ANNOUNCEMENT)
 
@@ -1294,6 +1415,53 @@ describe('Bet', () => {
         ])
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.CANCELLED)
+      }
+
+      // Insufficient deciding amount
+      for (const chip of chips) {
+        const useChipERC20 = isAddressEqual(chip, BetChip.address)
+        const Bet = await createBet(
+          user,
+          BetManager,
+          BetDetails,
+          WEEK,
+          DAY3,
+          useChipERC20,
+        )
+        const options = await Bet.read.options()
+        await wager(chip, [
+          [owner, options[0], 2n],
+          [user, options[1], 9n],
+          [hacker, options[1], 1n],
+        ], Bet)
+        await time.increaseTo(await Bet.read.statusDeadline() + 1n)
+        assert.equal(await Bet.read.status(), BetStatus.DECIDING)
+
+        await decide(BetVotingEscrow.address, [
+          [owner, options[0], 6n],
+          [user, options[1], 3n],
+          [hacker, options[1], 2n],
+        ], Bet)
+        await time.increaseTo(await Bet.read.statusDeadline() + 1n)
+        assert.equal(await Bet.read.status(), BetStatus.ANNOUNCEMENT)
+
+        await dispute(chip, [
+          [user, 9n],
+          [hacker, 1n],
+        ], Bet)
+        assert.equal(await Bet.read.status(), BetStatus.ARBITRATING)
+
+        const stakedAmount = (await GovTokenStaking.read.stakedAmount([owner.account.address, UnlockWaitingPeriod.WEEK12])) as bigint
+        const minArbitratedTotalAmount = (await Bet.read.minArbitratedTotalAmount()) as bigint
+        await unstake(owner, GovTokenStaking, UnlockWaitingPeriod.WEEK12, stakedAmount - (minArbitratedTotalAmount - 1n))
+
+        await arbitrate(BetVotingEscrow.address, [
+          [owner, options[0], 1n],
+        ])
+        await time.increaseTo(await Bet.read.statusDeadline() + 1n)
+        assert.equal(await Bet.read.status(), BetStatus.CANCELLED)
+
+        await GovTokenStaking.write.restake([0n], { account: owner.account })
       }
     })
 
@@ -1331,10 +1499,10 @@ describe('Bet', () => {
         assert.equal(await Bet.read.status(), BetStatus.DECIDING)
 
         await decide(BetVotingEscrow.address, [
-          [owner, options[0], 5n],
+          [owner, options[0], 6n],
           [user, options[1], 3n],
-          [hacker, options[1], 1n],
-        ])
+          [hacker, options[1], 2n],
+        ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.ANNOUNCEMENT)
 
@@ -1349,11 +1517,12 @@ describe('Bet', () => {
       }
     })
 
-    it('Confirmed records', async () => {
+    it('Arbitrated records', async () => {
       const {
         BetChip,
         BetVotingEscrow,
         BetManager,
+        GovTokenStaking,
         owner,
         user,
         hacker,
@@ -1383,10 +1552,10 @@ describe('Bet', () => {
         assert.equal(await Bet.read.status(), BetStatus.DECIDING)
 
         await decide(BetVotingEscrow.address, [
-          [owner, options[0], 5n],
+          [owner, options[0], 6n],
           [user, options[1], 3n],
-          [hacker, options[1], 1n],
-        ])
+          [hacker, options[1], 2n],
+        ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.ANNOUNCEMENT)
 
@@ -1397,40 +1566,46 @@ describe('Bet', () => {
         assert.equal(await Bet.read.status(), BetStatus.ARBITRATING)
 
         await arbitrate(BetVotingEscrow.address, [
-          [owner, options[0], 1n],
+          [owner, Bet.address, 1n],
           [user, options[1], 1n],
           [hacker, options[1], 1n],
         ])
-        const BetOption1 = await getBetOption(options[0])
-        const BetOption2 = await getBetOption(options[1])
+        const BetOption = await getBetOption(options[1])
 
-        const ownerArbitratedAmount = await BetVotingEscrow.read.balanceOf([owner.account.address, true])
-        const userArbitratedAmount = await BetVotingEscrow.read.balanceOf([user.account.address, true])
-        const hackerArbitratedAmount = await BetVotingEscrow.read.balanceOf([hacker.account.address, true])
-        assert.equal(await BetOption1.read.arbitratedAmount(), ownerArbitratedAmount)
+        const ownerArbitratedAmount = (await GovTokenStaking.read.stakedAmount([owner.account.address, UnlockWaitingPeriod.WEEK12])) as bigint
+        const userArbitratedAmount = (await GovTokenStaking.read.stakedAmount([user.account.address, UnlockWaitingPeriod.WEEK12])) as bigint
+        const hackerArbitratedAmount = (await GovTokenStaking.read.stakedAmount([hacker.account.address, UnlockWaitingPeriod.WEEK12])) as bigint
         assert.equal(
-          await BetOption2.read.arbitratedAmount(),
-          userArbitratedAmount + hackerArbitratedAmount,
+          await Bet.read.arbitratedTotalAmount(),
+          ownerArbitratedAmount + userArbitratedAmount + hackerArbitratedAmount,
         )
         assert.equal(
-          await BetOption1.read.arbitratedAmount([owner.account.address]),
+          await Bet.read.arbitratedAmount(),
           ownerArbitratedAmount,
         )
         assert.equal(
-          await BetOption2.read.arbitratedAmount([user.account.address]),
+          await BetOption.read.arbitratedAmount(),
+          userArbitratedAmount + hackerArbitratedAmount,
+        )
+        assert.equal(
+          await Bet.read.arbitratedAmount([owner.account.address]),
+          ownerArbitratedAmount,
+        )
+        assert.equal(
+          await BetOption.read.arbitratedAmount([user.account.address]),
           userArbitratedAmount,
         )
         assert.equal(
-          await BetOption2.read.arbitratedAmount([hacker.account.address]),
+          await BetOption.read.arbitratedAmount([hacker.account.address]),
           hackerArbitratedAmount,
         )
-        assert.deepEqual(await BetOption1.read.arbitratedRecords(), [
+        assert.deepEqual(await Bet.read.arbitratedRecords(), [
           {
             account: getAddress(owner.account.address),
             amount: ownerArbitratedAmount,
           },
         ])
-        assert.deepEqual(await BetOption2.read.arbitratedRecords(), [
+        assert.deepEqual(await BetOption.read.arbitratedRecords(), [
           {
             account: getAddress(user.account.address),
             amount: userArbitratedAmount,
@@ -1444,17 +1619,17 @@ describe('Bet', () => {
         // Cancel the arbitration
         await checkBalance(
           async () => {
-            await transfer(hacker, BetVotingEscrow.address, BetOption2.address, 0n)
+            await transfer(hacker, BetVotingEscrow.address, BetOption.address, 0n)
           },
           [
             [hacker.account.address, BetVotingEscrow.address, 0n],
           ],
         )
         assert.equal(
-          await BetOption2.read.arbitratedAmount([hacker.account.address]),
+          await BetOption.read.arbitratedAmount([hacker.account.address]),
           0n,
         )
-        assert.deepEqual(await BetOption2.read.arbitratedRecords(), [
+        assert.deepEqual(await BetOption.read.arbitratedRecords(), [
           {
             account: getAddress(user.account.address),
             amount: userArbitratedAmount,
@@ -1499,10 +1674,10 @@ describe('Bet', () => {
         assert.equal(await Bet.read.status(), BetStatus.DECIDING)
 
         await decide(BetVotingEscrow.address, [
-          [owner, options[0], 5n],
+          [owner, options[0], 6n],
           [user, options[1], 3n],
-          [hacker, options[1], 1n],
-        ])
+          [hacker, options[1], 2n],
+        ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.ANNOUNCEMENT)
 
@@ -1564,10 +1739,10 @@ describe('Bet', () => {
         assert.equal(await Bet.read.status(), BetStatus.DECIDING)
 
         await decide(BetVotingEscrow.address, [
-          [owner, options[0], 5n],
+          [owner, options[0], 6n],
           [user, options[1], 3n],
-          [hacker, options[1], 1n],
-        ])
+          [hacker, options[1], 2n],
+        ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.ANNOUNCEMENT)
 
@@ -1641,7 +1816,7 @@ describe('Bet', () => {
           [owner, options[0], 5n],
           [user, options[1], 3n],
           [hacker, options[1], 2n],
-        ])
+        ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.CANCELLED)
 
@@ -1730,10 +1905,10 @@ describe('Bet', () => {
           userDecidedAmount,
           hackerDecidedAmount,
         ] = await decide(BetVotingEscrow.address, [
-          [owner, options[0], 5n],
+          [owner, options[0], 6n],
           [user, options[1], 3n],
-          [hacker, options[1], 1n],
-        ])
+          [hacker, options[1], 2n],
+        ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.ANNOUNCEMENT)
 
@@ -1839,10 +2014,10 @@ describe('Bet', () => {
           userDecidedAmount,
           hackerDecidedAmount,
         ] = await decide(BetVotingEscrow.address, [
-          [owner, options[0], 5n],
+          [owner, options[0], 6n],
           [user, options[1], 3n],
-          [hacker, options[1], 1n],
-        ])
+          [hacker, options[1], 2n],
+        ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.ANNOUNCEMENT)
 
@@ -1953,10 +2128,10 @@ describe('Bet', () => {
           userDecidedAmount,
           hackerDecidedAmount,
         ] = await decide(BetVotingEscrow.address, [
-          [owner, options[2], 5n],
+          [owner, options[2], 6n],
           [user, options[1], 3n],
-          [hacker, options[1], 1n],
-        ])
+          [hacker, options[1], 2n],
+        ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.ANNOUNCEMENT)
 
@@ -2058,10 +2233,10 @@ describe('Bet', () => {
           userDecidedAmount,
           hackerDecidedAmount,
         ] = await decide(BetVotingEscrow.address, [
-          [owner, options[0], 5n],
+          [owner, options[0], 6n],
           [user, options[1], 3n],
-          [hacker, options[1], 1n],
-        ])
+          [hacker, options[1], 2n],
+        ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.ANNOUNCEMENT)
 
@@ -2185,7 +2360,7 @@ describe('Bet', () => {
           [owner, options[0], 5n],
           [user, options[1], 3n],
           [hacker, options[1], 3n],
-        ])
+        ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.ANNOUNCEMENT)
 
@@ -2312,10 +2487,10 @@ describe('Bet', () => {
           userDecidedAmount,
           hackerDecidedAmount,
         ] = await decide(BetVotingEscrow.address, [
-          [owner, options[0], 5n],
+          [owner, options[0], 6n],
           [user, options[1], 3n],
-          [hacker, options[1], 1n],
-        ])
+          [hacker, options[1], 2n],
+        ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.ANNOUNCEMENT)
 
@@ -2437,10 +2612,10 @@ describe('Bet', () => {
         assert.equal(await Bet.read.status(), BetStatus.DECIDING)
 
         await decide(BetVotingEscrow.address, [
-          [owner, options[0], 5n],
+          [owner, options[0], 6n],
           [user, options[1], 3n],
-          [hacker, options[1], 1n],
-        ])
+          [hacker, options[1], 2n],
+        ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.ANNOUNCEMENT)
 
@@ -2505,10 +2680,10 @@ describe('Bet', () => {
       assert.equal(await Bet.read.status(), BetStatus.DECIDING)
 
       await decide(BetVotingEscrow.address, [
-        [owner, options[0], 5n],
+        [owner, options[0], 6n],
         [user, options[1], 3n],
-        [hacker, options[1], 1n],
-      ])
+        [hacker, options[1], 2n],
+      ], Bet)
       await time.increaseTo(await Bet.read.statusDeadline() + 1n)
       assert.equal(await Bet.read.status(), BetStatus.ANNOUNCEMENT)
 

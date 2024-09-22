@@ -1,6 +1,5 @@
 import { ignition, viem } from 'hardhat'
 import BetManagerModule from '../../ignition/modules/BetManager'
-import { parseUnits } from 'viem'
 import { transfer } from '../../utils'
 import type {
   AbiEvent,
@@ -128,8 +127,9 @@ export async function wager(
 export async function decide(
   vote: Address,
   accounts: [wallet: WalletClient, option: Address, ratio: bigint][],
-  total: bigint = parseUnits('10000', 18),
+  Bet: ContractTypes['Bet'],
 ) {
+  const total = await Bet.read.minDecidedTotalAmount()
   const amounts = []
   for (const [wallet, option, ratio] of accounts) {
     const amount = total * ratio / 10n
@@ -146,9 +146,7 @@ export async function dispute(
   accounts: [wallet: WalletClient, ratio: bigint][],
   Bet: ContractTypes['Bet'],
 ) {
-  const wageredTotalAmount = await Bet.read.wageredTotalAmount()
-  const CONFIRM_DISPUTE_AMOUNT_RATIO = await Bet.read.CONFIRM_DISPUTE_AMOUNT_RATIO()
-  const total = wageredTotalAmount * CONFIRM_DISPUTE_AMOUNT_RATIO / 100n
+  const total = await Bet.read.minDisputedTotalAmount()
   const amounts = []
   for (const [wallet, ratio] of accounts) {
     const amount = total * ratio / 10n
@@ -184,8 +182,8 @@ export async function getDeciderReward(
   owner: Address,
 ) {
   const Option = await getConfirmedWinningOption(Bet)
-  const winningOptionDecidedAmount = await Option.read.decidedAmount()
-  const ownerDecidedAmount = await Option.read.decidedAmount([owner])
+  const winningOptionDecidedAmount = (await Option.read.decidedAmount()) as bigint
+  const ownerDecidedAmount = (await Option.read.decidedAmount([owner])) as bigint
 
   const DECIDER_REWARD_RATIO = await Bet.read.DECIDER_REWARD_RATIO()
   const wageredTotalAmount = await Bet.read.wageredTotalAmount()
@@ -198,8 +196,8 @@ export async function getWinnerReward(
   owner: Address,
 ) {
   const Option = await getConfirmedWinningOption(Bet)
-  const winningOptionWageredAmount = await Option.read.wageredAmount()
-  const ownerWageredAmount = await Option.read.wageredAmount([owner])
+  const winningOptionWageredAmount = (await Option.read.wageredAmount()) as bigint
+  const ownerWageredAmount = (await Option.read.wageredAmount([owner])) as bigint
 
   const PROTOCOL_REWARD_RATIO = await Bet.read.PROTOCOL_REWARD_RATIO()
   const CREATOR_REWARD_RATIO = await Bet.read.CREATOR_REWARD_RATIO()
