@@ -8,13 +8,14 @@ interface IBetFactory {
 	 * @dev Create a bet.
 	 */
   function createBet(
-    address betOptionFactory,
-    address betManager,
-    address chip,
-    address vote,
-    address creator,
+    IBet.BetConfig calldata config,
+    IBet.BetDetails calldata details,
     uint256 wageringPeriodDuration,
     uint256 decidingPeriodDuration,
-    IBet.BetDetails calldata details
+    address creator,
+    address chip,
+    address vote,
+    address betManager,
+    address betOptionFactory
   ) external returns (address);
 }

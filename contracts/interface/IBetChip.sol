@@ -6,7 +6,7 @@ interface IBetChip {
   event Withdrawn(address indexed sender, uint256 amount);
 
   /**
-   * @dev Returns contract address of the currency token.
+   * @dev Returns the contract address of the currency token.
    */
   function currency() external view returns (address);
 

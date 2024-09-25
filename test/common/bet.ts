@@ -172,9 +172,9 @@ export async function arbitrate(
 export async function getCreatorReward(
   Bet: ContractTypes['Bet'],
 ) {
-  const CREATOR_REWARD_RATIO = await Bet.read.CREATOR_REWARD_RATIO()
+  const betConfig = await Bet.read.config()
   const wageredTotalAmount = await Bet.read.wageredTotalAmount()
-  return wageredTotalAmount * CREATOR_REWARD_RATIO / 100n
+  return wageredTotalAmount * betConfig.creatorRewardRatio / 100n
 }
 
 export async function getDeciderReward(
@@ -185,9 +185,9 @@ export async function getDeciderReward(
   const winningOptionDecidedAmount = (await Option.read.decidedAmount()) as bigint
   const ownerDecidedAmount = (await Option.read.decidedAmount([owner])) as bigint
 
-  const DECIDER_REWARD_RATIO = await Bet.read.DECIDER_REWARD_RATIO()
+  const betConfig = await Bet.read.config()
   const wageredTotalAmount = await Bet.read.wageredTotalAmount()
-  const deciderReward = wageredTotalAmount * DECIDER_REWARD_RATIO / 100n
+  const deciderReward = wageredTotalAmount * betConfig.deciderRewardRatio / 100n
   return deciderReward * ownerDecidedAmount / winningOptionDecidedAmount
 }
 
@@ -199,13 +199,11 @@ export async function getWinnerReward(
   const winningOptionWageredAmount = (await Option.read.wageredAmount()) as bigint
   const ownerWageredAmount = (await Option.read.wageredAmount([owner])) as bigint
 
-  const PROTOCOL_REWARD_RATIO = await Bet.read.PROTOCOL_REWARD_RATIO()
-  const CREATOR_REWARD_RATIO = await Bet.read.CREATOR_REWARD_RATIO()
-  const DECIDER_REWARD_RATIO = await Bet.read.DECIDER_REWARD_RATIO()
+  const betConfig = await Bet.read.config()
   const wageredTotalAmount = await Bet.read.wageredTotalAmount()
-  const protocolReward = wageredTotalAmount * PROTOCOL_REWARD_RATIO / 100n
-  const creatorReward = wageredTotalAmount * CREATOR_REWARD_RATIO / 100n
-  const deciderReward = wageredTotalAmount * DECIDER_REWARD_RATIO / 100n
+  const protocolReward = wageredTotalAmount * betConfig.creatorRewardRatio / 100n
+  const creatorReward = wageredTotalAmount * betConfig.creatorRewardRatio / 100n
+  const deciderReward = wageredTotalAmount * betConfig.deciderRewardRatio / 100n
   const winnerReward = wageredTotalAmount - protocolReward - creatorReward - deciderReward
   return winnerReward * ownerWageredAmount / winningOptionWageredAmount
 }

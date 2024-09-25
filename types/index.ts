@@ -6,6 +6,7 @@ export interface ContractTypes {
   USDC: GetContractReturnType<ArtifactsMap['USDC']['abi']>
   Bet: GetContractReturnType<ArtifactsMap['Bet']['abi']>
   BetChip: GetContractReturnType<ArtifactsMap['BetChip']['abi']>
+  BetConfigurator: GetContractReturnType<ArtifactsMap['BetConfigurator']['abi']>
   BetFactory: GetContractReturnType<ArtifactsMap['BetFactory']['abi']>
   BetManager: GetContractReturnType<ArtifactsMap['BetManager']['abi']>
   BetOption: GetContractReturnType<ArtifactsMap['BetOption']['abi']>

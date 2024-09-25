@@ -48,7 +48,7 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseGovToken,
   function initialize(address initialGovToken, address initialVoteToken)
   public
   initializer {
-    Upgradeable.initialize();
+    initialize();
     _setGovToken(initialGovToken);
     _setVoteToken(initialVoteToken);
   }

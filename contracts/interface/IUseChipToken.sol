@@ -5,12 +5,12 @@ interface IUseChipToken {
   event ChipTokenSet(address chipToken);
 
   /**
-   * @dev Returns contract address of the chip token.
+   * @dev Returns the contract address of the chip token.
    */
   function chipToken() external view returns (address);
 
   /**
-   * @dev Set contract address of the chip token.
+   * @dev Set the contract address of the chip token.
    */
   function setChipToken(address newChip) external;
 }

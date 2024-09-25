@@ -2,6 +2,20 @@
 pragma solidity ^0.8.20;
 
 interface IBet {
+  struct BetConfig {
+    uint256 minWageredTotalAmountETH;
+    uint256 minWageredTotalAmountERC20;
+    uint256 minDecidedTotalAmount;
+    uint256 minArbitratedTotalAmount;
+    uint256 announcementPeriodDuration;
+    uint256 arbitratingPeriodDuration;
+    uint256 singleOptionMaxAmountRatio;
+    uint256 confirmDisputeAmountRatio;
+    uint256 protocolRewardRatio;
+    uint256 creatorRewardRatio;
+    uint256 deciderRewardRatio;
+  }
+
   struct BetDetails {
     string title;
     string description;
@@ -23,36 +37,12 @@ interface IBet {
   /**
    * @dev Returns true if the contract is a bet.
    */
-  function isBet() external pure returns (bool);
+  function isBet() external view returns (bool);
 
   /**
-   * @dev Returns contract address of the chip token.
+   * @dev Returns the bet config
    */
-  function chip() external view returns (address);
-
-  /**
-   * @dev Returns the chip minimum value.
-   *
-   * If it is below this value, it will be considered a dust attack.
-   */
-  function chipMinValue() external view returns (uint256);
-
-  /**
-   * @dev Returns contract address of the vote token.
-   */
-  function vote() external view returns (address);
-
-  /**
-   * @dev Returns the vote minimum value.
-   *
-   * If it is below this value, it will be considered a dust attack.
-   */
-  function voteMinValue() external view returns (uint256);
-
-  /**
-   * @dev Returns the bet creator address.
-   */
-  function creator() external view returns (address);
+  function config() external view returns (BetConfig memory);
 
   /**
    * @dev Returns the bet details
@@ -65,14 +55,19 @@ interface IBet {
   function options() external view returns (address[] memory);
 
   /**
-   * @dev Returns the wagering period deadline.
+   * @dev Returns the deadline of the wagering period.
    */
   function wageringPeriodDeadline() external view returns (uint256);
 
   /**
-   * @dev Returns the deciding period deadline.
+   * @dev Returns the deadline of the deciding period.
    */
   function decidingPeriodDeadline() external view returns (uint256);
+
+  /**
+   * @dev Returns the start time of the arbitration period.
+   */
+  function arbitratingPeriodStartTime() external view returns (uint256);
 
   /**
    * @dev Returns the unconfirmed winning option.
@@ -83,7 +78,36 @@ interface IBet {
    * @dev Returns the confirmed winning option.
    */
   function confirmedWinningOption() external view returns (address);
-  
+
+  /**
+   * @dev Returns the address of the bet creator.
+   */
+  function creator() external view returns (address);
+
+  /**
+   * @dev Returns the contract address of the chip token.
+   */
+  function chip() external view returns (address);
+
+  /**
+   * @dev Returns the contract address of the vote token.
+   */
+  function vote() external view returns (address);
+
+  /**
+   * @dev Returns the chip minimum value.
+   *
+   * If it is below this value, it will be considered a dust attack.
+   */
+  function chipMinValue() external view returns (uint256);
+
+  /**
+   * @dev Returns the vote minimum value.
+   *
+   * If it is below this value, it will be considered a dust attack.
+   */
+  function voteMinValue() external view returns (uint256);
+
   /**
    * @dev Returns the minimum wagered total amount.
    */

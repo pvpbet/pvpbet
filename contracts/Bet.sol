@@ -21,13 +21,13 @@ import {TransferLib} from "./lib/Transfer.sol";
 
 contract Bet is IBet, IMetadata, BetActionArbitrate, BetActionDispute {
   function name()
-  public pure virtual
+  public pure
   returns (string memory) {
     return "PVPBet";
   }
 
   function version()
-  public view virtual
+  public view
   returns (string memory) {
     return _version;
   }
@@ -41,25 +41,19 @@ contract Bet is IBet, IMetadata, BetActionArbitrate, BetActionDispute {
   error BetHasNotEndedYet();
   error BetHasBeenReleased();
 
-  uint256 public constant ANNOUNCEMENT_PERIOD_DURATION = 2 days;
-  uint256 public constant ARBITRATING_PERIOD_DURATION = 3 days;
-  uint256 public constant SINGLE_OPTION_MAX_AMOUNT_RATIO = 85;
-  uint256 public constant CONFIRM_DISPUTE_AMOUNT_RATIO = 5;
-  uint256 public constant PROTOCOL_REWARD_RATIO = 1;
-  uint256 public constant CREATOR_REWARD_RATIO = 1;
-  uint256 public constant DECIDER_REWARD_RATIO = 5;
-
   address private constant ZERO_ADDRESS = address(0);
 
-  address private immutable _betManager;
+  string private _version;
+  BetConfig private _config;
+  BetDetails private _details;
+  address[] private _options;
+
+  address private immutable _creator;
   address private immutable _chip;
   address private immutable _vote;
-  address private immutable _creator;
+  address private immutable _betManager;
   uint256 private immutable _wageringPeriodDeadline;
   uint256 private immutable _decidingPeriodDeadline;
-  BetDetails private _details;
-  string private _version;
-  address[] private _options;
 
   uint256 private _arbitratingPeriodStartTime;
   address private _unconfirmedWinningOption;
@@ -67,30 +61,32 @@ contract Bet is IBet, IMetadata, BetActionArbitrate, BetActionDispute {
   bool private _released;
 
   constructor(
-    address betOptionFactory,
-    address betManager,
-    address chip_,
-    address vote_,
-    address creator_,
+    string memory version_,
+    BetConfig memory config_,
+    BetDetails memory details_,
     uint256 wageringPeriodDuration,
     uint256 decidingPeriodDuration,
-    BetDetails memory details_,
-    string memory version_
+    address creator_,
+    address chip_,
+    address vote_,
+    address betManager,
+    address betOptionFactory
   ) {
-    _betManager = betManager;
-    _chip = chip_;
-    _vote = vote_;
-    _creator = creator_;
+    _version = version_;
+    _config = config_;
+    _details = details_;
     _wageringPeriodDeadline = block.timestamp.unsafeAdd(wageringPeriodDuration);
     _decidingPeriodDeadline = _wageringPeriodDeadline.unsafeAdd(decidingPeriodDuration);
-    _details = details_;
-    _version = version_;
+    _creator = creator_;
+    _chip = chip_;
+    _vote = vote_;
+    _betManager = betManager;
 
     IBetOptionFactory factory = IBetOptionFactory(betOptionFactory);
     uint256 length = details_.options.length;
     for (uint256 i = 0; i < length; i = i.unsafeInc()) {
       _options.push(
-        factory.createBetOption(address(this), _details.options[i])
+        factory.createBetOption(_details.options[i], address(this))
       );
     }
   }
@@ -101,44 +97,10 @@ contract Bet is IBet, IMetadata, BetActionArbitrate, BetActionDispute {
     return true;
   }
 
-  function bet()
-  public view override(BetActionArbitrate, BetActionDispute)
-  returns (address) {
-    return address(this);
-  }
-
-  function chip()
-  public view override(IBet, BetActionDispute)
-  returns (address) {
-    return _chip;
-  }
-
-  function chipMinValue()
-  public view override(IBet, BetActionDispute)
-  returns (uint256) {
-    if (_chip == ZERO_ADDRESS) {
-      return 0.001 ether;
-    } else {
-      return 10 ** _chip.decimals();
-    }
-  }
-
-  function vote()
-  public view override(IBet, BetActionArbitrate)
-  returns (address) {
-    return _vote;
-  }
-
-  function voteMinValue()
-  public view override(IBet, BetActionArbitrate)
-  returns (uint256) {
-    return 10 ** _vote.decimals();
-  }
-
-  function creator()
+  function config()
   external view
-  returns (address) {
-    return _creator;
+  returns (BetConfig memory) {
+    return _config;
   }
 
   function details()
@@ -165,6 +127,12 @@ contract Bet is IBet, IMetadata, BetActionArbitrate, BetActionDispute {
     return _decidingPeriodDeadline;
   }
 
+  function arbitratingPeriodStartTime()
+  external view
+  returns (uint256) {
+    return _arbitratingPeriodStartTime;
+  }
+
   function unconfirmedWinningOption()
   external view
   returns (address) {
@@ -179,32 +147,72 @@ contract Bet is IBet, IMetadata, BetActionArbitrate, BetActionDispute {
     return confirmedWinningOption_;
   }
 
+  function bet()
+  public view override(BetActionArbitrate, BetActionDispute)
+  returns (address) {
+    return address(this);
+  }
+
+  function creator()
+  external view
+  returns (address) {
+    return _creator;
+  }
+
+  function chip()
+  public view override(IBet, BetActionDispute)
+  returns (address) {
+    return _chip;
+  }
+
+  function vote()
+  public view override(IBet, BetActionArbitrate)
+  returns (address) {
+    return _vote;
+  }
+
+  function chipMinValue()
+  public view override(IBet, BetActionDispute)
+  returns (uint256) {
+    if (_chip == ZERO_ADDRESS) {
+      return 0.001 ether;
+    } else {
+      return 10 ** _chip.decimals();
+    }
+  }
+
+  function voteMinValue()
+  public view override(IBet, BetActionArbitrate)
+  returns (uint256) {
+    return 10 ** _vote.decimals();
+  }
+
   function minWageredTotalAmount()
   public view
   returns (uint256) {
     if (_chip == ZERO_ADDRESS) {
-      return 5 ether;
+      return _config.minWageredTotalAmountETH;
     } else {
-      return 10000 * 10 ** _chip.decimals();
+      return _config.minWageredTotalAmountERC20 * 10 ** _chip.decimals();
     }
   }
 
   function minDecidedTotalAmount()
   public view
   returns (uint256) {
-    return 10000 * 10 ** _vote.decimals();
+    return _config.minDecidedTotalAmount * 10 ** _vote.decimals();
   }
 
   function minDisputedTotalAmount()
   public view
   returns (uint256) {
-    return wageredTotalAmount().mulDiv(CONFIRM_DISPUTE_AMOUNT_RATIO, 100);
+    return wageredTotalAmount().mulDiv(_config.confirmDisputeAmountRatio, 100);
   }
 
   function minArbitratedTotalAmount()
   public view
   returns (uint256) {
-    return 10000 * 10 ** _vote.decimals();
+    return _config.minArbitratedTotalAmount * 10 ** _vote.decimals();
   }
 
   function wageredTotalAmount()
@@ -284,13 +292,13 @@ contract Bet is IBet, IMetadata, BetActionArbitrate, BetActionDispute {
     if (status_ == Status.ANNOUNCEMENT) {
       if (_arbitratingPeriodStartTime > 0) {
         status_ = Status.ARBITRATING;
-      } else if (block.timestamp > _decidingPeriodDeadline.unsafeAdd(ANNOUNCEMENT_PERIOD_DURATION)) {
+      } else if (block.timestamp > _decidingPeriodDeadline.unsafeAdd(_config.announcementPeriodDuration)) {
         confirmedWinningOption_ = unconfirmedWinningOption_;
         status_ = Status.CONFIRMED;
       }
     }
 
-    if (status_ == Status.ARBITRATING && block.timestamp > _arbitratingPeriodStartTime.unsafeAdd(ARBITRATING_PERIOD_DURATION)) {
+    if (status_ == Status.ARBITRATING && block.timestamp > _arbitratingPeriodStartTime.unsafeAdd(_config.arbitratingPeriodDuration)) {
       confirmedWinningOption_ = _getArbitratedWinningOption();
       if (confirmedWinningOption_ != ZERO_ADDRESS) {
         status_ = Status.CONFIRMED;
@@ -311,9 +319,9 @@ contract Bet is IBet, IMetadata, BetActionArbitrate, BetActionDispute {
     } else if (status_ == Status.DECIDING) {
       return _decidingPeriodDeadline;
     } else if (status_ == Status.ANNOUNCEMENT) {
-      return _decidingPeriodDeadline.unsafeAdd(ANNOUNCEMENT_PERIOD_DURATION);
+      return _decidingPeriodDeadline.unsafeAdd(_config.announcementPeriodDuration);
     } else if (status_ == Status.ARBITRATING) {
-      return _arbitratingPeriodStartTime.unsafeAdd(ARBITRATING_PERIOD_DURATION);
+      return _arbitratingPeriodStartTime.unsafeAdd(_config.arbitratingPeriodDuration);
     } else {
       return 0;
     }
@@ -394,7 +402,7 @@ contract Bet is IBet, IMetadata, BetActionArbitrate, BetActionDispute {
       return false;
     }
 
-    uint256 singleOptionMaxAmount = total.mulDiv(SINGLE_OPTION_MAX_AMOUNT_RATIO, 100);
+    uint256 singleOptionMaxAmount = total.mulDiv(_config.singleOptionMaxAmountRatio, 100);
     for (uint256 i = 0; i < length; i = i.unsafeInc()) {
       if (optionAmounts[i] > singleOptionMaxAmount) {
         return false;
@@ -477,9 +485,9 @@ contract Bet is IBet, IMetadata, BetActionArbitrate, BetActionDispute {
       total = total.unsafeAdd(action.wageredAmount());
     }
 
-    uint256 protocolReward = total.mulDiv(PROTOCOL_REWARD_RATIO, 100);
-    uint256 creatorReward = total.mulDiv(CREATOR_REWARD_RATIO, 100);
-    uint256 deciderReward = total.mulDiv(DECIDER_REWARD_RATIO, 100);
+    uint256 protocolReward = total.mulDiv(_config.protocolRewardRatio, 100);
+    uint256 creatorReward = total.mulDiv(_config.creatorRewardRatio, 100);
+    uint256 deciderReward = total.mulDiv(_config.deciderRewardRatio, 100);
     uint256 winnerReward = total.unsafeSub(protocolReward).unsafeSub(creatorReward).unsafeSub(deciderReward);
 
     _creator.transferFromContract(_chip, creatorReward, true);

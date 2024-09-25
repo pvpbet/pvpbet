@@ -6,7 +6,7 @@ import {ERC20Pausable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC2
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 contract GovToken is ERC20, ERC20Pausable, Ownable {
-  constructor () ERC20("PVPBetGovToken", "PVPB") Ownable(msg.sender) {
+  constructor() ERC20("PVPBetGovToken", "PVPB") Ownable(msg.sender) {
     _mint(msg.sender, 1_000_000_000 * 10 ** decimals());
   }
 

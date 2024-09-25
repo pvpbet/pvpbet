@@ -23,7 +23,7 @@ contract BetChip is IBetChip, IErrors, ERC20 {
 
   address private immutable _currency;
 
-  constructor (address currency_) ERC20("PVPBetChip", "cPVPB") {
+  constructor(address currency_) ERC20("PVPBetChip", "cPVPB") {
     _currency = currency_;
   }
 

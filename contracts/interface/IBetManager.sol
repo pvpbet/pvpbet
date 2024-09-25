@@ -4,28 +4,39 @@ pragma solidity ^0.8.20;
 import {IBet} from "./IBet.sol";
 
 interface IBetManager {
+  event BetConfiguratorSet(address betConfigurator);
   event BetFactorySet(address betFactory);
   event BetOptionFactorySet(address betOptionFactory);
   event CreationFeeSet(uint256 fee);
   event BetCreated(address indexed bet, address indexed creator);
 
   /**
-   * @dev Returns contract address of the bet factory.
+   * @dev Returns the contract address of the bet configurator.
+   */
+  function betConfigurator() external view returns (address);
+
+  /**
+  * @dev Set the contract address of the bet configurator.
+   */
+  function setBetConfigurator(address newBetConfigurator) external;
+
+  /**
+   * @dev Returns the contract address of the bet factory.
    */
   function betFactory() external view returns (address);
 
   /**
-  * @dev Set contract address of the bet factory.
+  * @dev Set the contract address of the bet factory.
    */
   function setBetFactory(address newBetFactory) external;
 
   /**
-   * @dev Returns contract address of the bet option factory.
+   * @dev Returns the contract address of the bet option factory.
    */
   function betOptionFactory() external view returns (address);
 
   /**
-  * @dev Set contract address of the bet option factory.
+  * @dev Set the contract address of the bet option factory.
    */
   function setBetOptionFactory(address newBetOptionFactory) external;
 

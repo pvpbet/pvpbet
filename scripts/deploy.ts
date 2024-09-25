@@ -47,7 +47,7 @@ exec(async () => {
   contracts.GovTokenStaking = GovTokenStaking.address
   console.log(`GovTokenStaking deployed to: ${GovTokenStaking.address}`)
 
-  const { BetManager } = await ignition.deploy(BetManagerModule, {
+  const { BetManager, BetConfigurator } = await ignition.deploy(BetManagerModule, {
     parameters: {
       BetManager: {
         govToken: GovToken.address,
@@ -58,10 +58,13 @@ exec(async () => {
   })
   contracts.BetManager = BetManager.address
   console.log(`BetManager deployed to: ${BetManager.address}`)
+  contracts.BetConfigurator = BetConfigurator.address
+  console.log(`BetConfigurator deployed to: ${BetConfigurator.address}`)
 
   await ignition.deploy(ContractSetupModule, {
     parameters: {
       ContractSetup: {
+        BetConfigurator: BetConfigurator.address,
         BetManager: BetManager.address,
         BetVotingEscrow: BetVotingEscrow.address,
         GovTokenStaking: GovTokenStaking.address,

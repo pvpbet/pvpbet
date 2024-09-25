@@ -8,38 +8,40 @@ import {BetOption} from "./BetOption.sol";
 
 contract BetFactory is IBetFactory, IMetadata {
   function name()
-  public pure virtual
+  public pure
   returns (string memory) {
     return "PVPBetFactory";
   }
 
   function version()
-  public pure virtual
+  public pure
   returns (string memory) {
     return "1.0.0";
   }
 
   function createBet(
-    address betOptionFactory,
-    address betManager,
-    address chip,
-    address vote,
-    address creator,
+    Bet.BetConfig calldata config,
+    Bet.BetDetails calldata details,
     uint256 wageringPeriodDuration,
     uint256 decidingPeriodDuration,
-    Bet.BetDetails calldata details
+    address creator,
+    address chip,
+    address vote,
+    address betManager,
+    address betOptionFactory
   ) external returns (address) {
     return address(
       new Bet(
-        betOptionFactory,
-        betManager,
-        chip,
-        vote,
-        creator,
+        version(),
+        config,
+        details,
         wageringPeriodDuration,
         decidingPeriodDuration,
-        details,
-        version()
+        creator,
+        chip,
+        vote,
+        betManager,
+        betOptionFactory
       )
     );
   }

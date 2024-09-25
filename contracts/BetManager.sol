@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {BetRestriction} from "./base/BetRestriction.sol";
 import {Receivable} from "./base/Receivable.sol";
 import {Upgradeable} from "./base/Upgradeable.sol";
 import {UseChipToken} from "./base/UseChipToken.sol";
@@ -9,6 +8,7 @@ import {UseGovToken} from "./base/UseGovToken.sol";
 import {UseVoteToken} from "./base/UseVoteToken.sol";
 import {Withdrawable} from "./base/Withdrawable.sol";
 import {IBet} from "./interface/IBet.sol";
+import {IBetConfigurator} from "./interface/IBetConfigurator.sol";
 import {IBetFactory} from "./interface/IBetFactory.sol";
 import {IBetManager} from "./interface/IBetManager.sol";
 import {AddressArrayLib} from "./lib/Address.sol";
@@ -16,7 +16,7 @@ import {MathLib} from "./lib/Math.sol";
 import {StringLib} from "./lib/String.sol";
 import {TransferLib} from "./lib/Transfer.sol";
 
-contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, BetRestriction, UseChipToken, UseVoteToken, UseGovToken {
+contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, UseChipToken, UseVoteToken, UseGovToken {
   function name()
   public pure override
   returns (string memory) {
@@ -38,24 +38,18 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, BetRe
 
   address private constant ZERO_ADDRESS = address(0);
 
-  uint256 private _creationFee;
-
+  address private _betConfigurator;
   address private _betFactory;
   address private _betOptionFactory;
+  uint256 private _creationFee;
 
   address[] private _activeBets;
   address[] private _bets;
   mapping(address bet => uint256 index) private _activeBetMap;
   mapping(address bet => uint256 index) private _betMap;
 
-  function initialize()
-  public override(Upgradeable, BetRestriction)
-  initializer {
-    Upgradeable.initialize();
-    BetRestriction.initialize();
-  }
-
   function initialize(
+    address initialBetConfigurator,
     address initialBetFactory,
     address initialBetOptionFactory,
     address initialGovToken,
@@ -65,6 +59,7 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, BetRe
   public
   initializer {
     initialize();
+    _setBetConfigurator(initialBetConfigurator);
     _setBetFactory(initialBetFactory);
     _setBetOptionFactory(initialBetOptionFactory);
     _setGovToken(initialGovToken);
@@ -75,9 +70,6 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, BetRe
   function _authorizeWithdraw(address sender)
   internal view override(Withdrawable) onlyOwner {}
 
-  function _authorizeUpdateBetRestriction(address sender)
-  internal view override(BetRestriction) onlyOwner {}
-
   function _authorizeUpdateChipToken(address sender)
   internal view override(UseChipToken) onlyOwner {}
 
@@ -86,6 +78,24 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, BetRe
 
   function _authorizeUpdateGovToken(address sender)
   internal view override(UseGovToken) onlyOwner {}
+
+  function betConfigurator()
+  external view
+  returns (address) {
+    return _betConfigurator;
+  }
+
+  function setBetConfigurator(address newBetConfigurator)
+  external
+  onlyOwner {
+    _setBetConfigurator(newBetConfigurator);
+  }
+
+  function _setBetConfigurator(address newBetConfigurator)
+  private {
+    _betConfigurator = newBetConfigurator;
+    emit BetConfiguratorSet(newBetConfigurator);
+  }
 
   function betFactory()
   external view
@@ -170,27 +180,29 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, BetRe
     if (chipToken() == ZERO_ADDRESS && useChipERC20) revert ServiceHasNotStartedYet();
     if (voteToken() == ZERO_ADDRESS) revert ServiceHasNotStartedYet();
 
-    validateTitle(details.title);
-    validateDescription(details.description);
-    validateOptions(details.options);
+    IBetConfigurator configurator = IBetConfigurator(_betConfigurator);
+    configurator.validateTitle(details.title);
+    configurator.validateDescription(details.description);
+    configurator.validateOptions(details.options);
     if (!details.forumURL.isEmpty()) {
-      validateUrl(details.forumURL);
+      configurator.validateUrl(details.forumURL);
     }
-    validateDuration(wageringPeriodDuration, decidingPeriodDuration);
+    configurator.validateDuration(wageringPeriodDuration, decidingPeriodDuration);
 
     if (_creationFee > 0) {
       msg.sender.transferToContract(govToken(), _creationFee);
     }
 
     address bet = IBetFactory(_betFactory).createBet(
-      _betOptionFactory,
-      address(this),
-      useChipERC20 ? chipToken() : ZERO_ADDRESS,
-      voteToken(),
-      msg.sender,
+      configurator.betConfig(),
+      details,
       wageringPeriodDuration,
       decidingPeriodDuration,
-      details
+      msg.sender,
+      useChipERC20 ? chipToken() : ZERO_ADDRESS,
+      voteToken(),
+      address(this),
+      _betOptionFactory
     );
     emit BetCreated(bet, msg.sender);
     _activeBets.push(bet);

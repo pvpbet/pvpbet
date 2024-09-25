@@ -6,7 +6,7 @@ interface IBetOptionFactory {
 	 * @dev Create a bet option.
 	 */
   function createBetOption(
-    address bet,
-    string calldata description
+    string calldata description,
+    address bet
   ) external returns (address);
 }

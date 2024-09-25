@@ -11,13 +11,13 @@ import {AddressLib} from "./lib/Address.sol";
 
 contract BetOption is IBetOption, IMetadata, BetActionArbitrate, BetActionDecide, BetActionWager {
   function name()
-  public pure virtual
+  public pure
   returns (string memory) {
     return "PVPBetOption";
   }
 
   function version()
-  public view virtual
+  public view
   returns (string memory) {
     return _version;
   }
@@ -30,10 +30,10 @@ contract BetOption is IBetOption, IMetadata, BetActionArbitrate, BetActionDecide
   string private _description;
   string private _version;
 
-  constructor (
-    address bet_,
+  constructor(
+    string memory version_,
     string memory description_,
-    string memory version_
+    address bet_
   ) {
     _bet = bet_;
     _description = description_;
@@ -60,6 +60,12 @@ contract BetOption is IBetOption, IMetadata, BetActionArbitrate, BetActionDecide
     return true;
   }
 
+  function description()
+  external view
+  returns (string memory) {
+    return _description;
+  }
+
   function bet()
   public view override(IBetOption, BetActionArbitrate, BetActionDecide, BetActionWager)
   returns (address) {
@@ -72,28 +78,22 @@ contract BetOption is IBetOption, IMetadata, BetActionArbitrate, BetActionDecide
     return IBet(_bet).chip();
   }
 
-  function chipMinValue()
-  public view override(IBetOption, BetActionWager)
-  returns (uint256) {
-    return IBet(_bet).chipMinValue();
-  }
-
   function vote()
   public view override(IBetOption, BetActionArbitrate, BetActionDecide)
   returns (address) {
     return IBet(_bet).vote();
   }
 
+  function chipMinValue()
+  public view override(IBetOption, BetActionWager)
+  returns (uint256) {
+    return IBet(_bet).chipMinValue();
+  }
+
   function voteMinValue()
   public view override(IBetOption, BetActionArbitrate, BetActionDecide)
   returns (uint256) {
     return IBet(_bet).voteMinValue();
-  }
-
-  function description()
-  external view
-  returns (string memory) {
-    return _description;
   }
 
   receive() external payable {

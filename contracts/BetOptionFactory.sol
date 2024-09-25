@@ -7,26 +7,26 @@ import {BetOption} from "./BetOption.sol";
 
 contract BetOptionFactory is IBetOptionFactory, IMetadata {
   function name()
-  public pure virtual
+  public pure
   returns (string memory) {
     return "PVPBetOptionFactory";
   }
 
   function version()
-  public pure virtual
+  public pure
   returns (string memory) {
     return "1.0.0";
   }
 
   function createBetOption(
-    address bet,
-    string calldata description
+    string calldata description,
+    address bet
   ) external returns (address) {
     return address(
       new BetOption(
-        bet,
+        version(),
         description,
-        version()
+        bet
       )
     );
   }

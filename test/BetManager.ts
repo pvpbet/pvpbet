@@ -33,6 +33,7 @@ describe('BetManager', () => {
     const GovToken = await deployGovToken()
     const BetVotingEscrow = await deployBetVotingEscrow()
     const BetManager = await deployBetManager(GovToken.address, BetChip.address, BetVotingEscrow.address)
+    const BetConfigurator = await viem.getContractAt('BetConfigurator', await BetManager.read.betConfigurator())
     await BetVotingEscrow.write.setBetManager([BetManager.address])
 
     await GovToken.write.transfer([user.account.address, parseUnits('1000000', 18)])
@@ -41,6 +42,7 @@ describe('BetManager', () => {
       BetChip,
       BetVotingEscrow,
       BetManager,
+      BetConfigurator,
       GovToken,
       publicClient,
       owner,
@@ -80,7 +82,25 @@ describe('BetManager', () => {
     })
   })
 
-  describe('Config contracts', () => {
+  describe('Configure the contracts', () => {
+    it('#betConfigurator() #setBetConfigurator()', async () => {
+      const {
+        BetManager,
+        owner,
+        hacker,
+      } = await loadFixture(deployFixture)
+      await assert.isRejected(
+        BetManager.write.setBetConfigurator([zeroAddress], { account: hacker.account }),
+        'OwnableUnauthorizedAccount',
+      )
+
+      await BetManager.write.setBetConfigurator([zeroAddress], { account: owner.account })
+      assert.equal(
+        await BetManager.read.betConfigurator(),
+        zeroAddress,
+      )
+    })
+
     it('#betFactory() #setBetFactory()', async () => {
       const {
         BetManager,
@@ -173,10 +193,48 @@ describe('BetManager', () => {
   })
 
   describe('Bets management', () => {
+    it('Bet configuration', async () => {
+      const {
+        BetChip,
+        BetVotingEscrow,
+        BetManager,
+        BetConfigurator,
+        user,
+      } = await loadFixture(deployFixture)
+      const chips = [
+        zeroAddress,
+        BetChip.address,
+      ]
+
+      const betConfig = await BetConfigurator.read.betConfig()
+      const chipDecimals = await BetChip.read.decimals()
+      const voteDecimals = await BetVotingEscrow.read.decimals()
+
+      for (const chip of chips) {
+        const useChipERC20 = isAddressEqual(chip, BetChip.address)
+        const Bet = await createBet(
+          user,
+          BetManager,
+          BetDetails,
+          WEEK,
+          DAY3,
+          useChipERC20,
+        )
+        assert.deepEqual(await Bet.read.config(), betConfig)
+        assert.equal(
+          await Bet.read.minWageredTotalAmount(),
+          useChipERC20 ? parseUnits(String(betConfig.minWageredTotalAmountERC20), chipDecimals) : betConfig.minWageredTotalAmountETH,
+        )
+        assert.equal(await Bet.read.minDecidedTotalAmount(), parseUnits(String(betConfig.minDecidedTotalAmount), voteDecimals))
+        assert.equal(await Bet.read.minArbitratedTotalAmount(), parseUnits(String(betConfig.minArbitratedTotalAmount), voteDecimals))
+      }
+    })
+
     it('Restrictions on creation', async () => {
       const {
         BetChip,
         BetManager,
+        BetConfigurator,
         owner,
         user,
       } = await loadFixture(deployFixture)
@@ -185,12 +243,12 @@ describe('BetManager', () => {
         BetChip.address,
       ]
 
-      const MIN_OPTIONS_COUNT = await BetManager.read.minOptionsCount()
-      const MAX_OPTIONS_COUNT = await BetManager.read.maxOptionsCount()
-      const MIN_WAGERING_PERIOD_DURATION = await BetManager.read.minWageringPeriodDuration()
-      const MAX_WAGERING_PERIOD_DURATION = await BetManager.read.maxWageringPeriodDuration()
-      const MIN_DECISION_PERIOD_DURATION = await BetManager.read.minDecidingPeriodDuration()
-      const MAX_DECISION_PERIOD_DURATION = await BetManager.read.maxDecidingPeriodDuration()
+      const MIN_OPTIONS_COUNT = await BetConfigurator.read.minOptionsCount()
+      const MAX_OPTIONS_COUNT = await BetConfigurator.read.maxOptionsCount()
+      const MIN_WAGERING_PERIOD_DURATION = await BetConfigurator.read.minWageringPeriodDuration()
+      const MAX_WAGERING_PERIOD_DURATION = await BetConfigurator.read.maxWageringPeriodDuration()
+      const MIN_DECISION_PERIOD_DURATION = await BetConfigurator.read.minDecidingPeriodDuration()
+      const MAX_DECISION_PERIOD_DURATION = await BetConfigurator.read.maxDecidingPeriodDuration()
 
       const originAllowlist = [
         'https://example.com',
@@ -339,10 +397,10 @@ describe('BetManager', () => {
       }
 
       await assert.isRejected(
-        BetManager.write.setOriginAllowlist([originAllowlist], { account: user.account }),
+        BetConfigurator.write.setOriginAllowlist([originAllowlist], { account: user.account }),
         'OwnableUnauthorizedAccount',
       )
-      await BetManager.write.setOriginAllowlist([originAllowlist], { account: owner.account })
+      await BetConfigurator.write.setOriginAllowlist([originAllowlist], { account: owner.account })
 
       for (const chip of chips) {
         const useChipERC20 = isAddressEqual(chip, BetChip.address)

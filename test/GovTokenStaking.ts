@@ -137,7 +137,7 @@ describe('GovTokenStaking', () => {
 
       await assert.isRejected(
         stake(user, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK12 + 1, stakeAmount),
-        'Transaction reverted and Hardhat couldn\'t infer the reason.',
+        'Missing or invalid parameters.',
       )
       await assert.isRejected(
         stake(user, GovToken, GovTokenStaking, UnlockWaitingPeriod.NONE, stakeAmount),
@@ -454,7 +454,7 @@ describe('GovTokenStaking', () => {
             [UnlockWaitingPeriod.WEEK, UnlockWaitingPeriod.WEEK12 + 1],
             { account: user.account },
           ),
-          'Transaction reverted and Hardhat couldn\'t infer the reason.',
+          'Missing or invalid parameters.',
         )
         await assert.isRejected(
           GovTokenStaking.write.extendUnlockWaitingPeriod(
@@ -501,7 +501,7 @@ describe('GovTokenStaking', () => {
             [UnlockWaitingPeriod.WEEK, UnlockWaitingPeriod.WEEK12 + 1, perAmount],
             { account: hacker.account },
           ),
-          'Transaction reverted and Hardhat couldn\'t infer the reason.',
+          'Missing or invalid parameters.',
         )
         await assert.isRejected(
           GovTokenStaking.write.extendUnlockWaitingPeriod(

@@ -5,12 +5,12 @@ interface IUseGovTokenStaking {
   event GovTokenStakingSet(address govTokenStaking);
 
   /**
-   * @dev Returns contract address of the governance token staking.
+   * @dev Returns the contract address of the governance token staking.
    */
   function govTokenStaking() external view returns (address);
 
   /**
-   * @dev Set contract address of the governance token staking.
+   * @dev Set the contract address of the governance token staking.
    */
   function setGovTokenStaking(address newGovTokenStaking) external;
 }

@@ -5,12 +5,12 @@ interface IUseGovToken {
   event GovTokenSet(address govToken);
 
   /**
-   * @dev Returns contract address of the governance token.
+   * @dev Returns the contract address of the governance token.
    */
   function govToken() external view returns (address);
 
   /**
-   * @dev Set contract address of the governance token.
+   * @dev Set the contract address of the governance token.
    */
   function setGovToken(address newGovToken) external;
 }
