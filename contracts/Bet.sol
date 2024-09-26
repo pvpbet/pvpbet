@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {BetActionArbitrate} from "./base/BetActionArbitrate.sol";
 import {BetActionDispute} from "./base/BetActionDispute.sol";
@@ -19,7 +20,7 @@ import {MathLib} from "./lib/Math.sol";
 import {Record, RecordArrayLib} from "./lib/Record.sol";
 import {TransferLib} from "./lib/Transfer.sol";
 
-contract Bet is IBet, IMetadata, BetActionArbitrate, BetActionDispute {
+contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDispute {
   function name()
   public pure
   returns (string memory) {
@@ -48,19 +49,18 @@ contract Bet is IBet, IMetadata, BetActionArbitrate, BetActionDispute {
   BetDetails private _details;
   address[] private _options;
 
-  address private immutable _creator;
-  address private immutable _chip;
-  address private immutable _vote;
-  address private immutable _betManager;
-  uint256 private immutable _wageringPeriodDeadline;
-  uint256 private immutable _decidingPeriodDeadline;
-
-  uint256 private _arbitratingPeriodStartTime;
+  address private _creator;
+  address private _chip;
+  address private _vote;
+  address private _betManager;
   address private _unconfirmedWinningOption;
   address private _confirmedWinningOption;
+  uint256 private _wageringPeriodDeadline;
+  uint256 private _decidingPeriodDeadline;
+  uint256 private _arbitratingPeriodStartTime;
   bool private _released;
 
-  constructor(
+  function initialize(
     string memory version_,
     BetConfig memory config_,
     BetDetails memory details_,
@@ -71,7 +71,9 @@ contract Bet is IBet, IMetadata, BetActionArbitrate, BetActionDispute {
     address vote_,
     address betManager,
     address betOptionFactory
-  ) {
+  )
+  public
+  initializer {
     _version = version_;
     _config = config_;
     _details = details_;

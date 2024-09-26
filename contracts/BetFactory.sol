@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {IBetFactory} from "./interface/IBetFactory.sol";
 import {IMetadata} from "./interface/IMetadata.sol";
 import {Bet} from "./Bet.sol";
@@ -19,6 +20,8 @@ contract BetFactory is IBetFactory, IMetadata {
     return "1.0.0";
   }
 
+  address private _implementation;
+
   function createBet(
     Bet.BetConfig calldata config,
     Bet.BetDetails calldata details,
@@ -30,19 +33,25 @@ contract BetFactory is IBetFactory, IMetadata {
     address betManager,
     address betOptionFactory
   ) external returns (address) {
-    return address(
-      new Bet(
-        version(),
-        config,
-        details,
-        wageringPeriodDuration,
-        decidingPeriodDuration,
-        creator,
-        chip,
-        vote,
-        betManager,
-        betOptionFactory
-      )
+    Bet bet;
+    if (_implementation == address(0)) {
+      bet = new Bet();
+      _implementation = address(bet);
+    } else {
+      bet = Bet(payable(Clones.clone(_implementation)));
+    }
+    bet.initialize(
+      version(),
+      config,
+      details,
+      wageringPeriodDuration,
+      decidingPeriodDuration,
+      creator,
+      chip,
+      vote,
+      betManager,
+      betOptionFactory
     );
+    return address(bet);
   }
 }

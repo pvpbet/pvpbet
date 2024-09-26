@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {BetActionArbitrate} from "./base/BetActionArbitrate.sol";
 import {BetActionDecide} from "./base/BetActionDecide.sol";
 import {BetActionWager} from "./base/BetActionWager.sol";
@@ -9,7 +10,7 @@ import {IBetOption} from "./interface/IBetOption.sol";
 import {IMetadata} from "./interface/IMetadata.sol";
 import {AddressLib} from "./lib/Address.sol";
 
-contract BetOption is IBetOption, IMetadata, BetActionArbitrate, BetActionDecide, BetActionWager {
+contract BetOption is IBetOption, Initializable, IMetadata, BetActionArbitrate, BetActionDecide, BetActionWager {
   function name()
   public pure
   returns (string memory) {
@@ -26,15 +27,17 @@ contract BetOption is IBetOption, IMetadata, BetActionArbitrate, BetActionDecide
 
   error InvalidChip();
 
-  address private immutable _bet;
-  string private _description;
   string private _version;
+  string private _description;
+  address private _bet;
 
-  constructor(
+  function initialize(
     string memory version_,
     string memory description_,
     address bet_
-  ) {
+  )
+  public
+  initializer {
     _bet = bet_;
     _description = description_;
     _version = version_;
