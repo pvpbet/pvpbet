@@ -113,7 +113,7 @@ interface IBetManager {
   /**
    * @dev Returns the bet contracts by status.
    */
-  function bets(uint256 offset, uint256 limit, IBet.Status[] memory status) external view returns (address[] memory);
+  function bets(uint256 offset, uint256 limit, IBet.Status[] calldata status) external view returns (address[] memory);
 
   /**
    * @dev Returns the contract address for the active bet’s index.
@@ -142,5 +142,5 @@ interface IBetManager {
   /**
    * @dev Returns the active bet contracts by status.
    */
-  function activeBets(uint256 offset, uint256 limit, IBet.Status[] memory status) external view returns (address[] memory);
+  function activeBets(uint256 offset, uint256 limit, IBet.Status[] calldata status) external view returns (address[] memory);
 }

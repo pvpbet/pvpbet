@@ -37,7 +37,7 @@ contract TestBet {
     arbitrated = true;
   }
 
-  function functionCall(address target, bytes memory data)
+  function functionCall(address target, bytes calldata data)
   external
   returns (bytes memory) {
     return AddressLib.functionCallWithValue(target, data, 0);

@@ -288,7 +288,7 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, UseCh
     return _bets.search(offset, limit);
   }
 
-  function bets(uint256 offset, uint256 limit, IBet.Status[] memory status)
+  function bets(uint256 offset, uint256 limit, IBet.Status[] calldata status)
   public view
   returns (address[] memory) {
     return _bets.search(offset, limit, status);
@@ -321,7 +321,7 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, UseCh
     return _activeBets.search(offset, limit);
   }
 
-  function activeBets(uint256 offset, uint256 limit, IBet.Status[] memory status)
+  function activeBets(uint256 offset, uint256 limit, IBet.Status[] calldata status)
   public view
   returns (address[] memory) {
     return _activeBets.search(offset, limit, status);

@@ -20,7 +20,8 @@ library StringLib {
 
     if (bBytes.length > aBytes.length) return false;
 
-    for (uint i = 0; i < bBytes.length; i = i.unsafeInc()) {
+    uint256 length = bBytes.length;
+    for (uint i = 0; i < length; i = i.unsafeInc()) {
       if (aBytes[i] != bBytes[i]) return false;
     }
 
