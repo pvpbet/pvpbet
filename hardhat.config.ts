@@ -4,6 +4,7 @@ import '@nomicfoundation/hardhat-ledger'
 import '@nomicfoundation/hardhat-toolbox-viem'
 import '@nomicfoundation/hardhat-verify'
 import '@openzeppelin/hardhat-upgrades'
+import 'hardhat-gas-reporter'
 import 'dotenv/config'
 import * as chains from 'viem/chains'
 import type { Chain } from 'viem'
@@ -30,6 +31,18 @@ const config: HardhatUserConfig = {
         runs: 200,
       }
     }
+  },
+  gasReporter: {
+    enabled: process.env.REPORT_GAS === 'true',
+    L2: 'arbitrum',
+    excludeContracts: [
+      'AttackContract',
+      'DAI',
+      'TestBet',
+      'TestBetManager',
+      'TestBetOption',
+      'USDC',
+    ],
   },
   etherscan: {
     apiKey: Object.keys(networks).reduce((acc: Record<string, string>, key) => {
