@@ -17,52 +17,76 @@ interface IGovTokenStaking {
   function stakeMinValue() external view returns (uint256);
 
   /**
-   * @dev Stake a specified amount of governance token and mint staking certificate.
+   * @dev Stakes a specified amount of governance tokens and mints a staking certificate.
+   * @param unlockWaitingPeriod The time period to wait for unlocking after unstaking.
+   * @param amount The amount of governance tokens to stake.
    *
-   * You must specify a unlock waiting period, which indicates the time required from unstake to unlock.
-   * The unlock waiting period varies, representing different staking benefits or rights.
+   * You must specify an unlock waiting period, which indicates the time required from unstaking to unlocking.
+   * The unlock waiting period varies, offering different staking benefits or rights.
    */
-  function stake(UnlockWaitingPeriod, uint256 amount) external;
+  function stake(UnlockWaitingPeriod unlockWaitingPeriod, uint256 amount) external;
 
   /**
-   * @dev Unstake all governance token and burn staking certificate.
+   * @dev Unstakes all governance tokens and burns the staking certificate.
+   * @param unlockWaitingPeriod The waiting period for unlocking after unstaking.
    *
    * An unstaked record will be generated and will enter the unlock waiting period.
-   * You will need to wait for this period to pass before it can be withdrawn.
+   * You must wait for this period to pass before the tokens can be withdrawn.
    */
-  function unstake(UnlockWaitingPeriod) external;
+  function unstake(UnlockWaitingPeriod unlockWaitingPeriod) external;
 
   /**
-   * @dev Unstake a specified amount of governance token and burn staking certificate.
+   * @dev Unstakes a specified amount of governance tokens and burns the staking certificate.
+   * @param unlockWaitingPeriod The waiting period for unlocking after unstaking.
+   * @param amount The amount of governance tokens to unstake.
    */
-  function unstake(UnlockWaitingPeriod, uint256 amount) external;
+  function unstake(UnlockWaitingPeriod unlockWaitingPeriod, uint256 amount) external;
 
   /**
-   * @dev Restake the record corresponding to the index in the unstaked list.
+   * @dev Restakes the record corresponding to the index in the unstaked list.
+   * @param index The index of the unstaked record to restake.
    */
   function restake(uint256 index) external;
 
   /**
-   * @dev Extend the unlock waiting period for the staking record.
+   * @dev Extends the unlock waiting period for the staking record.
+   * @param from The current unlock waiting period.
+   * @param to The new unlock waiting period.
    */
   function extendUnlockWaitingPeriod(UnlockWaitingPeriod from, UnlockWaitingPeriod to) external;
 
   /**
-   * @dev Extend the unlock waiting period for the staking record of the specified amount.
+   * @dev Extends the unlock waiting period for the staking record of a specified amount.
+   * @param from The current unlock waiting period.
+   * @param to The new unlock waiting period.
+   * @param amount The amount of tokens for which the unlock waiting period will be extended.
    */
   function extendUnlockWaitingPeriod(UnlockWaitingPeriod from, UnlockWaitingPeriod to, uint256 amount) external;
 
   /**
-   * @dev Withdraw unlocked governance tokens.
+   * @dev Withdraws unlocked governance tokens.
    */
   function withdraw() external;
 
   /**
-   * @dev Deduct the staked amount and transfer the governance token to the custodian.
+   * @dev Deducts the staked amount from the specified account and transfers the governance token to the custodian.
+   * @param account The address of the account from which the staked amount will be deducted.
+   * @param amount The amount of staked tokens to deduct.
+   * @param custodian The address of the custodian to receive the tokens.
    *
    * Can only be called by the vote token contract.
    */
   function deductStakedAmountAndTransfer(address account, uint256 amount, address custodian) external;
+
+  /**
+   * @dev Deducts the staked amounts from multiple accounts and transfers the governance tokens to the custodian.
+   * @param accounts The addresses of the accounts from which the staked amounts will be deducted.
+   * @param amounts The respective amounts of staked tokens to deduct from each account.
+   * @param custodian The address of the custodian to receive the tokens.
+   *
+   * Can only be called by the vote token contract.
+   */
+  function batchDeductStakedAmountAndTransfer(address[] calldata accounts, uint256[] calldata amounts, address custodian) external;
 
   /**
    * @dev Returns whether the account is staked.

@@ -14,6 +14,7 @@ abstract contract BetActionWager is IBetActionWager, IErrors {
   using RecordArrayLib for Record[];
 
   Record[] private _wageredRecords;
+  uint256 private _wageredTotalAmount;
   bool private _wageredChipsReleased;
 
   error WageringPeriodHasAlreadyEnded();
@@ -60,12 +61,14 @@ abstract contract BetActionWager is IBetActionWager, IErrors {
 
   function _wager(address player, uint256 amount)
   internal {
-    IBet.Status status = IBet(bet()).status();
+    IBet bet_ = IBet(bet());
+    IBet.Status status = bet_.status();
     if (status > IBet.Status.WAGERING) revert WageringPeriodHasAlreadyEnded();
 
     uint256 wageredAmount_ = _wageredRecords.remove(player).amount;
     if (wageredAmount_ > 0) {
       player.transferFromContract(chip(), wageredAmount_);
+      _wageredTotalAmount = _wageredTotalAmount.sub(wageredAmount_);
     }
 
     if (amount > 0) {
@@ -74,15 +77,17 @@ abstract contract BetActionWager is IBetActionWager, IErrors {
       _wageredRecords.add(
         Record(player, amount)
       );
+      _wageredTotalAmount = _wageredTotalAmount.add(amount);
     }
 
+    bet_.statusUpdate();
     emit Wagered(player, amount);
   }
 
   function wageredAmount()
   public view
   returns (uint256) {
-    return _wageredRecords.sumAmount();
+    return _wageredTotalAmount;
   }
 
   function wageredAmount(address player)
@@ -102,13 +107,11 @@ abstract contract BetActionWager is IBetActionWager, IErrors {
   onlyBet {
     if (_wageredChipsReleased) return;
 
-    address bet_ = bet();
-    IBet.Status status = IBet(bet_).status();
-    if (status == IBet.Status.WAGERING) revert WageringPeriodHasNotEndedYet();
+    if (IBet(bet()).status() == IBet.Status.WAGERING) revert WageringPeriodHasNotEndedYet();
 
     _wageredChipsReleased = true;
-    if (bet_ != address(this)) {
-      bet_.transferFromContract(chip(), type(uint256).max);
+    if (bet() != address(this)) {
+      bet().transferFromContract(chip(), type(uint256).max);
     }
   }
 
@@ -117,15 +120,13 @@ abstract contract BetActionWager is IBetActionWager, IErrors {
   onlyBet {
     if (_wageredChipsReleased) return;
 
-    IBet.Status status = IBet(bet()).status();
-    if (status == IBet.Status.WAGERING) revert WageringPeriodHasNotEndedYet();
+    if (IBet(bet()).status() == IBet.Status.WAGERING) revert WageringPeriodHasNotEndedYet();
 
     _wageredChipsReleased = true;
-    address chip_ = chip();
     uint256 length = _wageredRecords.length;
     for (uint256 i = 0; i < length; i = i.unsafeInc()) {
       Record memory record = _wageredRecords[i];
-      record.account.transferFromContract(chip_, record.amount, true);
+      record.account.transferFromContract(chip(), record.amount, true);
     }
   }
 

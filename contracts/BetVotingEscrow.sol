@@ -202,19 +202,10 @@ contract BetVotingEscrow is IBetVotingEscrow, IErrors, ERC20Upgradeable, Upgrade
     }
     _fixedAllowances[account][spender] = _fixedAllowances[account][spender].unsafeAdd(value);
     _fixedBalances[account] = _fixedBalances[account].unsafeAdd(value);
-    emit Fixed(account, spender, value);
+    emit Fixed(spender, account, value);
   }
 
-  function unfix(address account, uint256 value)
-  external {
-    address spender = _msgSender();
-    if (!spender.isBet() && !spender.isBetOption()) revert UnauthorizedAccess(spender);
-
-    _unfix(account, spender, value);
-    emit Unfixed(account, spender, value);
-  }
-
-  function _unfix(address account, address spender, uint256 value)
+  function _unfix(address spender, address account, uint256 value)
   private {
     uint256 allowance = _fixedAllowances[account][spender];
     if (allowance < value) {
@@ -224,14 +215,51 @@ contract BetVotingEscrow is IBetVotingEscrow, IErrors, ERC20Upgradeable, Upgrade
     _fixedBalances[account] = _fixedBalances[account].unsafeSub(value);
   }
 
+  function unfix(address account, uint256 value)
+  external {
+    address spender = _msgSender();
+    if (!spender.isBet() && !spender.isBetOption()) revert UnauthorizedAccess(spender);
+
+    _unfix(spender, account, value);
+    emit Unfixed(spender, account, value);
+  }
+
+  function unfixBatch(address[] calldata accounts, uint256[] calldata values)
+  external {
+    address spender = _msgSender();
+    if (!spender.isBet() && !spender.isBetOption()) revert UnauthorizedAccess(spender);
+
+    uint256 length = accounts.length;
+    for (uint256 i = 0; i < length; i = i.unsafeInc()) {
+      _unfix(spender, accounts[i], values[i]);
+    }
+    emit UnfixedBatch(spender, accounts, values);
+  }
+
   function confiscate(address account, uint256 value, address custodian)
   external {
     address spender = _msgSender();
     if (!spender.isBet() && !spender.isBetOption()) revert UnauthorizedAccess(spender);
 
-    _unfix(account, spender, value);
+    _unfix(spender, account, value);
     _burn(account, value);
     IGovTokenStaking(govTokenStaking()).deductStakedAmountAndTransfer(account, value, custodian);
-    emit Confiscated(account, spender, value);
+    emit Confiscated(spender, account, value);
+  }
+
+  function confiscateBatch(address[] calldata accounts, uint256[] calldata values, address custodian)
+  external {
+    address spender = _msgSender();
+    if (!spender.isBet() && !spender.isBetOption()) revert UnauthorizedAccess(spender);
+
+    uint256 length = accounts.length;
+    for (uint256 i = 0; i < length; i = i.unsafeInc()) {
+      address account = accounts[i];
+      uint256 value = values[i];
+      _unfix(spender, account, value);
+      _burn(account, value);
+    }
+    IGovTokenStaking(govTokenStaking()).batchDeductStakedAmountAndTransfer(accounts, values, custodian);
+    emit ConfiscatedBatch(spender, accounts, values);
   }
 }

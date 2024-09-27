@@ -223,10 +223,10 @@ describe('BetManager', () => {
         assert.deepEqual(await Bet.read.config(), betConfig)
         assert.equal(
           await Bet.read.minWageredTotalAmount(),
-          useChipERC20 ? parseUnits(String(betConfig.minWageredTotalAmountERC20), chipDecimals) : betConfig.minWageredTotalAmountETH,
+          useChipERC20 ? parseUnits(String(betConfig.minWageredTotalQuantityERC20), chipDecimals) : betConfig.minWageredTotalAmountETH,
         )
-        assert.equal(await Bet.read.minDecidedTotalAmount(), parseUnits(String(betConfig.minDecidedTotalAmount), voteDecimals))
-        assert.equal(await Bet.read.minArbitratedTotalAmount(), parseUnits(String(betConfig.minArbitratedTotalAmount), voteDecimals))
+        assert.equal(await Bet.read.minDecidedTotalAmount(), parseUnits(String(betConfig.minDecidedTotalQuantity), voteDecimals))
+        assert.equal(await Bet.read.minArbitratedTotalAmount(), parseUnits(String(betConfig.minArbitratedTotalQuantity), voteDecimals))
       }
     })
 

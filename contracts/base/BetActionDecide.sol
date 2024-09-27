@@ -13,6 +13,7 @@ abstract contract BetActionDecide is IBetActionDecide, IErrors {
   using RecordArrayLib for Record[];
 
   Record[] private _decidedRecords;
+  uint256 private _decidedTotalAmount;
   bool private _decidedVotesReleased;
 
   error DecidingPeriodHasNotStartedYet();
@@ -60,7 +61,8 @@ abstract contract BetActionDecide is IBetActionDecide, IErrors {
 
   function _decide(address decider, uint256 amount)
   internal {
-    IBet.Status status = IBet(bet()).status();
+    IBet bet_ = IBet(bet());
+    IBet.Status status = bet_.status();
     if (status < IBet.Status.DECIDING) revert DecidingPeriodHasNotStartedYet();
     if (status > IBet.Status.DECIDING) revert DecidingPeriodHasAlreadyEnded();
 
@@ -68,6 +70,7 @@ abstract contract BetActionDecide is IBetActionDecide, IErrors {
     uint256 decidedAmount_ = _decidedRecords.remove(decider).amount;
     if (decidedAmount_ > 0) {
       vote_.unfix(decider, decidedAmount_);
+      _decidedTotalAmount = _decidedTotalAmount.sub(decidedAmount_);
     }
 
     if (amount > 0) {
@@ -76,15 +79,17 @@ abstract contract BetActionDecide is IBetActionDecide, IErrors {
       _decidedRecords.add(
         Record(decider, amount)
       );
+      _decidedTotalAmount = _decidedTotalAmount.add(amount);
     }
 
+    bet_.statusUpdate();
     emit Decided(decider, amount);
   }
 
   function decidedAmount()
   public view
   returns (uint256) {
-    return _decidedRecords.sumAmount();
+    return _decidedTotalAmount;
   }
 
   function decidedAmount(address decider)
@@ -104,17 +109,18 @@ abstract contract BetActionDecide is IBetActionDecide, IErrors {
   onlyBet {
     if (_decidedVotesReleased) return;
 
-    address bet_ = bet();
-    IBet.Status status = IBet(bet_).status();
-    if (status <= IBet.Status.DECIDING) revert DecidingPeriodHasNotEndedYet();
+    if (IBet(bet()).status() <= IBet.Status.DECIDING) revert DecidingPeriodHasNotEndedYet();
 
     _decidedVotesReleased = true;
-    IBetVotingEscrow vote_ = IBetVotingEscrow(vote());
     uint256 length = _decidedRecords.length;
+    address[] memory accounts = new address[](length);
+    uint256[] memory amounts = new uint256[](length);
     for (uint256 i = 0; i < length; i = i.unsafeInc()) {
       Record memory record = _decidedRecords[i];
-      vote_.confiscate(record.account, record.amount, bet_);
+      accounts[i] = record.account;
+      amounts[i] = record.amount;
     }
+    IBetVotingEscrow(vote()).confiscateBatch(accounts, amounts, bet());
   }
 
   function unfixDecidedVotes()
@@ -122,16 +128,18 @@ abstract contract BetActionDecide is IBetActionDecide, IErrors {
   onlyBet {
     if (_decidedVotesReleased) return;
 
-    IBet.Status status = IBet(bet()).status();
-    if (status <= IBet.Status.DECIDING) revert DecidingPeriodHasNotEndedYet();
+    if (IBet(bet()).status() <= IBet.Status.DECIDING) revert DecidingPeriodHasNotEndedYet();
 
     _decidedVotesReleased = true;
-    IBetVotingEscrow vote_ = IBetVotingEscrow(vote());
     uint256 length = _decidedRecords.length;
+    address[] memory accounts = new address[](length);
+    uint256[] memory amounts = new uint256[](length);
     for (uint256 i = 0; i < length; i = i.unsafeInc()) {
       Record memory record = _decidedRecords[i];
-      vote_.unfix(record.account, record.amount);
+      accounts[i] = record.account;
+      amounts[i] = record.amount;
     }
+    IBetVotingEscrow(vote()).unfixBatch(accounts, amounts);
   }
 
   function decidedVotesReleased()

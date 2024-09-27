@@ -196,13 +196,22 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseGovToken,
   }
 
   function deductStakedAmountAndTransfer(address account, uint256 amount, address custodian)
-  external
+  public
   onlyVoteContract {
     uint256 remainingAmount = amount;
     remainingAmount = _deductStakedAmount(account, UnlockWaitingPeriod.WEEK, remainingAmount);
     if (remainingAmount > 0) remainingAmount = _deductStakedAmount(account, UnlockWaitingPeriod.WEEK12, remainingAmount);
     if (remainingAmount > 0) revert StakedAmountDeductionFailed();
     custodian.transferFromContract(govToken(), amount);
+  }
+
+  function batchDeductStakedAmountAndTransfer(address[] calldata accounts, uint256[] calldata amounts, address custodian)
+  external
+  onlyVoteContract {
+    uint256 length = accounts.length;
+    for (uint256 i = 0; i < length; i = i.unsafeInc()) {
+      deductStakedAmountAndTransfer(accounts[i], amounts[i], custodian);
+    }
   }
 
   function _deductStakedAmount(address account, UnlockWaitingPeriod unlockWaitingPeriod, uint256 amount)

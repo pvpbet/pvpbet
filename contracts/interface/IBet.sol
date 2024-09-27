@@ -4,9 +4,9 @@ pragma solidity ^0.8.20;
 interface IBet {
   struct BetConfig {
     uint256 minWageredTotalAmountETH;
-    uint256 minWageredTotalAmountERC20;
-    uint256 minDecidedTotalAmount;
-    uint256 minArbitratedTotalAmount;
+    uint256 minWageredTotalQuantityERC20;
+    uint256 minDecidedTotalQuantity;
+    uint256 minArbitratedTotalQuantity;
     uint256 announcementPeriodDuration;
     uint256 arbitratingPeriodDuration;
     uint256 singleOptionMaxAmountRatio;
@@ -159,7 +159,12 @@ interface IBet {
   function statusDeadline() external view returns (uint256);
 
   /**
-   * @dev Release all funds based on results.
+   * @dev Updates the status of the bet.
+   */
+  function statusUpdate() external;
+
+  /**
+   * @dev Releases all funds based on results.
    */
   function release() external;
 

@@ -30,6 +30,11 @@ contract BetOption is IBetOption, Initializable, IMetadata, BetActionArbitrate, 
   string private _version;
   string private _description;
   address private _bet;
+  address private _chip;
+  address private _vote;
+
+  uint256 private _chipPerQuantity;
+  uint256 private _votePerQuantity;
 
   function initialize(
     string memory version_,
@@ -41,6 +46,13 @@ contract BetOption is IBetOption, Initializable, IMetadata, BetActionArbitrate, 
     _bet = bet_;
     _description = description_;
     _version = version_;
+
+    _chip = IBet(_bet).chip();
+    _vote = IBet(_bet).vote();
+    unchecked {
+      _chipPerQuantity = 10 ** _chip.decimals();
+      _votePerQuantity = 10 ** _vote.decimals();
+    }
   }
 
   modifier onlyBet() override(BetActionDecide, BetActionWager) {
@@ -78,25 +90,29 @@ contract BetOption is IBetOption, Initializable, IMetadata, BetActionArbitrate, 
   function chip()
   public view override(IBetOption, BetActionWager)
   returns (address) {
-    return IBet(_bet).chip();
+    return _chip;
   }
 
   function vote()
   public view override(IBetOption, BetActionArbitrate, BetActionDecide)
   returns (address) {
-    return IBet(_bet).vote();
+    return _vote;
   }
 
   function chipMinValue()
   public view override(IBetOption, BetActionWager)
   returns (uint256) {
-    return IBet(_bet).chipMinValue();
+    if (_chip == address(0)) {
+      return 0.001 ether;
+    } else {
+      return _chipPerQuantity;
+    }
   }
 
   function voteMinValue()
   public view override(IBetOption, BetActionArbitrate, BetActionDecide)
   returns (uint256) {
-    return IBet(_bet).voteMinValue();
+    return _votePerQuantity;
   }
 
   receive() external payable {
@@ -109,7 +125,7 @@ contract BetOption is IBetOption, Initializable, IMetadata, BetActionArbitrate, 
       return;
     }
 
-    if (bet_.chip() != address(0)) revert InvalidChip();
+    if (_chip != address(0)) revert InvalidChip();
     if (AddressLib.isContractSender()) revert CannotReceive();
     wager(msg.value);
   }

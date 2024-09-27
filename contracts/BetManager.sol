@@ -36,8 +36,6 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, UseCh
 
   error ServiceHasNotStartedYet();
 
-  address private constant ZERO_ADDRESS = address(0);
-
   address private _betConfigurator;
   address private _betFactory;
   address private _betOptionFactory;
@@ -177,8 +175,8 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, UseCh
     bool useChipERC20
   ) private
   returns (address) {
-    if (chipToken() == ZERO_ADDRESS && useChipERC20) revert ServiceHasNotStartedYet();
-    if (voteToken() == ZERO_ADDRESS) revert ServiceHasNotStartedYet();
+    if (chipToken() == address(0) && useChipERC20) revert ServiceHasNotStartedYet();
+    if (voteToken() == address(0)) revert ServiceHasNotStartedYet();
 
     IBetConfigurator configurator = IBetConfigurator(_betConfigurator);
     configurator.validateTitle(details.title);
@@ -199,7 +197,7 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, UseCh
       wageringPeriodDuration,
       decidingPeriodDuration,
       msg.sender,
-      useChipERC20 ? chipToken() : ZERO_ADDRESS,
+      useChipERC20 ? chipToken() : address(0),
       voteToken(),
       address(this),
       _betOptionFactory
@@ -273,7 +271,7 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, UseCh
   external view
   returns (address) {
     uint256 length = _bets.length;
-    return index > 0 && index <= length ? _bets[length.unsafeSub(index)] : ZERO_ADDRESS;
+    return index > 0 && index <= length ? _bets[length.unsafeSub(index)] : address(0);
   }
 
   function betCount()
@@ -306,7 +304,7 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, UseCh
   external view
   returns (address) {
     uint256 length = _activeBets.length;
-    return index > 0 && index <= length ? _activeBets[length.unsafeSub(index)] : ZERO_ADDRESS;
+    return index > 0 && index <= length ? _activeBets[length.unsafeSub(index)] : address(0);
   }
 
   function activeBetCount()

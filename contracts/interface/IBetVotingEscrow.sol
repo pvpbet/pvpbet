@@ -2,55 +2,84 @@
 pragma solidity ^0.8.20;
 
 interface IBetVotingEscrow {
-  event Fixed(address indexed account, address indexed spender, uint256 value);
-  event Unfixed(address indexed account, address indexed spender, uint256 value);
-  event Confiscated(address indexed account, address indexed spender, uint256 value);
+  event Fixed(address indexed spender, address indexed account, uint256 value);
+  event Unfixed(address indexed spender, address indexed account, uint256 value);
+  event UnfixedBatch(address indexed spender, address[] indexed accounts, uint256[] values);
+  event Confiscated(address indexed spender, address indexed account, uint256 value);
+  event ConfiscatedBatch(address indexed spender, address[] indexed accounts, uint256[] values);
 
   /**
-   * @dev Mint the votes to the account.
+   * @dev Mints votes to the specified account.
+   * @param account The address of the account to receive the minted votes.
+   * @param value The number of votes to mint.
    *
    * Can only be called by the governance token staking contract.
    */
   function mint(address account, uint256 value) external;
 
   /**
-   * @dev Burn the votes from the account.
+   * @dev Burns votes from the specified account.
+   * @param account The address of the account from which the votes will be burned.
+   * @param value The number of votes to burn.
    *
    * Can only be called by the governance token staking contract.
    */
   function burn(address account, uint256 value) external;
 
   /**
-   * @dev Returns the vote balance of the account.
-   * @param hasFixed If true, includes the fixed votes.
+   * @dev Returns the vote balance of the specified account.
+   * @param account The address of the account whose vote balance is being queried.
+   * @param hasFixed If true, includes fixed votes in the balance.
+   * @return The total vote balance of the account.
    */
   function balanceOf(address account, bool hasFixed) external view returns (uint256);
 
   /**
-   * @dev Returns whether the account is able to decide.
+   * @dev Returns whether the specified account is able to participate in decision.
+   * @param account The address of the account being checked.
    */
   function isAbleToDecide(address account) external view returns (bool);
 
   /**
-   * @dev Returns whether the account is able to arbitrate.
+   * @dev Returns whether the specified account is able to participate in arbitration.
+   * @param account The address of the account being checked.
    */
   function isAbleToArbitrate(address account) external view returns (bool);
 
   /**
-   * @dev Fix the votes of the account.
+   * @dev Fixes the votes of the specified account.
+   * @param account The address of the account whose votes will be fixed.
+   * @param value The number of votes to fix.
    */
   function fix(address account, uint256 value) external;
 
   /**
-   * @dev Unfix the votes of the account.
+   * @dev Unfixes the votes of the specified account.
+   * @param account The address of the account whose votes will be unfixed.
+   * @param value The number of votes to unfix.
    */
   function unfix(address account, uint256 value) external;
 
   /**
-   * @dev Confiscate the votes of the account.
-   * @param custodian The custodian address.
-   *
-   * `custodian` can transfer the votes to anyone.
+   * @dev Unfixes the votes of multiple accounts.
+   * @param accounts The addresses of the accounts whose votes will be unfixed.
+   * @param values The respective number of votes to unfix from each account.
+   */
+  function unfixBatch(address[] calldata accounts, uint256[] calldata values) external;
+
+  /**
+   * @dev Confiscates the votes of the specified account.
+   * @param account The address of the account whose votes will be confiscated.
+   * @param value The number of votes to confiscate.
+   * @param custodian The address of the custodian.
    */
   function confiscate(address account, uint256 value, address custodian) external;
+
+  /**
+   * @dev Confiscates the votes of multiple accounts.
+   * @param accounts The addresses of the accounts whose votes will be confiscated.
+   * @param values The respective number of votes to confiscate from each account.
+   * @param custodian The address of the custodian.
+   */
+  function confiscateBatch(address[] calldata accounts, uint256[] calldata values, address custodian) external;
 }

@@ -72,4 +72,16 @@ library RecordArrayLib {
       record.account.transferFromContract(token, record.amount.mulDiv(amount, total), true);
     }
   }
+
+  /**
+   * @dev The purpose of using the `total` parameter is to save gas.
+   */
+  function distribute(Record[] memory records, address token, uint256 amount, uint256 total)
+  internal {
+    uint256 length = records.length;
+    for (uint256 i = 0; i < length; i = i.unsafeInc()) {
+      Record memory record = records[i];
+      record.account.transferFromContract(token, record.amount.mulDiv(amount, total), true);
+    }
+  }
 }

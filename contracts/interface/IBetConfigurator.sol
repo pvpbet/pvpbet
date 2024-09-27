@@ -31,13 +31,13 @@ interface IBetConfigurator {
 
   function minWageredTotalAmountETH() external view returns (uint256);
   function setMinWageredTotalAmountETH(uint256 newMinWageredTotalAmountETH) external;
-  function minWageredTotalAmountERC20() external view returns (uint256);
-  function setMinWageredTotalAmountERC20(uint256 newMinWageredTotalAmountERC20) external;
+  function minWageredTotalQuantityERC20() external view returns (uint256);
+  function setMinWageredTotalQuantityERC20(uint256 newMinWageredTotalQuantityERC20) external;
 
-  function minDecidedTotalAmount() external view returns (uint256);
-  function setMinDecidedTotalAmount(uint256 newMinDecidedTotalAmount) external;
-  function minArbitratedTotalAmount() external view returns (uint256);
-  function setMinArbitratedTotalAmount(uint256 newMinArbitratedTotalAmount) external;
+  function minDecidedTotalQuantity() external view returns (uint256);
+  function setMinDecidedTotalQuantity(uint256 newMinDecidedTotalQuantity) external;
+  function minArbitratedTotalQuantity() external view returns (uint256);
+  function setMinArbitratedTotalQuantity(uint256 newMinArbitratedTotalQuantity) external;
 
   function announcementPeriodDuration() external view returns (uint256);
   function setAnnouncementPeriodDuration(uint256 newAnnouncementPeriodDuration) external;

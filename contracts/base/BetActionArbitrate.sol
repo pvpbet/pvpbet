@@ -4,12 +4,15 @@ pragma solidity ^0.8.20;
 import {IBet} from "../interface/IBet.sol";
 import {IBetActionArbitrate} from "../interface/IBetActionArbitrate.sol";
 import {IErrors} from "../interface/IErrors.sol";
+import {MathLib} from "../lib/Math.sol";
 import {Record, RecordArrayLib} from "../lib/Record.sol";
 
 abstract contract BetActionArbitrate is IBetActionArbitrate, IErrors {
+  using MathLib for uint256;
   using RecordArrayLib for Record[];
 
   Record[] private _arbitratedRecords;
+  uint256 private _arbitratedTotalAmount;
 
   error CurrentStatusIsNotArbitrable();
 
@@ -47,26 +50,32 @@ abstract contract BetActionArbitrate is IBetActionArbitrate, IErrors {
 
   function _arbitrate(address arbitrator, uint256 amount)
   internal {
-    IBet.Status status = IBet(bet()).status();
+    IBet bet_ = IBet(bet());
+    IBet.Status status = bet_.status();
     if (status < IBet.Status.ARBITRATING) revert CurrentStatusIsNotArbitrable();
     if (status > IBet.Status.ARBITRATING) revert CurrentStatusIsNotArbitrable();
 
-    _arbitratedRecords.remove(arbitrator).amount;
+    uint256 arbitratedAmount_ = _arbitratedRecords.remove(arbitrator).amount;
+    if (arbitratedAmount_ > 0) {
+      _arbitratedTotalAmount = _arbitratedTotalAmount.sub(arbitratedAmount_);
+    }
 
     if (amount > 0) {
       if (amount < voteMinValue()) revert InvalidAmount();
       _arbitratedRecords.add(
         Record(arbitrator, amount)
       );
+      _arbitratedTotalAmount = _arbitratedTotalAmount.add(amount);
     }
 
+    bet_.statusUpdate();
     emit Arbitrated(arbitrator, amount);
   }
 
   function arbitratedAmount()
   public view
   returns (uint256) {
-    return _arbitratedRecords.sumAmount();
+    return _arbitratedTotalAmount;
   }
 
   function arbitratedAmount(address arbitrator)

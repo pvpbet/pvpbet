@@ -29,9 +29,9 @@ contract BetConfigurator is IBetConfigurator, Ownable {
 
   // Bet configuration
   uint256 private _minWageredTotalAmountETH;
-  uint256 private _minWageredTotalAmountERC20;
-  uint256 private _minDecidedTotalAmount;
-  uint256 private _minArbitratedTotalAmount;
+  uint256 private _minWageredTotalQuantityERC20;
+  uint256 private _minDecidedTotalQuantity;
+  uint256 private _minArbitratedTotalQuantity;
   uint256 private _announcementPeriodDuration;
   uint256 private _arbitratingPeriodDuration;
   uint256 private _singleOptionMaxAmountRatio;
@@ -50,9 +50,9 @@ contract BetConfigurator is IBetConfigurator, Ownable {
     _maxDecidingPeriodDuration = 90 days;
 
     _minWageredTotalAmountETH = 5 ether;
-    _minWageredTotalAmountERC20 = 10000;
-    _minDecidedTotalAmount = 10000;
-    _minArbitratedTotalAmount = 10000;
+    _minWageredTotalQuantityERC20 = 10000;
+    _minDecidedTotalQuantity = 10000;
+    _minArbitratedTotalQuantity = 10000;
 
     _announcementPeriodDuration = 2 days;
     _arbitratingPeriodDuration = 3 days;
@@ -110,9 +110,9 @@ contract BetConfigurator is IBetConfigurator, Ownable {
   returns (IBet.BetConfig memory) {
     return IBet.BetConfig({
       minWageredTotalAmountETH: _minWageredTotalAmountETH,
-      minWageredTotalAmountERC20: _minWageredTotalAmountERC20,
-      minDecidedTotalAmount: _minDecidedTotalAmount,
-      minArbitratedTotalAmount: _minArbitratedTotalAmount,
+      minWageredTotalQuantityERC20: _minWageredTotalQuantityERC20,
+      minDecidedTotalQuantity: _minDecidedTotalQuantity,
+      minArbitratedTotalQuantity: _minArbitratedTotalQuantity,
       announcementPeriodDuration: _announcementPeriodDuration,
       arbitratingPeriodDuration: _arbitratingPeriodDuration,
       singleOptionMaxAmountRatio: _singleOptionMaxAmountRatio,
@@ -211,37 +211,37 @@ contract BetConfigurator is IBetConfigurator, Ownable {
     _minWageredTotalAmountETH = newMinWageredTotalAmountETH;
   }
 
-  function minWageredTotalAmountERC20()
+  function minWageredTotalQuantityERC20()
   external view
   returns (uint256) {
-    return _minWageredTotalAmountERC20;
+    return _minWageredTotalQuantityERC20;
   }
 
-  function setMinWageredTotalAmountERC20(uint256 newMinWageredTotalAmountERC20)
+  function setMinWageredTotalQuantityERC20(uint256 newMinWageredTotalQuantityERC20)
   external onlyOwner {
-    _minWageredTotalAmountERC20 = newMinWageredTotalAmountERC20;
+    _minWageredTotalQuantityERC20 = newMinWageredTotalQuantityERC20;
   }
 
-  function minDecidedTotalAmount()
+  function minDecidedTotalQuantity()
   external view
   returns (uint256) {
-    return _minDecidedTotalAmount;
+    return _minDecidedTotalQuantity;
   }
 
-  function setMinDecidedTotalAmount(uint256 newMinDecidedTotalAmount)
+  function setMinDecidedTotalQuantity(uint256 newMinDecidedTotalQuantity)
   external onlyOwner {
-    _minDecidedTotalAmount = newMinDecidedTotalAmount;
+    _minDecidedTotalQuantity = newMinDecidedTotalQuantity;
   }
 
-  function minArbitratedTotalAmount()
+  function minArbitratedTotalQuantity()
   external view
   returns (uint256) {
-    return _minArbitratedTotalAmount;
+    return _minArbitratedTotalQuantity;
   }
 
-  function setMinArbitratedTotalAmount(uint256 newMinArbitratedTotalAmount)
+  function setMinArbitratedTotalQuantity(uint256 newMinArbitratedTotalQuantity)
   external onlyOwner {
-    _minArbitratedTotalAmount = newMinArbitratedTotalAmount;
+    _minArbitratedTotalQuantity = newMinArbitratedTotalQuantity;
   }
 
   function announcementPeriodDuration()

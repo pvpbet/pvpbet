@@ -42,12 +42,11 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
   error BetHasNotEndedYet();
   error BetHasBeenReleased();
 
-  address private constant ZERO_ADDRESS = address(0);
-
   string private _version;
   BetConfig private _config;
   BetDetails private _details;
   address[] private _options;
+  Status private _status;
 
   address private _creator;
   address private _chip;
@@ -58,6 +57,13 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
   uint256 private _wageringPeriodDeadline;
   uint256 private _decidingPeriodDeadline;
   uint256 private _arbitratingPeriodStartTime;
+
+  uint256 private _chipPerQuantity;
+  uint256 private _votePerQuantity;
+  uint256 private _minWageredTotalAmount;
+  uint256 private _minDecidedTotalAmount;
+  uint256 private _minArbitratedTotalAmount;
+
   bool private _released;
 
   function initialize(
@@ -83,6 +89,18 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
     _chip = chip_;
     _vote = vote_;
     _betManager = betManager;
+
+    unchecked {
+      _chipPerQuantity = 10 ** _chip.decimals();
+      _votePerQuantity = 10 ** _vote.decimals();
+      if (_chip == address(0)) {
+        _minWageredTotalAmount = _config.minWageredTotalAmountETH;
+      } else {
+        _minWageredTotalAmount = _config.minWageredTotalQuantityERC20.unsafeMul(_chipPerQuantity);
+      }
+      _minDecidedTotalAmount = _config.minDecidedTotalQuantity.unsafeMul(_votePerQuantity);
+      _minArbitratedTotalAmount = _config.minArbitratedTotalQuantity.unsafeMul(_votePerQuantity);
+    }
 
     IBetOptionFactory factory = IBetOptionFactory(betOptionFactory);
     uint256 length = details_.options.length;
@@ -176,33 +194,29 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
   function chipMinValue()
   public view override(IBet, BetActionDispute)
   returns (uint256) {
-    if (_chip == ZERO_ADDRESS) {
+    if (_chip == address(0)) {
       return 0.001 ether;
     } else {
-      return 10 ** _chip.decimals();
+      return _chipPerQuantity;
     }
   }
 
   function voteMinValue()
   public view override(IBet, BetActionArbitrate)
   returns (uint256) {
-    return 10 ** _vote.decimals();
+    return _votePerQuantity;
   }
 
   function minWageredTotalAmount()
   public view
   returns (uint256) {
-    if (_chip == ZERO_ADDRESS) {
-      return _config.minWageredTotalAmountETH;
-    } else {
-      return _config.minWageredTotalAmountERC20 * 10 ** _chip.decimals();
-    }
+    return _minWageredTotalAmount;
   }
 
   function minDecidedTotalAmount()
   public view
   returns (uint256) {
-    return _config.minDecidedTotalAmount * 10 ** _vote.decimals();
+    return _minDecidedTotalAmount;
   }
 
   function minDisputedTotalAmount()
@@ -214,7 +228,7 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
   function minArbitratedTotalAmount()
   public view
   returns (uint256) {
-    return _config.minArbitratedTotalAmount * 10 ** _vote.decimals();
+    return _minArbitratedTotalAmount;
   }
 
   function wageredTotalAmount()
@@ -266,13 +280,9 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
   function _getState()
   private view
   returns (Status status_, address unconfirmedWinningOption_, address confirmedWinningOption_) {
-    if (_released) {
-      return (Status.CLOSED, _unconfirmedWinningOption, _confirmedWinningOption);
-    }
-
-    status_ = Status.WAGERING;
-    unconfirmedWinningOption_ = ZERO_ADDRESS;
-    confirmedWinningOption_ = ZERO_ADDRESS;
+    status_ = _status;
+    unconfirmedWinningOption_ = _unconfirmedWinningOption;
+    confirmedWinningOption_ = _confirmedWinningOption;
 
     if (status_ == Status.WAGERING && block.timestamp > _wageringPeriodDeadline) {
       if (_isValidWager()) {
@@ -284,7 +294,7 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
 
     if (status_ == Status.DECIDING && block.timestamp > _decidingPeriodDeadline) {
       unconfirmedWinningOption_ = _getDecidedWinningOption();
-      if (unconfirmedWinningOption_ != ZERO_ADDRESS) {
+      if (unconfirmedWinningOption_ != address(0)) {
         status_ = Status.ANNOUNCEMENT;
       } else {
         status_ = Status.CANCELLED;
@@ -302,7 +312,7 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
 
     if (status_ == Status.ARBITRATING && block.timestamp > _arbitratingPeriodStartTime.unsafeAdd(_config.arbitratingPeriodDuration)) {
       confirmedWinningOption_ = _getArbitratedWinningOption();
-      if (confirmedWinningOption_ != ZERO_ADDRESS) {
+      if (confirmedWinningOption_ != address(0)) {
         status_ = Status.CONFIRMED;
       } else {
         status_ = Status.CANCELLED;
@@ -329,6 +339,14 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
     }
   }
 
+  function statusUpdate()
+  external {
+    (Status status_, address unconfirmedWinningOption_, address confirmedWinningOption_) = _getState();
+    _status = status_;
+    _unconfirmedWinningOption = unconfirmedWinningOption_;
+    _confirmedWinningOption = confirmedWinningOption_;
+  }
+
   function dispute(uint256 amount)
   public override(BetActionDispute) {
     super.dispute(amount);
@@ -353,23 +371,32 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
     if (status_ != Status.CONFIRMED && status_ != Status.CANCELLED) revert BetHasNotEndedYet();
 
     _released = true;
+    _status = Status.CLOSED;
     _unconfirmedWinningOption = unconfirmedWinningOption_;
     _confirmedWinningOption = confirmedWinningOption_;
 
     if (status_ == Status.CONFIRMED) {
       if (_arbitratingPeriodStartTime > 0) {
         // Dispute occurred
-        Record[] memory records = IBetActionArbitrate(confirmedWinningOption_).arbitratedRecords();
+        IBetActionArbitrate confirmedWinningOptionActionArbitrate = IBetActionArbitrate(confirmedWinningOption_);
         if (confirmedWinningOption_ == unconfirmedWinningOption_) {
           // Punish disputer
           this.collectDisputedChips();
-          records.distribute(_chip, disputedAmount());
+          confirmedWinningOptionActionArbitrate.arbitratedRecords().distribute(
+            _chip,
+            disputedAmount(),
+            confirmedWinningOptionActionArbitrate.arbitratedAmount()
+          );
         } else {
           // Punish decider
-          IBetActionDecide action = IBetActionDecide(unconfirmedWinningOption_);
-          action.confiscateDecidedVotes();
-          records.distribute(IUseGovToken(_betManager).govToken(), action.decidedAmount());
-          _deciderLevelDown(action.decidedRecords());
+          IBetActionDecide unconfirmedWinningOptionActionDecide = IBetActionDecide(unconfirmedWinningOption_);
+          unconfirmedWinningOptionActionDecide.confiscateDecidedVotes();
+          confirmedWinningOptionActionArbitrate.arbitratedRecords().distribute(
+            IUseGovToken(_betManager).govToken(),
+            unconfirmedWinningOptionActionDecide.decidedAmount(),
+            confirmedWinningOptionActionArbitrate.arbitratedAmount()
+          );
+          _deciderLevelDown(unconfirmedWinningOptionActionDecide.decidedRecords());
         }
       }
 
@@ -400,7 +427,7 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
       total = total.unsafeAdd(optionAmounts[i]);
     }
 
-    if (total < minWageredTotalAmount()) {
+    if (total < _minWageredTotalAmount) {
       return false;
     }
 
@@ -423,7 +450,7 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
   function _getDecidedWinningOption()
   private view
   returns (address) {
-    address winningOption = ZERO_ADDRESS;
+    address winningOption = address(0);
     uint256 max = 0;
     uint256 total = 0;
     uint256 length = _options.length;
@@ -434,19 +461,19 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
       if (decidedAmount_ > max) {
         max = decidedAmount_;
         winningOption = option;
-      } else if (decidedAmount_ == max && winningOption != ZERO_ADDRESS) {
-        winningOption = ZERO_ADDRESS;
+      } else if (decidedAmount_ == max && winningOption != address(0)) {
+        winningOption = address(0);
       }
     }
-    if (total < minDecidedTotalAmount()) return ZERO_ADDRESS;
+    if (total < _minDecidedTotalAmount) return address(0);
     return winningOption;
   }
 
   function _getArbitratedWinningOption()
   private view
   returns (address) {
-    if (_arbitratingPeriodStartTime == 0) return ZERO_ADDRESS;
-    address winningOption = ZERO_ADDRESS;
+    if (_arbitratingPeriodStartTime == 0) return address(0);
+    address winningOption = address(0);
     uint256 max = arbitratedAmount();
     uint256 total = max;
     uint256 length = _options.length;
@@ -457,11 +484,11 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
       if (arbitratedAmount_ > max) {
         max = arbitratedAmount_;
         winningOption = option;
-      } else if (arbitratedAmount_ == max && winningOption != ZERO_ADDRESS) {
-        winningOption = ZERO_ADDRESS;
+      } else if (arbitratedAmount_ == max && winningOption != address(0)) {
+        winningOption = address(0);
       }
     }
-    if (total < minArbitratedTotalAmount()) return ZERO_ADDRESS;
+    if (total < _minArbitratedTotalAmount) return address(0);
     return winningOption;
   }
 
@@ -481,10 +508,9 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
     uint256 total = 0;
     uint256 length = _options.length;
     for (uint256 i = 0; i < length; i = i.unsafeInc()) {
-      address option = _options[i];
-      IBetActionWager action = IBetActionWager(option);
-      action.collectWageredChips();
-      total = total.unsafeAdd(action.wageredAmount());
+      IBetActionWager optionActionWager = IBetActionWager(_options[i]);
+      optionActionWager.collectWageredChips();
+      total = total.unsafeAdd(optionActionWager.wageredAmount());
     }
 
     uint256 protocolReward = total.mulDiv(_config.protocolRewardRatio, 100);
@@ -494,17 +520,19 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
 
     _creator.transferFromContract(_chip, creatorReward, true);
 
-    Record[] memory decidedRecords = IBetActionDecide(winingOption).decidedRecords();
+    IBetActionDecide winingOptionActionDecide = IBetActionDecide(winingOption);
+    Record[] memory decidedRecords = winingOptionActionDecide.decidedRecords();
     if (decidedRecords.length > 0) {
-      decidedRecords.distribute(_chip, deciderReward);
+      decidedRecords.distribute(_chip, deciderReward, winingOptionActionDecide.decidedAmount());
       _deciderLevelUp(decidedRecords);
     } else {
       protocolReward = protocolReward.unsafeAdd(deciderReward);
     }
 
-    Record[] memory wageredRecords = IBetActionWager(winingOption).wageredRecords();
+    IBetActionWager winingOptionActionWager = IBetActionWager(winingOption);
+    Record[] memory wageredRecords = winingOptionActionWager.wageredRecords();
     if (wageredRecords.length > 0) {
-      wageredRecords.distribute(_chip, winnerReward);
+      wageredRecords.distribute(_chip, winnerReward, winingOptionActionWager.wageredAmount());
     } else {
       protocolReward = protocolReward.unsafeAdd(winnerReward);
     }
@@ -514,7 +542,7 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
 
   function _distributeStakeReward(uint256 amount)
   private {
-    if (_chip == ZERO_ADDRESS) {
+    if (_chip == address(0)) {
       _vote.functionCallWithValue(
         abi.encodeWithSignature("distribute()"),
         amount
@@ -528,17 +556,21 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
   function _deciderLevelUp(Record[] memory records)
   private {
     uint256 length = records.length;
+    address[] memory accounts = new address[](length);
     for (uint256 i = 0; i < length; i = i.unsafeInc()) {
-      IAccountLevel(_vote).levelUp(records[i].account);
+      accounts[i] = records[i].account;
     }
+    IAccountLevel(_vote).levelUpBatch(accounts);
   }
 
   function _deciderLevelDown(Record[] memory records)
   private {
     uint256 length = records.length;
+    address[] memory accounts = new address[](length);
     for (uint256 i = 0; i < length; i = i.unsafeInc()) {
-      IAccountLevel(_vote).levelDown(records[i].account);
+      accounts[i] = records[i].account;
     }
+    IAccountLevel(_vote).levelDownBatch(accounts);
   }
 
   function _destroy()
@@ -558,7 +590,7 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
       return;
     }
 
-    if (_chip != ZERO_ADDRESS) revert InvalidChip();
+    if (_chip != address(0)) revert InvalidChip();
     if (AddressLib.isContractSender()) revert CannotReceive();
     dispute(msg.value);
   }

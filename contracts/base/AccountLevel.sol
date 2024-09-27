@@ -25,10 +25,34 @@ abstract contract AccountLevel is IAccountLevel {
     emit LevelUpdated(account, _levels[account]);
   }
 
+  function levelUpBatch(address[] calldata accounts)
+  external {
+    _authorizeUpdateAccountLevel(msg.sender);
+    uint256 length = accounts.length;
+    uint256[] memory levels = new uint256[](length);
+    for (uint256 i = 0; i < length; i = i.unsafeInc()) {
+      address account = accounts[i];
+      levels[i] = _levels[account] = _levels[account].inc();
+    }
+    emit LevelUpdatedBatch(accounts, levels);
+  }
+
   function levelDown(address account)
   external {
     _authorizeUpdateAccountLevel(msg.sender);
     _levels[account] = _levels[account].sub(3);
     emit LevelUpdated(account, _levels[account]);
+  }
+
+  function levelDownBatch(address[] calldata accounts)
+  external {
+    _authorizeUpdateAccountLevel(msg.sender);
+    uint256 length = accounts.length;
+    uint256[] memory levels = new uint256[](length);
+    for (uint256 i = 0; i < length; i = i.unsafeInc()) {
+      address account = accounts[i];
+      levels[i] = _levels[account] = _levels[account].sub(3);
+    }
+    emit LevelUpdatedBatch(accounts, levels);
   }
 }
