@@ -34,18 +34,26 @@ interface IBetActionWager {
   function wageredRecords() external view returns (Record[] memory);
 
   /**
-   * @dev Collect the wagered chips into the bet contract.
+   * @dev Collects the wagered chips into the bet contract.
    *
    * Can only be called by the bet contract.
    */
   function collectWageredChips() external;
 
   /**
-   * @dev Refund the wagered chips to the players.
+   * @dev Refunds the wagered chips to the players.
    *
    * Can only be called by the bet contract.
    */
   function refundWageredChips() external;
+
+  /**
+   * @dev Refunds the wagered chips to the players.
+   * @param limit The number of accounts processed at a time.
+   *
+   * Can only be called by the bet contract.
+   */
+  function refundWageredChips(uint256 limit) external;
 
   /**
    * @dev Returns true if the wagered chips has been released.

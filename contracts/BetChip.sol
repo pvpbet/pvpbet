@@ -51,16 +51,17 @@ contract BetChip is IBetChip, IErrors, ERC20 {
       }
 
       IBet.Status status = bet.status();
-      if (status == IBet.Status.CLOSED) {
+      if (status >= IBet.Status.CONFIRMED) {
         if (owner.isBetOption()) {
           _transfer(owner, to, value);
           return true;
         }
-        revert CannotReceive();
-      } else if (status == IBet.Status.CONFIRMED || status == IBet.Status.CANCELLED) {
-        if (value > 0) revert CannotReceive();
-        bet.release();
-        return true;
+        if (status == IBet.Status.CLOSED) revert CannotReceive();
+        else if (status == IBet.Status.CONFIRMED || status == IBet.Status.CANCELLED) {
+          if (value > 0) revert CannotReceive();
+          bet.release();
+          return true;
+        }
       }
 
       if (bet.chip() != address(this)) revert InvalidChip();

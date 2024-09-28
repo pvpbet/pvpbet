@@ -15,6 +15,8 @@ abstract contract BetActionDispute is IBetActionDispute, IErrors {
 
   Record[] private _disputedRecords;
   uint256 private _disputedTotalAmount;
+  uint256 private _releasedOffset;
+  bool private _disputedChipsPartialReleased;
   bool private _disputedChipsReleased;
 
   error AnnouncementPeriodHasNotStartedYet();
@@ -70,7 +72,7 @@ abstract contract BetActionDispute is IBetActionDispute, IErrors {
     uint256 disputedAmount_ = _disputedRecords.remove(disputer).amount;
     if (disputedAmount_ > 0) {
       disputer.transferFromContract(chip(), disputedAmount_);
-      _disputedTotalAmount = _disputedTotalAmount.sub(disputedAmount_);
+      _disputedTotalAmount = _disputedTotalAmount.unsafeSub(disputedAmount_);
     }
 
     if (amount > 0) {
@@ -79,7 +81,7 @@ abstract contract BetActionDispute is IBetActionDispute, IErrors {
       _disputedRecords.add(
         Record(disputer, amount)
       );
-      _disputedTotalAmount = _disputedTotalAmount.add(amount);
+      _disputedTotalAmount = _disputedTotalAmount.unsafeAdd(amount);
     }
 
     bet_.statusUpdate();
@@ -107,11 +109,10 @@ abstract contract BetActionDispute is IBetActionDispute, IErrors {
   function collectDisputedChips()
   external
   onlyBet {
-    if (_disputedChipsReleased) return;
-
+    if (_disputedChipsReleased || _disputedChipsPartialReleased) return;
     if (IBet(bet()).status() <= IBet.Status.ARBITRATING) revert AnnouncementPeriodHasNotEndedYet();
-
     _disputedChipsReleased = true;
+
     if (bet() != address(this)) {
       bet().transferFromContract(chip(), type(uint256).max);
     }
@@ -120,11 +121,10 @@ abstract contract BetActionDispute is IBetActionDispute, IErrors {
   function refundDisputedChips()
   external
   onlyBet {
-    if (_disputedChipsReleased) return;
-
+    if (_disputedChipsReleased || _disputedChipsPartialReleased) return;
     if (IBet(bet()).status() <= IBet.Status.ARBITRATING) revert AnnouncementPeriodHasNotEndedYet();
-
     _disputedChipsReleased = true;
+
     uint256 length = _disputedRecords.length;
     for (uint256 i = 0; i < length; i = i.unsafeInc()) {
       Record memory record = _disputedRecords[i];
@@ -132,8 +132,32 @@ abstract contract BetActionDispute is IBetActionDispute, IErrors {
     }
   }
 
+  function refundDisputedChips(uint256 limit)
+  external
+  onlyBet {
+    if (_disputedChipsReleased) return;
+    if (IBet(bet()).status() <= IBet.Status.ARBITRATING) revert AnnouncementPeriodHasNotEndedYet();
+
+    uint256 offset = _releasedOffset;
+    uint256 maxLength = _disputedRecords.length;
+    if (limit == 0) limit = maxLength.sub(offset);
+    _releasedOffset = offset.add(limit).min(maxLength);
+    if (_releasedOffset == maxLength) {
+      _disputedChipsReleased = true;
+    } else {
+      _disputedChipsPartialReleased = true;
+    }
+
+    Record[] memory records = _disputedRecords.slice(offset, limit);
+    uint256 length = records.length;
+    for (uint256 i = 0; i < length; i = i.unsafeInc()) {
+      Record memory record = records[i];
+      record.account.transferFromContract(chip(), record.amount, true);
+    }
+  }
+
   function disputedChipsReleased()
-  external view
+  public view
   returns (bool) {
     return _disputedChipsReleased;
   }

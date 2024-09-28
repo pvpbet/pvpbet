@@ -47,8 +47,8 @@ contract BetOption is IBetOption, Initializable, IMetadata, BetActionArbitrate, 
     _description = description_;
     _version = version_;
 
-    _chip = IBet(_bet).chip();
-    _vote = IBet(_bet).vote();
+    _chip = IBet(bet_).chip();
+    _vote = IBet(bet_).vote();
     unchecked {
       _chipPerQuantity = 10 ** _chip.decimals();
       _votePerQuantity = 10 ** _vote.decimals();

@@ -169,6 +169,11 @@ interface IBet {
   function release() external;
 
   /**
+   * @dev Partial release, used when the required gas for release is too large.
+   */
+  function release(uint256 limit) external;
+
+  /**
    * @dev Returns true if the bet has been released.
    */
   function released() external view returns (bool);

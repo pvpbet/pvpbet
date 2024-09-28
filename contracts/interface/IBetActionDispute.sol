@@ -34,18 +34,26 @@ interface IBetActionDispute {
   function disputedRecords() external view returns (Record[] memory);
 
   /**
-   * @dev Collect the disputed chips into the bet contract.
+   * @dev Collects the disputed chips into the bet contract.
    *
    * Can only be called by the bet contract.
    */
   function collectDisputedChips() external;
 
   /**
-   * @dev Refund the disputed chips to the disputers.
+   * @dev Refunds the disputed chips to the disputers.
    *
    * Can only be called by the bet contract.
    */
   function refundDisputedChips() external;
+
+  /**
+   * @dev Refunds the disputed chips to the disputers.
+   * @param limit The number of accounts processed at a time.
+   *
+   * Can only be called by the bet contract.
+   */
+  function refundDisputedChips(uint256 limit) external;
 
   /**
    * @dev Returns true if the disputed chips has been released.

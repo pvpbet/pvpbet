@@ -63,6 +63,18 @@ library RecordArrayLib {
     return sum;
   }
 
+  function slice(Record[] memory records, uint256 offset, uint256 limit)
+  internal pure
+  returns (Record[] memory) {
+    uint256 length = records.length;
+    uint256 end = offset.add(limit).min(length);
+    Record[] memory result = new Record[](end.unsafeSub(offset));
+    for (uint256 i = offset; i < end; i = i.unsafeInc()) {
+      result[i.unsafeSub(offset)] = records[i];
+    }
+    return result;
+  }
+
   function distribute(Record[] memory records, address token, uint256 amount)
   internal {
     uint256 total = sumAmount(records);
@@ -74,7 +86,7 @@ library RecordArrayLib {
   }
 
   /**
-   * @dev The purpose of using the `total` parameter is to save gas.
+   * @dev Implement distribution for a portion of the records.
    */
   function distribute(Record[] memory records, address token, uint256 amount, uint256 total)
   internal {

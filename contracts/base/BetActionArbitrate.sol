@@ -57,7 +57,7 @@ abstract contract BetActionArbitrate is IBetActionArbitrate, IErrors {
 
     uint256 arbitratedAmount_ = _arbitratedRecords.remove(arbitrator).amount;
     if (arbitratedAmount_ > 0) {
-      _arbitratedTotalAmount = _arbitratedTotalAmount.sub(arbitratedAmount_);
+      _arbitratedTotalAmount = _arbitratedTotalAmount.unsafeSub(arbitratedAmount_);
     }
 
     if (amount > 0) {
@@ -65,7 +65,7 @@ abstract contract BetActionArbitrate is IBetActionArbitrate, IErrors {
       _arbitratedRecords.add(
         Record(arbitrator, amount)
       );
-      _arbitratedTotalAmount = _arbitratedTotalAmount.add(amount);
+      _arbitratedTotalAmount = _arbitratedTotalAmount.unsafeAdd(amount);
     }
 
     bet_.statusUpdate();
