@@ -16,8 +16,9 @@ abstract contract BetActionWager is IBetActionWager, IErrors {
   Record[] private _wageredRecords;
   uint256 private _wageredTotalAmount;
   uint256 private _releasedOffset;
-  bool private _wageredChipsPartialReleased;
   bool private _wageredChipsReleased;
+  bool private _collected;
+  bool private _refunded;
 
   error WageringPeriodHasAlreadyEnded();
   error WageringPeriodHasNotEndedYet();
@@ -63,8 +64,7 @@ abstract contract BetActionWager is IBetActionWager, IErrors {
 
   function _wager(address player, uint256 amount)
   internal {
-    IBet bet_ = IBet(bet());
-    IBet.Status status = bet_.status();
+    IBet.Status status = IBet(bet()).statusUpdate();
     if (status > IBet.Status.WAGERING) revert WageringPeriodHasAlreadyEnded();
 
     uint256 wageredAmount_ = _wageredRecords.remove(player).amount;
@@ -82,7 +82,6 @@ abstract contract BetActionWager is IBetActionWager, IErrors {
       _wageredTotalAmount = _wageredTotalAmount.unsafeAdd(amount);
     }
 
-    bet_.statusUpdate();
     emit Wagered(player, amount);
   }
 
@@ -104,11 +103,18 @@ abstract contract BetActionWager is IBetActionWager, IErrors {
     return _wageredRecords;
   }
 
+  function wageredRecordCount()
+  public view
+  returns (uint256) {
+    return _wageredRecords.length;
+  }
+
   function collectWageredChips()
   external
   onlyBet {
-    if (_wageredChipsReleased || _wageredChipsPartialReleased) return;
+    if (_wageredChipsReleased || _refunded) return;
     if (IBet(bet()).status() == IBet.Status.WAGERING) revert WageringPeriodHasNotEndedYet();
+    _collected = true;
     _wageredChipsReleased = true;
 
     if (bet() != address(this)) {
@@ -119,15 +125,10 @@ abstract contract BetActionWager is IBetActionWager, IErrors {
   function refundWageredChips()
   external
   onlyBet {
-    if (_wageredChipsReleased || _wageredChipsPartialReleased) return;
+    if (_wageredChipsReleased || _collected) return;
     if (IBet(bet()).status() == IBet.Status.WAGERING) revert WageringPeriodHasNotEndedYet();
-    _wageredChipsReleased = true;
-
-    uint256 length = _wageredRecords.length;
-    for (uint256 i = 0; i < length; i = i.unsafeInc()) {
-      Record memory record = _wageredRecords[i];
-      record.account.transferFromContract(chip(), record.amount, true);
-    }
+    _refunded = true;
+    _refundWageredChips(0);
   }
 
   function refundWageredChips(uint256 limit)
@@ -135,18 +136,26 @@ abstract contract BetActionWager is IBetActionWager, IErrors {
   onlyBet {
     if (_wageredChipsReleased) return;
     if (IBet(bet()).status() == IBet.Status.WAGERING) revert WageringPeriodHasNotEndedYet();
+    _refunded = true;
+    _refundWageredChips(limit);
+  }
 
+  function _refundWageredChips(uint256 limit)
+  private {
     uint256 offset = _releasedOffset;
-    uint256 maxLength = _wageredRecords.length;
-    if (limit == 0) limit = maxLength.sub(offset);
-    _releasedOffset = offset.add(limit).min(maxLength);
-    if (_releasedOffset == maxLength) {
+    bool isAll = offset == 0 && limit == 0;
+    if (isAll) {
       _wageredChipsReleased = true;
     } else {
-      _wageredChipsPartialReleased = true;
+      uint256 maxLength = _wageredRecords.length;
+      if (limit == 0) limit = maxLength.sub(offset);
+      _releasedOffset = offset.add(limit).min(maxLength);
+      if (_releasedOffset == maxLength) {
+        _wageredChipsReleased = true;
+      }
     }
 
-    Record[] memory records = _wageredRecords.slice(offset, limit);
+    Record[] memory records = isAll ? _wageredRecords : _wageredRecords.slice(offset, limit);
     uint256 length = records.length;
     for (uint256 i = 0; i < length; i = i.unsafeInc()) {
       Record memory record = records[i];

@@ -4,6 +4,7 @@ node_modules
 .idea
 .openzeppelin
 /contracts.json
+/keys.json
 /networks.json
 
 # Hardhat files

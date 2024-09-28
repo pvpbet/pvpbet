@@ -154,14 +154,14 @@ interface IBet {
   function status() external view returns (Status);
 
   /**
+   * @dev Updates the status of the bet.
+   */
+  function statusUpdate() external returns (Status);
+
+  /**
    * @dev Returns the status deadline.
    */
   function statusDeadline() external view returns (uint256);
-
-  /**
-   * @dev Updates the status of the bet.
-   */
-  function statusUpdate() external;
 
   /**
    * @dev Releases all funds based on results.
@@ -172,6 +172,16 @@ interface IBet {
    * @dev Partial release, used when the required gas for release is too large.
    */
   function release(uint256 limit) external;
+
+  /**
+   * @dev Returns the release count of the partial release.
+   */
+  function maxReleaseCount() external view returns (uint256);
+
+  /**
+   * @dev Returns the offset of the partial release.
+   */
+  function releasedOffset() external view returns (uint256);
 
   /**
    * @dev Returns true if the bet has been released.

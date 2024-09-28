@@ -50,8 +50,7 @@ abstract contract BetActionArbitrate is IBetActionArbitrate, IErrors {
 
   function _arbitrate(address arbitrator, uint256 amount)
   internal {
-    IBet bet_ = IBet(bet());
-    IBet.Status status = bet_.status();
+    IBet.Status status = IBet(bet()).statusUpdate();
     if (status < IBet.Status.ARBITRATING) revert CurrentStatusIsNotArbitrable();
     if (status > IBet.Status.ARBITRATING) revert CurrentStatusIsNotArbitrable();
 
@@ -68,7 +67,6 @@ abstract contract BetActionArbitrate is IBetActionArbitrate, IErrors {
       _arbitratedTotalAmount = _arbitratedTotalAmount.unsafeAdd(amount);
     }
 
-    bet_.statusUpdate();
     emit Arbitrated(arbitrator, amount);
   }
 
@@ -88,5 +86,11 @@ abstract contract BetActionArbitrate is IBetActionArbitrate, IErrors {
   public view
   returns (Record[] memory) {
     return _arbitratedRecords;
+  }
+
+  function arbitratedRecordCount()
+  public view
+  returns (uint256) {
+    return _arbitratedRecords.length;
   }
 }

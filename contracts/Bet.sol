@@ -66,7 +66,6 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
   uint256 private _minArbitratedTotalAmount;
 
   uint256 private _releasedOffset;
-  bool private _partialReleased;
   bool private _released;
 
   function initialize(
@@ -293,6 +292,16 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
     return status_;
   }
 
+  function statusUpdate()
+  external
+  returns (Status) {
+    (Status status_, address unconfirmedWinningOption_, address confirmedWinningOption_) = _getState();
+    _status = status_;
+    _unconfirmedWinningOption = unconfirmedWinningOption_;
+    _confirmedWinningOption = confirmedWinningOption_;
+    return status_;
+  }
+
   function _getState()
   private view
   returns (Status status_, address unconfirmedWinningOption_, address confirmedWinningOption_) {
@@ -355,14 +364,6 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
     }
   }
 
-  function statusUpdate()
-  public {
-    (Status status_, address unconfirmedWinningOption_, address confirmedWinningOption_) = _getState();
-    _status = status_;
-    _unconfirmedWinningOption = unconfirmedWinningOption_;
-    _confirmedWinningOption = confirmedWinningOption_;
-  }
-
   function dispute(uint256 amount)
   public override(BetActionDispute) {
     super.dispute(amount);
@@ -377,93 +378,6 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
     if (_isValidDispute()) {
       _arbitratingPeriodStartTime = block.timestamp;
     }
-  }
-
-  function release()
-  public {
-    release(1000);
-  }
-
-  function release(uint256 limit)
-  public {
-    if (_released) revert BetHasBeenReleased();
-
-    (Status status_, address unconfirmedWinningOption_, address confirmedWinningOption_) = _getState();
-    if (status_ != Status.CONFIRMED && status_ != Status.CANCELLED) revert BetHasNotEndedYet();
-
-    uint256 offset = _releasedOffset;
-    bool isAll = offset == 0 && limit == 0;
-    bool isUnfinished;
-
-    if (limit == 0) {
-      _released = true;
-      _status = Status.CLOSED;
-      _unconfirmedWinningOption = unconfirmedWinningOption_;
-      _confirmedWinningOption = confirmedWinningOption_;
-    } else {
-      _partialReleased = true;
-      statusUpdate();
-      _releasedOffset = _releasedOffset.add(limit);
-    }
-
-    if (status_ == Status.CONFIRMED) {
-      if (_arbitratingPeriodStartTime > 0) {
-        // Dispute occurred
-        IBetActionArbitrate winingOptionActionArbitrate = IBetActionArbitrate(confirmedWinningOption_);
-        uint256 arbitratedAmount_ = winingOptionActionArbitrate.arbitratedAmount();
-        Record[] memory arbitratedRecords = winingOptionActionArbitrate.arbitratedRecords();
-        uint256 maxLength = arbitratedRecords.length;
-        if (_releasedOffset < maxLength) isUnfinished = true;
-        uint256 end = limit > 0 ? limit : maxLength.sub(offset);
-        Record[] memory records = isAll ? arbitratedRecords : arbitratedRecords.slice(offset, end);
-
-        if (confirmedWinningOption_ == unconfirmedWinningOption_) {
-          // Punish disputer
-          if (offset == 0) this.collectDisputedChips();
-          records.distribute(
-            _chip,
-            disputedAmount(),
-            arbitratedAmount_
-          );
-        } else {
-          // Punish decider
-          IBetActionDecide unconfirmedWinningActionDecide = IBetActionDecide(unconfirmedWinningOption_);
-          if (offset == 0) unconfirmedWinningActionDecide.confiscateDecidedVotes(); // TODO
-          records.distribute(
-            _govToken,
-            unconfirmedWinningActionDecide.decidedAmount(),
-            arbitratedAmount_
-          );
-          if (offset == 0) _deciderLevelDown(unconfirmedWinningActionDecide.decidedRecords());
-        }
-      }
-
-      if (_distribute(offset, limit)) {
-        isUnfinished = true;
-      }
-    }
-
-    if (_refund(offset, limit)) {
-      isUnfinished = true;
-    }
-
-    if (!_released && !isUnfinished) {
-      _released = true;
-      _status = Status.CLOSED;
-    }
-
-    if (_released) {
-      _destroy();
-      if (msg.sender != _betManager) {
-        IBetManager(_betManager).close();
-      }
-    }
-  }
-
-  function released()
-  external view
-  returns (bool) {
-    return _released;
   }
 
   function _isValidWager()
@@ -542,6 +456,214 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
     return winningOption;
   }
 
+  function release()
+  public {
+    release(0);
+  }
+
+  function release(uint256 limit)
+  public {
+    if (_released) revert BetHasBeenReleased();
+
+    (Status status_, address unconfirmedWinningOption_, address confirmedWinningOption_) = _getState();
+    if (status_ != Status.CONFIRMED && status_ != Status.CANCELLED) revert BetHasNotEndedYet();
+
+    _unconfirmedWinningOption = unconfirmedWinningOption_;
+    _confirmedWinningOption = confirmedWinningOption_;
+
+    uint256 offset = _releasedOffset;
+    bool isUnfinished;
+
+    if (limit > 0) {
+      _status = status_;
+      _releasedOffset = _releasedOffset.add(limit);
+    } else {
+      _released = true;
+      _status = Status.CLOSED;
+    }
+
+    if (status_ == Status.CONFIRMED) {
+      if (_arbitratingPeriodStartTime > 0) {
+        // Dispute occurred
+        if (_confirmedWinningOption == _unconfirmedWinningOption) {
+          if (_penalizeDisputer(offset, limit)) isUnfinished = true;
+        } else {
+          if (_penalizeDecider(offset, limit)) isUnfinished = true;
+        }
+      }
+
+      if (_distribute(offset, limit)) isUnfinished = true;
+    }
+
+    if (_refund(offset, limit)) isUnfinished = true;
+
+    if (!_released && !isUnfinished) {
+      _released = true;
+      _status = Status.CLOSED;
+    }
+
+    if (_released) {
+      _destroy();
+      if (msg.sender != _betManager) {
+        IBetManager(_betManager).close();
+      }
+    }
+  }
+
+  function maxReleaseCount()
+  external view
+  returns (uint256) {
+    uint256 maxReleaseCount_;
+
+    (Status status_, address unconfirmedWinningOption_, address confirmedWinningOption_) = _getState();
+    if (status_ < Status.CONFIRMED) return maxReleaseCount_;
+
+    uint256 count;
+
+    if (status_ == Status.CONFIRMED) {
+      if (_arbitratingPeriodStartTime > 0) {
+        // Dispute occurred
+        if (confirmedWinningOption_ == unconfirmedWinningOption_) {
+          count = IBetActionArbitrate(confirmedWinningOption_).arbitratedRecordCount();
+          if (maxReleaseCount_ < count) maxReleaseCount_ = count;
+        } else {
+          count = IBetActionDecide(unconfirmedWinningOption_).decidedRecordCount()
+            .unsafeAdd(IBetActionArbitrate(confirmedWinningOption_).arbitratedRecordCount());
+          if (maxReleaseCount_ < count) maxReleaseCount_ = count;
+        }
+      }
+
+      count = IBetActionDecide(confirmedWinningOption_).decidedRecordCount();
+      if (maxReleaseCount_ < count) maxReleaseCount_ = count;
+      count = IBetActionWager(confirmedWinningOption_).wageredRecordCount();
+      if (maxReleaseCount_ < count) maxReleaseCount_ = count;
+    }
+
+    count = disputedRecordCount();
+    if (maxReleaseCount_ < count) maxReleaseCount_ = count;
+
+    uint256 length = _options.length;
+    for (uint256 i = 0; i < length; i = i.unsafeInc()) {
+      address option = _options[i];
+      count = IBetActionDecide(option).decidedRecordCount();
+      if (maxReleaseCount_ < count) maxReleaseCount_ = count;
+      count = IBetActionWager(option).wageredRecordCount();
+      if (maxReleaseCount_ < count) maxReleaseCount_ = count;
+    }
+
+    return maxReleaseCount_;
+  }
+
+  function releasedOffset()
+  external view
+  returns (uint256) {
+    return _releasedOffset;
+  }
+
+  function released()
+  external view
+  returns (bool) {
+    return _released;
+  }
+
+  function _penalizeDisputer(uint256 offset, uint256 limit)
+  private
+  returns (bool) {
+    bool isAll = offset == 0 && limit == 0;
+    bool isUnfinished;
+
+    IBetActionArbitrate actionArbitrate = IBetActionArbitrate(_confirmedWinningOption);
+    uint256 length = actionArbitrate.arbitratedRecordCount();
+    if (offset < length) {
+      Record[] memory records = isAll
+        ? actionArbitrate.arbitratedRecords()
+        : actionArbitrate.arbitratedRecords().slice(offset, limit > 0 ? limit : length.unsafeSub(offset));
+
+      if (offset == 0) this.collectDisputedChips();
+      records.distribute(
+        _chip,
+        disputedAmount(),
+        actionArbitrate.arbitratedAmount()
+      );
+
+      if (limit > 0 && _releasedOffset < length) isUnfinished = true;
+    }
+
+    return isUnfinished;
+  }
+
+  function _penalizeDecider(uint256 offset, uint256 limit)
+  private
+  returns (bool) {
+    bool isAll = offset == 0 && limit == 0;
+    bool isUnfinished;
+
+    IBetActionDecide actionDecide = IBetActionDecide(_unconfirmedWinningOption);
+    uint256 length = actionDecide.decidedRecordCount();
+    if (offset < length) {
+      Record[] memory records = isAll
+        ? actionDecide.decidedRecords()
+        : actionDecide.decidedRecords().slice(offset, limit > 0 ? limit : length.unsafeSub(offset));
+
+      actionDecide.confiscateDecidedVotes(limit);
+      _deciderLevelDown(records);
+
+      if (limit > 0 && _releasedOffset < length) isUnfinished = true;
+    }
+
+    if (isAll || !isUnfinished) {
+      if (limit == 0 || _releasedOffset > length) {
+        if (_distributeConfiscatedAmount(actionDecide.decidedAmount(), length, offset, limit)) {
+          isUnfinished = true;
+        }
+      } else {
+        isUnfinished = true;
+      }
+    }
+
+    return isUnfinished;
+  }
+
+  function _distributeConfiscatedAmount(uint256 confiscatedAmount, uint256 start, uint256 offset, uint256 limit)
+  private
+  returns (bool) {
+    bool isAll = offset == 0 && limit == 0;
+    bool isUnfinished;
+
+    if (isAll || limit == 0 || _releasedOffset > start) {
+      uint256 relativeReleasedOffset;
+      if (_releasedOffset > start) {
+        relativeReleasedOffset = _releasedOffset.unsafeSub(start);
+        if (relativeReleasedOffset < limit) {
+          offset = 0;
+          limit = relativeReleasedOffset;
+        } else {
+          offset = relativeReleasedOffset.unsafeSub(limit);
+        }
+      }
+
+      IBetActionArbitrate actionArbitrate = IBetActionArbitrate(_confirmedWinningOption);
+      uint256 length = actionArbitrate.arbitratedRecordCount();
+      if (offset < length) {
+        Record[] memory records = isAll
+          ? actionArbitrate.arbitratedRecords()
+          : actionArbitrate.arbitratedRecords().slice(offset, limit > 0 ? limit : length.unsafeSub(offset));
+
+        records.distribute(
+          _govToken,
+          confiscatedAmount,
+          actionArbitrate.arbitratedAmount()
+        );
+
+        if (limit > 0 && relativeReleasedOffset < length) isUnfinished = true;
+      }
+    } else {
+      isUnfinished = true;
+    }
+
+    return isUnfinished;
+  }
+
   function _collectWageredChips()
   private
   returns (uint256) {
@@ -569,16 +691,18 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
 
     if (offset == 0) _creator.transferFromContract(_chip, creatorReward, true);
 
-    (bool isUnfinished_, uint256 remainingAmount) = _distributeDeciderReward(deciderReward, offset, limit);
+    bool isUnfinished_;
+    uint256 remainingAmount_;
+    (isUnfinished_, remainingAmount_) = _distributeDeciderReward(deciderReward, offset, limit);
     if (isUnfinished_) isUnfinished = true;
-    if (remainingAmount > 0) {
-      protocolReward = protocolReward.unsafeAdd(remainingAmount);
+    if (remainingAmount_ > 0) {
+      protocolReward = protocolReward.unsafeAdd(remainingAmount_);
     }
 
-    (isUnfinished_, remainingAmount) = _distributeWinnerReward(winnerReward, offset, limit);
+    (isUnfinished_, remainingAmount_) = _distributeWinnerReward(winnerReward, offset, limit);
     if (isUnfinished_) isUnfinished = true;
-    if (remainingAmount > 0) {
-      protocolReward = protocolReward.unsafeAdd(remainingAmount);
+    if (remainingAmount_ > 0) {
+      protocolReward = protocolReward.unsafeAdd(remainingAmount_);
     }
 
     if (offset == 0) _distributeProtocolReward(protocolReward);
@@ -591,17 +715,21 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
   returns (bool, uint256) {
     bool isAll = offset == 0 && limit == 0;
     bool isUnfinished;
+
     IBetActionDecide actionDecide = IBetActionDecide(_confirmedWinningOption);
-    Record[] memory decidedRecords = actionDecide.decidedRecords();
-    uint256 maxLength = decidedRecords.length;
-    if (maxLength > 0) {
-      if (_releasedOffset < maxLength) isUnfinished = true;
-      uint256 end = limit > 0 ? limit : maxLength.sub(offset);
-      Record[] memory records = isAll ? decidedRecords : decidedRecords.slice(offset, end);
+    uint256 length = actionDecide.decidedRecordCount();
+    if (offset < length) {
+      Record[] memory records = isAll
+        ? actionDecide.decidedRecords()
+        : actionDecide.decidedRecords().slice(offset, limit > 0 ? limit : length.unsafeSub(offset));
+
       records.distribute(_chip, amount, actionDecide.decidedAmount());
       _deciderLevelUp(records);
+
+      if (limit > 0 && _releasedOffset < length) isUnfinished = true;
       amount = 0;
     }
+
     return (isUnfinished, amount);
   }
 
@@ -610,16 +738,19 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
   returns (bool, uint256) {
     bool isAll = offset == 0 && limit == 0;
     bool isUnfinished;
+
     IBetActionWager actionWager = IBetActionWager(_confirmedWinningOption);
-    Record[] memory wageredRecords = actionWager.wageredRecords();
-    uint256 maxLength = wageredRecords.length;
-    if (maxLength > 0) {
-      if (_releasedOffset < maxLength) isUnfinished = true;
-      uint256 end = limit > 0 ? limit : maxLength.sub(offset);
-      Record[] memory records = isAll ? wageredRecords : wageredRecords.slice(offset, end);
+    uint256 length = actionWager.wageredRecordCount();
+    if (offset < length) {
+      Record[] memory records = isAll
+        ? actionWager.wageredRecords()
+        : actionWager.wageredRecords().slice(offset, limit > 0 ? limit : length.unsafeSub(offset));
       records.distribute(_chip, amount, actionWager.wageredAmount());
+
+      if (limit > 0 && _releasedOffset < length) isUnfinished = true;
       amount = 0;
     }
+
     return (isUnfinished, amount);
   }
 
@@ -645,9 +776,7 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
       this.refundDisputedChips();
     } else {
       this.refundDisputedChips(limit);
-      if (!disputedChipsReleased()) {
-        isUnfinished = true;
-      }
+      if (!disputedChipsReleased()) isUnfinished = true;
     }
 
     uint256 length = _options.length;
@@ -666,6 +795,7 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
         }
       }
     }
+
     return isUnfinished;
   }
 

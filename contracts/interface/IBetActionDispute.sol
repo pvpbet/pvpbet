@@ -34,6 +34,11 @@ interface IBetActionDispute {
   function disputedRecords() external view returns (Record[] memory);
 
   /**
+   * @dev Returns the count of the records of the dispute.
+   */
+  function disputedRecordCount() external view returns (uint256);
+
+  /**
    * @dev Collects the disputed chips into the bet contract.
    *
    * Can only be called by the bet contract.

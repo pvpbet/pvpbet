@@ -32,4 +32,9 @@ interface IBetActionArbitrate {
    * @dev Returns the records of the arbitration.
    */
   function arbitratedRecords() external view returns (Record[] memory);
+
+  /**
+   * @dev Returns the count of the records of the arbitration.
+   */
+  function arbitratedRecordCount() external view returns (uint256);
 }

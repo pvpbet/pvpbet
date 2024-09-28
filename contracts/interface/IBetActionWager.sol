@@ -34,6 +34,11 @@ interface IBetActionWager {
   function wageredRecords() external view returns (Record[] memory);
 
   /**
+   * @dev Returns the count of the records of the wager.
+   */
+  function wageredRecordCount() external view returns (uint256);
+
+  /**
    * @dev Collects the wagered chips into the bet contract.
    *
    * Can only be called by the bet contract.

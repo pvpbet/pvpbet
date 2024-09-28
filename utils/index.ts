@@ -1,7 +1,22 @@
 import { readFile, writeFile } from 'fs/promises'
 import { viem, ethers, upgrades } from 'hardhat'
-import { erc20Abi, getAddress, getContract, isAddressEqual, zeroAddress } from 'viem'
-import type { Address, ContractFunctionName, ContractFunctionArgs } from 'viem'
+import {
+  createWalletClient,
+  erc20Abi,
+  http,
+  getAddress,
+  getContract,
+  isAddressEqual,
+  zeroAddress,
+} from 'viem'
+import type {
+  Address,
+  ContractFunctionName,
+  ContractFunctionArgs,
+  Hash,
+} from 'viem'
+import { privateKeyToAccount } from 'viem/accounts'
+import { hardhat } from 'viem/chains'
 import type { DeployProxyOptions } from '@openzeppelin/hardhat-upgrades/src/utils'
 import type {
   PublicClient,
@@ -113,6 +128,15 @@ export async function getBalance(
   } else {
     return erc20Read(token, 'balanceOf', [owner]) as Promise<bigint>
   }
+}
+
+export async function getLocalWalletClient(privateKey: Hash) {
+  const account = privateKeyToAccount(privateKey)
+  return createWalletClient({
+    account,
+    chain: hardhat,
+    transport: http('http://127.0.0.1:8545'),
+  })
 }
 
 export function exec(callback: () => Promise<void>) {

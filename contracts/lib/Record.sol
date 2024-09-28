@@ -67,6 +67,7 @@ library RecordArrayLib {
   internal pure
   returns (Record[] memory) {
     uint256 length = records.length;
+    offset = offset.min(length);
     uint256 end = offset.add(limit).min(length);
     Record[] memory result = new Record[](end.unsafeSub(offset));
     for (uint256 i = offset; i < end; i = i.unsafeInc()) {

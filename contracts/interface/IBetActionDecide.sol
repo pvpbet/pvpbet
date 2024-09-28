@@ -41,6 +41,11 @@ interface IBetActionDecide {
   function decidedRecords() external view returns (Record[] memory);
 
   /**
+   * @dev Returns the count of the records of the decision.
+   */
+  function decidedRecordCount() external view returns (uint256);
+
+  /**
    * @dev Confiscates the decided votes into the bet contract.
    *
    * Can only be called by the bet contract.
