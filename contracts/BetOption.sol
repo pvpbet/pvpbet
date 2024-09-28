@@ -32,27 +32,27 @@ contract BetOption is IBetOption, Initializable, IMetadata, BetActionArbitrate, 
   address private _bet;
   address private _chip;
   address private _vote;
-
   uint256 private _chipPerQuantity;
   uint256 private _votePerQuantity;
 
   function initialize(
     string memory version_,
     string memory description_,
-    address bet_
+    address bet_,
+    address chip_,
+    address vote_,
+    uint256 chipPerQuantity,
+    uint256 votePerQuantity
   )
   public
   initializer {
-    _bet = bet_;
-    _description = description_;
     _version = version_;
-
-    _chip = IBet(bet_).chip();
-    _vote = IBet(bet_).vote();
-    unchecked {
-      _chipPerQuantity = 10 ** _chip.decimals();
-      _votePerQuantity = 10 ** _vote.decimals();
-    }
+    _description = description_;
+    _bet = bet_;
+    _chip = chip_;
+    _vote = vote_;
+    _chipPerQuantity = chipPerQuantity;
+    _votePerQuantity = votePerQuantity;
   }
 
   modifier onlyBet() override(BetActionDecide, BetActionWager) {

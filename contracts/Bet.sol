@@ -115,7 +115,14 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
     uint256 length = details_.options.length;
     for (uint256 i = 0; i < length; i = i.unsafeInc()) {
       _options.push(
-        factory.createBetOption(details_.options[i], address(this))
+        factory.createBetOption(
+          details_.options[i],
+          address(this),
+          _chip,
+          _vote,
+          _chipPerQuantity,
+          _votePerQuantity
+        )
       );
     }
   }

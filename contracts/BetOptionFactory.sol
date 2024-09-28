@@ -23,7 +23,11 @@ contract BetOptionFactory is IBetOptionFactory, IMetadata {
 
   function createBetOption(
     string calldata description,
-    address bet
+    address bet,
+    address chip,
+    address vote,
+    uint256 chipPerQuantity,
+    uint256 votePerQuantity
   ) external returns (address) {
     BetOption betOption;
     if (_implementation == address(0)) {
@@ -35,7 +39,11 @@ contract BetOptionFactory is IBetOptionFactory, IMetadata {
     betOption.initialize(
       version(),
       description,
-      bet
+      bet,
+      chip,
+      vote,
+      chipPerQuantity,
+      votePerQuantity
     );
     return address(betOption);
   }

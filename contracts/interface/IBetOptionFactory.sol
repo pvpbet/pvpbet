@@ -7,6 +7,10 @@ interface IBetOptionFactory {
 	 */
   function createBetOption(
     string calldata description,
-    address bet
+    address bet,
+    address chip,
+    address vote,
+    uint256 chipPerQuantity,
+    uint256 votePerQuantity
   ) external returns (address);
 }
