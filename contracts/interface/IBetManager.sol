@@ -70,77 +70,7 @@ interface IBetManager {
   ) external returns (address);
 
   /**
-   * @dev The bet notifies that it has been closed.
-   *
-   * Can only be called by the bet contract.
-   */
-  function close() external;
-
-  /**
-   * @dev Release all bets with the status "CANCELLED".
-   */
-  function clear() external;
-
-  /**
    * @dev Returns true if the address is a bet contract.
    */
   function isBet(address bet) external view returns (bool);
-
-  /**
-   * @dev Returns the contract address for the bet’s index.
-   *
-   * Index counts from 1.
-   */
-  function betIndex(address bet) external view returns (uint256);
-
-  /**
-   * @dev Returns the bet contract address at the index.
-   *
-   * Index counts from 1.
-   */
-  function betAt(uint256 index) external view returns (address);
-
-  /**
-   * @dev Returns the total number of bet contracts.
-   */
-  function betCount() external view returns (uint256);
-
-  /**
-   * @dev Returns the bet contracts.
-   */
-  function bets(uint256 offset, uint256 limit) external view returns (address[] memory);
-
-  /**
-   * @dev Returns the bet contracts by status.
-   */
-  function bets(uint256 offset, uint256 limit, IBet.Status[] calldata status) external view returns (address[] memory);
-
-  /**
-   * @dev Returns the contract address for the active bet’s index.
-   *
-   * Index counts from 1.
-   */
-  function activeBetIndex(address bet) external view returns (uint256);
-
-  /**
-   * @dev Returns the active bet contract address at the index.
-   *
-   * Index counts from 1.
-   */
-  function activeBetAt(uint256 index) external view returns (address);
-
-  /**
-   * @dev Returns the total number of active bet contracts.
-   */
-  function activeBetCount() external view returns (uint256);
-
-  /**
-   * @dev Returns the active bet contracts.
-   */
-  function activeBets(uint256 offset, uint256 limit) external view returns (address[] memory);
-
-  /**
-   * @dev Returns the active bet contracts by status.
-   */
-  function activeBets(uint256 offset, uint256 limit, IBet.Status[] calldata status) external view returns (address[] memory);
 }

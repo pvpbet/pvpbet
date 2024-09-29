@@ -2703,6 +2703,7 @@ describe('Bet', () => {
 
       const creatorReward = await getCreatorReward(Bet)
 
+      // The creator is unable to claim the reward, so it was sent to the `BetManager`.
       await checkBalance(
         async () => {
           await Bet.write.release({ account: hacker.account })

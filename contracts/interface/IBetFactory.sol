@@ -15,6 +15,7 @@ interface IBetFactory {
     address creator,
     address chip,
     address vote,
+    address govToken,
     address betManager,
     address betOptionFactory
   ) external returns (address);

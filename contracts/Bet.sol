@@ -51,8 +51,8 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
   address private _creator;
   address private _chip;
   address private _vote;
-  address private _betManager;
   address private _govToken;
+  address private _betManager;
   address private _unconfirmedWinningOption;
   address private _confirmedWinningOption;
   uint256 private _wageringPeriodDeadline;
@@ -77,6 +77,7 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
     address creator_,
     address chip_,
     address vote_,
+    address govToken_,
     address betManager,
     address betOptionFactory
   )
@@ -90,32 +91,33 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
     _creator = creator_;
     _chip = chip_;
     _vote = vote_;
+    _govToken = govToken_;
     _betManager = betManager;
-    _govToken = IUseGovToken(betManager).govToken();
-
-    unchecked {
-      _chipPerQuantity = 10 ** chip_.decimals();
-      _votePerQuantity = 10 ** vote_.decimals();
-      if (chip_ == address(0)) {
-        _minWageredTotalAmount = config_.minWageredTotalAmountETH;
-      } else {
-        _minWageredTotalAmount = config_.minWageredTotalQuantityERC20.unsafeMul(_chipPerQuantity);
-      }
-      _minDecidedTotalAmount = config_.minDecidedTotalQuantity.unsafeMul(_votePerQuantity);
-      _minArbitratedTotalAmount = config_.minArbitratedTotalQuantity.unsafeMul(_votePerQuantity);
-    }
-
-    _createBetOptions(details_, betOptionFactory);
+    _calculateParameters();
+    _createBetOptions(betOptionFactory);
   }
 
-  function _createBetOptions(BetDetails memory details_, address betOptionFactory)
+  function _calculateParameters()
+  private {
+    unchecked {
+      _chipPerQuantity = 10 ** _chip.decimals();
+      _votePerQuantity = 10 ** _vote.decimals();
+      _minWageredTotalAmount = _chip == address(0)
+        ? _config.minWageredTotalAmountETH
+        : _config.minWageredTotalQuantityERC20.unsafeMul(_chipPerQuantity);
+      _minDecidedTotalAmount = _config.minDecidedTotalQuantity.unsafeMul(_votePerQuantity);
+      _minArbitratedTotalAmount = _config.minArbitratedTotalQuantity.unsafeMul(_votePerQuantity);
+    }
+  }
+
+  function _createBetOptions(address betOptionFactory)
   private {
     IBetOptionFactory factory = IBetOptionFactory(betOptionFactory);
-    uint256 length = details_.options.length;
+    uint256 length = _details.options.length;
     for (uint256 i = 0; i < length; i = i.unsafeInc()) {
       _options.push(
         factory.createBetOption(
-          details_.options[i],
+          _details.options[i],
           address(this),
           _chip,
           _vote,
@@ -504,9 +506,6 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
 
     if (_released) {
       _destroy();
-      if (msg.sender != _betManager) {
-        IBetManager(_betManager).close();
-      }
     }
   }
 

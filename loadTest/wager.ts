@@ -19,7 +19,7 @@ exec(async () => {
     const privateKey = keys[i].key
     await owner.sendTransaction({ to: address, value: parseEther('0.1') })
     const walletClient = await getLocalWalletClient(privateKey)
-    await walletClient.sendTransaction({ to: options[Math.floor(Math.random() * optionLength)], value: parseEther('0.9') })
+    await walletClient.sendTransaction({ to: options[Math.floor(Math.random() * optionLength)], value: parseEther('0.09') })
     console.log(`${i + 1} Transactions have been sent.`)
   }
 

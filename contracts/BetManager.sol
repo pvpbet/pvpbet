@@ -11,8 +11,6 @@ import {IBet} from "./interface/IBet.sol";
 import {IBetConfigurator} from "./interface/IBetConfigurator.sol";
 import {IBetFactory} from "./interface/IBetFactory.sol";
 import {IBetManager} from "./interface/IBetManager.sol";
-import {AddressArrayLib} from "./lib/Address.sol";
-import {MathLib} from "./lib/Math.sol";
 import {StringLib} from "./lib/String.sol";
 import {TransferLib} from "./lib/Transfer.sol";
 
@@ -29,10 +27,8 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, UseCh
     return "1.0.0";
   }
 
-  using MathLib for uint256;
   using StringLib for string;
   using TransferLib for address;
-  using AddressArrayLib for address[];
 
   error ServiceHasNotStartedYet();
 
@@ -41,10 +37,7 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, UseCh
   address private _betOptionFactory;
   uint256 private _creationFee;
 
-  address[] private _activeBets;
-  address[] private _bets;
-  mapping(address bet => uint256 index) private _activeBetMap;
-  mapping(address bet => uint256 index) private _betMap;
+  mapping(address bet => bool) private _betMap;
 
   function initialize(
     address initialBetConfigurator,
@@ -199,129 +192,18 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, UseCh
       msg.sender,
       useChipERC20 ? chipToken() : address(0),
       voteToken(),
+      govToken(),
       address(this),
       _betOptionFactory
     );
     emit BetCreated(bet, msg.sender);
-    _activeBets.push(bet);
-    _activeBetMap[bet] = _activeBets.length;
-    _bets.push(bet);
-    _betMap[bet] = _bets.length;
+    _betMap[bet] = true;
     return bet;
-  }
-
-  function close()
-  external {
-    address sender = msg.sender;
-    uint256 index = _activeBetMap[sender];
-    if (index == 0) return;
-    _activeBetMap[sender] = 0;
-    uint256 length = _activeBets.length;
-    if (index > length) return;
-    uint256 max = length.unsafeDec();
-    for (uint256 i = index.unsafeDec(); i < max; i = i.unsafeInc()) {
-      uint256 j = i.unsafeInc();
-      address bet = _activeBets[j];
-      _activeBets[i] = bet;
-      _activeBetMap[bet] = j;
-    }
-    _activeBets.pop();
-  }
-
-  function clear()
-  external {
-    uint256 count = 0;
-    uint256 length = _activeBets.length;
-    for (uint256 i = 0; i < length; i = i.unsafeInc()) {
-      address betAddress = _activeBets[i];
-      IBet bet = IBet(betAddress);
-      if (bet.status() == IBet.Status.CANCELLED) {
-        bet.release();
-        _activeBetMap[betAddress] = 0;
-        count = count.unsafeInc();
-      } else if (count > 0) {
-        uint256 index = i.unsafeSub(count);
-        _activeBets[index] = betAddress;
-        _activeBetMap[betAddress] = index.unsafeInc();
-      }
-    }
-
-    if (count > 0) {
-      for (uint256 i = 0; i < count; i = i.unsafeInc()) {
-        _activeBets.pop();
-      }
-    }
   }
 
   function isBet(address bet)
   external view
   returns (bool) {
-    return _betMap[bet] > 0;
-  }
-
-  function betIndex(address bet)
-  external view
-  returns (uint256) {
-    uint256 index = _betMap[bet];
-    uint256 length = _bets.length;
-    return index > 0 && index <= length ? length.unsafeSub(index).unsafeInc() : 0;
-  }
-
-  function betAt(uint256 index)
-  external view
-  returns (address) {
-    uint256 length = _bets.length;
-    return index > 0 && index <= length ? _bets[length.unsafeSub(index)] : address(0);
-  }
-
-  function betCount()
-  external view
-  returns (uint256) {
-    return _bets.length;
-  }
-
-  function bets(uint256 offset, uint256 limit)
-  external view
-  returns (address[] memory) {
-    return _bets.search(offset, limit);
-  }
-
-  function bets(uint256 offset, uint256 limit, IBet.Status[] calldata status)
-  public view
-  returns (address[] memory) {
-    return _bets.search(offset, limit, status);
-  }
-
-  function activeBetIndex(address bet)
-  external view
-  returns (uint256) {
-    uint256 index = _activeBetMap[bet];
-    uint256 length = _activeBets.length;
-    return index > 0 && index <= length ? length.unsafeSub(index).unsafeInc() : 0;
-  }
-
-  function activeBetAt(uint256 index)
-  external view
-  returns (address) {
-    uint256 length = _activeBets.length;
-    return index > 0 && index <= length ? _activeBets[length.unsafeSub(index)] : address(0);
-  }
-
-  function activeBetCount()
-  external view
-  returns (uint256) {
-    return _activeBets.length;
-  }
-
-  function activeBets(uint256 offset, uint256 limit)
-  external view
-  returns (address[] memory) {
-    return _activeBets.search(offset, limit);
-  }
-
-  function activeBets(uint256 offset, uint256 limit, IBet.Status[] calldata status)
-  public view
-  returns (address[] memory) {
-    return _activeBets.search(offset, limit, status);
+    return _betMap[bet];
   }
 }

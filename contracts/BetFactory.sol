@@ -30,6 +30,7 @@ contract BetFactory is IBetFactory, IMetadata {
     address creator,
     address chip,
     address vote,
+    address govToken,
     address betManager,
     address betOptionFactory
   ) external returns (address) {
@@ -49,6 +50,7 @@ contract BetFactory is IBetFactory, IMetadata {
       creator,
       chip,
       vote,
+      govToken,
       betManager,
       betOptionFactory
     );
