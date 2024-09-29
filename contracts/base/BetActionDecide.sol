@@ -105,6 +105,12 @@ abstract contract BetActionDecide is IBetActionDecide, IErrors {
     return _decidedRecords;
   }
 
+  function decidedRecords(uint256 offset, uint256 limit)
+  public view
+  returns (Record[] memory) {
+    return _decidedRecords.slice(offset, limit);
+  }
+
   function decidedRecordCount()
   public view
   returns (uint256) {

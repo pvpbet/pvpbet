@@ -5,7 +5,6 @@ import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {IBetFactory} from "./interface/IBetFactory.sol";
 import {IMetadata} from "./interface/IMetadata.sol";
 import {Bet} from "./Bet.sol";
-import {BetOption} from "./BetOption.sol";
 
 contract BetFactory is IBetFactory, IMetadata {
   function name()

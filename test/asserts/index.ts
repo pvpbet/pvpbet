@@ -1,6 +1,7 @@
 import { assert } from 'chai'
 import { getBalance, numberFixed } from '../../utils'
 import { isAddressEqual, formatEther, zeroAddress } from 'viem'
+import { BetStatus } from '../common/bet'
 import type { Address } from 'viem'
 import type { ContractTypes } from '../../types'
 
@@ -63,7 +64,8 @@ export async function isBetClosed(
   Bet: ContractTypes['Bet'],
   chip: Address,
 ) {
-  assert.equal(await Bet.read.status(), 6)
+  assert.equal(await Bet.read.status(), BetStatus.CLOSED)
+  assert.equal(await Bet.read.released(), true)
   assert.equal(await getBalance(chip, Bet.address), 0n)
   const options = await Bet.read.options()
   for (const option of options) {

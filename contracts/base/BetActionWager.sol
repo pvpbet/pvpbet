@@ -103,6 +103,12 @@ abstract contract BetActionWager is IBetActionWager, IErrors {
     return _wageredRecords;
   }
 
+  function wageredRecords(uint256 offset, uint256 limit)
+  public view
+  returns (Record[] memory) {
+    return _wageredRecords.slice(offset, limit);
+  }
+
   function wageredRecordCount()
   public view
   returns (uint256) {

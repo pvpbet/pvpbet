@@ -34,6 +34,11 @@ interface IBetActionWager {
   function wageredRecords() external view returns (Record[] memory);
 
   /**
+   * @dev Returns the records of the wager.
+   */
+  function wageredRecords(uint256 offset, uint256 limit) external view returns (Record[] memory);
+
+  /**
    * @dev Returns the count of the records of the wager.
    */
   function wageredRecordCount() external view returns (uint256);

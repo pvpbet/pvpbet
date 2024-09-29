@@ -88,6 +88,12 @@ abstract contract BetActionArbitrate is IBetActionArbitrate, IErrors {
     return _arbitratedRecords;
   }
 
+  function arbitratedRecords(uint256 offset, uint256 limit)
+  public view
+  returns (Record[] memory) {
+    return _arbitratedRecords.slice(offset, limit);
+  }
+
   function arbitratedRecordCount()
   public view
   returns (uint256) {

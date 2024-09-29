@@ -34,6 +34,11 @@ interface IBetActionDispute {
   function disputedRecords() external view returns (Record[] memory);
 
   /**
+   * @dev Returns the records of the dispute.
+   */
+  function disputedRecords(uint256 offset, uint256 limit) external view returns (Record[] memory);
+
+  /**
    * @dev Returns the count of the records of the dispute.
    */
   function disputedRecordCount() external view returns (uint256);

@@ -50,12 +50,15 @@ import {
   isBetClosed,
   isCorrectStakeReward,
 } from './asserts'
+import type { Address } from 'viem'
+import type { ContractTypes } from '../types'
 
 const DAY = 24n * 3600n
 const DAY3 = 3n * DAY
 const WEEK = 7n * DAY
 
 describe('Bet', () => {
+  type DeployFixtureReturnType = Awaited<ReturnType<typeof loadFixture<ReturnType<typeof deployFixture>>>>
   async function deployFixture() {
     const publicClient = await viem.getPublicClient()
     const [owner, user, hacker] = await viem.getWalletClients()
@@ -1640,138 +1643,15 @@ describe('Bet', () => {
   })
 
   describe('Release', () => {
-    it('Release by transfer to the Bet contract', async () => {
-      const {
-        BetChip,
-        BetVotingEscrow,
-        BetManager,
-        owner,
-        user,
-        hacker,
-      } = await loadFixture(deployFixture)
-      const chips = [
-        zeroAddress,
-        BetChip.address,
-      ]
-
-      for (const chip of chips) {
-        const useChipERC20 = isAddressEqual(chip, BetChip.address)
-        const Bet = await createBet(
-          user,
-          BetManager,
-          BetDetails,
-          WEEK,
-          DAY3,
-          useChipERC20,
-        )
-        const options = await Bet.read.options()
-        await wager(chip, [
-          [owner, options[0], 2n],
-          [user, options[1], 9n],
-          [hacker, options[1], 1n],
-        ], Bet)
-        await time.increaseTo(await Bet.read.statusDeadline() + 1n)
-        assert.equal(await Bet.read.status(), BetStatus.DECIDING)
-
-        await decide(BetVotingEscrow.address, [
-          [owner, options[0], 6n],
-          [user, options[1], 3n],
-          [hacker, options[1], 2n],
-        ], Bet)
-        await time.increaseTo(await Bet.read.statusDeadline() + 1n)
-        assert.equal(await Bet.read.status(), BetStatus.ANNOUNCEMENT)
-
-        await time.increaseTo(await Bet.read.statusDeadline() + 1n)
-        assert.equal(await Bet.read.status(), BetStatus.CONFIRMED)
-
-        const creatorReward = await getCreatorReward(Bet)
-
-        await assert.isRejected(
-          transfer(hacker, chip, Bet.address, 1n),
-          'CannotReceive',
-        )
-
-        await checkBalance(
-          async () => {
-            await transfer(hacker, chip, Bet.address, 0n)
-          },
-          [
-            [user.account.address, chip, creatorReward],
-            [hacker.account.address, chip, 0n],
-          ],
-        )
-        assert.equal(await Bet.read.status(), BetStatus.CLOSED)
-        assert.equal(await Bet.read.released(), true)
-      }
-    })
-
-    it('Release by transfer to the BetOption contract', async () => {
-      const {
-        BetChip,
-        BetVotingEscrow,
-        BetManager,
-        owner,
-        user,
-        hacker,
-      } = await loadFixture(deployFixture)
-      const chips = [
-        zeroAddress,
-        BetChip.address,
-      ]
-
-      for (const chip of chips) {
-        const useChipERC20 = isAddressEqual(chip, BetChip.address)
-        const Bet = await createBet(
-          user,
-          BetManager,
-          BetDetails,
-          WEEK,
-          DAY3,
-          useChipERC20,
-        )
-        const options = await Bet.read.options()
-        await wager(chip, [
-          [owner, options[0], 2n],
-          [user, options[1], 9n],
-          [hacker, options[1], 1n],
-        ], Bet)
-        await time.increaseTo(await Bet.read.statusDeadline() + 1n)
-        assert.equal(await Bet.read.status(), BetStatus.DECIDING)
-
-        await decide(BetVotingEscrow.address, [
-          [owner, options[0], 6n],
-          [user, options[1], 3n],
-          [hacker, options[1], 2n],
-        ], Bet)
-        await time.increaseTo(await Bet.read.statusDeadline() + 1n)
-        assert.equal(await Bet.read.status(), BetStatus.ANNOUNCEMENT)
-
-        await time.increaseTo(await Bet.read.statusDeadline() + 1n)
-        assert.equal(await Bet.read.status(), BetStatus.CONFIRMED)
-
-        const creatorReward = await getCreatorReward(Bet)
-
-        await assert.isRejected(
-          transfer(hacker, chip, options[1], 1n),
-          'CannotReceive',
-        )
-
-        await checkBalance(
-          async () => {
-            await transfer(hacker, chip, options[1], 0n)
-          },
-          [
-            [user.account.address, chip, creatorReward],
-            [hacker.account.address, chip, 0n],
-          ],
-        )
-        assert.equal(await Bet.read.status(), BetStatus.CLOSED)
-        assert.equal(await Bet.read.released(), true)
-      }
-    })
-
-    it('Release when cancelled', async () => {
-      const {
+    async function cancelled(
+      release: (
+        Bet: ContractTypes['Bet'],
+        chip: Address,
+        data: DeployFixtureReturnType,
+      ) => Promise<void>,
+    ) {
+      const data = await loadFixture(deployFixture)
+        const {
         BetChip,
         BetVotingEscrow,
         BetManager,
@@ -1779,7 +1659,8 @@ describe('Bet', () => {
         owner,
         user,
         hacker,
-      } = await loadFixture(deployFixture)
+      } = data
+
       const chips = [
         zeroAddress,
         BetChip.address,
@@ -1825,7 +1706,7 @@ describe('Bet', () => {
             await checkVoteLevel(
               BetVotingEscrow,
               async () => {
-                await Bet.write.release({ account: hacker.account })
+                await release(Bet, chip, data)
               },
               [
                 [owner.account.address, 0n],
@@ -1860,9 +1741,16 @@ describe('Bet', () => {
           0n,
         )
       }
-    })
+    }
 
-    it('Release when cancelled after dispute occurred', async () => {
+    async function cancelledAfterDisputeOccurred(
+      release: (
+        Bet: ContractTypes['Bet'],
+        chip: Address,
+        data: DeployFixtureReturnType,
+      ) => Promise<void>,
+    ) {
+      const data = await loadFixture(deployFixture)
       const {
         BetChip,
         BetVotingEscrow,
@@ -1871,7 +1759,8 @@ describe('Bet', () => {
         owner,
         user,
         hacker,
-      } = await loadFixture(deployFixture)
+      } = data
+
       const chips = [
         zeroAddress,
         BetChip.address,
@@ -1934,7 +1823,7 @@ describe('Bet', () => {
             await checkVoteLevel(
               BetVotingEscrow,
               async () => {
-                await Bet.write.release({ account: hacker.account })
+                await release(Bet, chip, data)
               },
               [
                 [owner.account.address, 0n],
@@ -1969,9 +1858,16 @@ describe('Bet', () => {
           0n,
         )
       }
-    })
+    }
 
-    it('Release when confirmed', async () => {
+    async function confirmed(
+      release: (
+        Bet: ContractTypes['Bet'],
+        chip: Address,
+        data: DeployFixtureReturnType,
+      ) => Promise<void>,
+    ) {
+      const data = await loadFixture(deployFixture)
       const {
         BetChip,
         BetVotingEscrow,
@@ -1980,7 +1876,8 @@ describe('Bet', () => {
         owner,
         user,
         hacker,
-      } = await loadFixture(deployFixture)
+      } = data
+
       const chips = [
         zeroAddress,
         BetChip.address,
@@ -2040,7 +1937,7 @@ describe('Bet', () => {
             await checkVoteLevel(
               BetVotingEscrow,
               async () => {
-                await Bet.write.release({ account: hacker.account })
+                await release(Bet, chip, data)
               },
               [
                 [owner.account.address, 1n],
@@ -2083,9 +1980,16 @@ describe('Bet', () => {
           ),
         )
       }
-    })
+    }
 
-    it('Release when confirmed, and no one wagered on the winning option', async () => {
+    async function confirmedAndNoOneWageredOnTheWinningOption(
+      release: (
+        Bet: ContractTypes['Bet'],
+        chip: Address,
+        data: DeployFixtureReturnType,
+      ) => Promise<void>,
+    ) {
+      const data = await loadFixture(deployFixture)
       const {
         BetChip,
         BetVotingEscrow,
@@ -2094,7 +1998,8 @@ describe('Bet', () => {
         owner,
         user,
         hacker,
-      } = await loadFixture(deployFixture)
+      } = data
+
       const chips = [
         zeroAddress,
         BetChip.address,
@@ -2146,7 +2051,7 @@ describe('Bet', () => {
             await checkVoteLevel(
               BetVotingEscrow,
               async () => {
-                await Bet.write.release({ account: hacker.account })
+                await release(Bet, chip, data)
               },
               [
                 [owner.account.address, 1n],
@@ -2187,9 +2092,16 @@ describe('Bet', () => {
           ),
         )
       }
-    })
+    }
 
-    it('Release when confirmed after dispute occurred, and no one decided on the winning option', async () => {
+    async function confirmedAfterDisputeOccurredAndNoOneDecidedOnTheWinningOption(
+      release: (
+        Bet: ContractTypes['Bet'],
+        chip: Address,
+        data: DeployFixtureReturnType,
+      ) => Promise<void>,
+    ) {
+      const data = await loadFixture(deployFixture)
       const {
         BetChip,
         BetVotingEscrow,
@@ -2199,7 +2111,8 @@ describe('Bet', () => {
         owner,
         user,
         hacker,
-      } = await loadFixture(deployFixture)
+      } = data
+
       const chips = [
         zeroAddress,
         BetChip.address,
@@ -2270,7 +2183,7 @@ describe('Bet', () => {
             await checkVoteLevel(
               BetVotingEscrow,
               async () => {
-                await Bet.write.release({ account: hacker.account })
+                await release(Bet, chip, data)
               },
               [
                 [owner.account.address, 0n],
@@ -2312,9 +2225,16 @@ describe('Bet', () => {
           ) - creatorReward,
         )
       }
-    })
+    }
 
-    it('Release when confirmed after dispute occurred, and punish disputer', async () => {
+    async function confirmedAfterDisputeOccurredAndPunishDisputer(
+      release: (
+        Bet: ContractTypes['Bet'],
+        chip: Address,
+        data: DeployFixtureReturnType,
+      ) => Promise<void>,
+    ) {
+      const data = await loadFixture(deployFixture)
       const {
         BetChip,
         BetVotingEscrow,
@@ -2323,7 +2243,8 @@ describe('Bet', () => {
         owner,
         user,
         hacker,
-      } = await loadFixture(deployFixture)
+      } = data
+
       const chips = [
         zeroAddress,
         BetChip.address,
@@ -2396,7 +2317,7 @@ describe('Bet', () => {
             await checkVoteLevel(
               BetVotingEscrow,
               async () => {
-                await Bet.write.release({ account: hacker.account })
+                await release(Bet, chip, data)
               },
               [
                 [owner.account.address, 0n],
@@ -2441,9 +2362,16 @@ describe('Bet', () => {
           ),
         )
       }
-    })
+    }
 
-    it('Release when confirmed after dispute occurred, and punish decider', async () => {
+    async function confirmedAfterDisputeOccurredAndPunishDecider(
+      release: (
+        Bet: ContractTypes['Bet'],
+        chip: Address,
+        data: DeployFixtureReturnType,
+      ) => Promise<void>,
+    ) {
+      const data = await loadFixture(deployFixture)
       const {
         BetChip,
         BetVotingEscrow,
@@ -2453,7 +2381,8 @@ describe('Bet', () => {
         owner,
         user,
         hacker,
-      } = await loadFixture(deployFixture)
+      } = data
+
       const chips = [
         zeroAddress,
         BetChip.address,
@@ -2528,7 +2457,7 @@ describe('Bet', () => {
             await checkVoteLevel(
               BetVotingEscrow,
               async () => {
-                await Bet.write.release({ account: hacker.account })
+                await release(Bet, chip, data)
               },
               [
                 [owner.account.address, 0n],
@@ -2576,6 +2505,163 @@ describe('Bet', () => {
           ),
         )
       }
+    }
+
+    it('Release by transfer to the Bet contract', async () => {
+      await cancelled(async (Bet, chip, { hacker }) => {
+        await assert.isRejected(
+          transfer(hacker, chip, Bet.address, 1n),
+          'CannotReceive',
+        )
+        await transfer(hacker, chip, Bet.address, 0n)
+      })
+
+      await confirmed(async (Bet, chip, { hacker }) => {
+        await assert.isRejected(
+          transfer(hacker, chip, Bet.address, 1n),
+          'CannotReceive',
+        )
+        await transfer(hacker, chip, Bet.address, 0n)
+      })
+    })
+
+    it('Release by transfer to the BetOption contract', async () => {
+      await cancelled(async (Bet, chip, { hacker }) => {
+        const options = await Bet.read.options()
+        await assert.isRejected(
+          transfer(hacker, chip, options[1], 1n),
+          'CannotReceive',
+        )
+        await transfer(hacker, chip, options[1], 0n)
+      })
+
+      await confirmed(async (Bet, chip, { hacker }) => {
+        const options = await Bet.read.options()
+        await assert.isRejected(
+          transfer(hacker, chip, options[1], 1n),
+          'CannotReceive',
+        )
+        await transfer(hacker, chip, options[1], 0n)
+      })
+    })
+
+    it('Release when cancelled', async () => {
+      await cancelled(async (Bet, chip, { hacker }) => {
+        await Bet.write.release({ account: hacker.account })
+      })
+
+      // Partial release
+      await cancelled(async (Bet, chip, { hacker }) => {
+        const maxReleaseCount = await Bet.read.maxReleaseCount()
+        assert.equal(await Bet.read.releasedOffset(), 0n)
+
+        for (let i = 0; i < maxReleaseCount; i++) {
+          await Bet.write.release([1n], { account: hacker.account })
+        }
+        assert.equal(await Bet.read.releasedOffset(), maxReleaseCount)
+      })
+    })
+
+    it('Release when cancelled after dispute occurred', async () => {
+      await cancelledAfterDisputeOccurred(async (Bet, chip, { hacker }) => {
+        await Bet.write.release({ account: hacker.account })
+      })
+
+      // Partial release
+      await cancelledAfterDisputeOccurred(async (Bet, chip, { hacker }) => {
+        const maxReleaseCount = await Bet.read.maxReleaseCount()
+        assert.equal(await Bet.read.releasedOffset(), 0n)
+
+        for (let i = 0; i < maxReleaseCount; i++) {
+          await Bet.write.release([1n], { account: hacker.account })
+        }
+        assert.equal(await Bet.read.releasedOffset(), maxReleaseCount)
+      })
+    })
+
+    it('Release when confirmed', async () => {
+      await confirmed(async (Bet, chip, { hacker }) => {
+        await Bet.write.release({ account: hacker.account })
+      })
+
+      // Partial release
+      await confirmed(async (Bet, chip, { hacker }) => {
+        const maxReleaseCount = await Bet.read.maxReleaseCount()
+        assert.equal(await Bet.read.releasedOffset(), 0n)
+
+        for (let i = 0; i < maxReleaseCount; i++) {
+          await Bet.write.release([1n], { account: hacker.account })
+        }
+        assert.equal(await Bet.read.releasedOffset(), maxReleaseCount)
+      })
+    })
+
+    it('Release when confirmed, and no one wagered on the winning option', async () => {
+      await confirmedAndNoOneWageredOnTheWinningOption(async (Bet, chip, { hacker }) => {
+        await Bet.write.release({ account: hacker.account })
+      })
+
+      // Partial release
+      await confirmedAndNoOneWageredOnTheWinningOption(async (Bet, chip, { hacker }) => {
+        const maxReleaseCount = await Bet.read.maxReleaseCount()
+        assert.equal(await Bet.read.releasedOffset(), 0n)
+
+        for (let i = 0; i < maxReleaseCount; i++) {
+          await Bet.write.release([1n], { account: hacker.account })
+        }
+        assert.equal(await Bet.read.releasedOffset(), maxReleaseCount)
+      })
+    })
+
+    it('Release when confirmed after dispute occurred, and no one decided on the winning option', async () => {
+      await confirmedAfterDisputeOccurredAndNoOneDecidedOnTheWinningOption(async (Bet, chip, { hacker }) => {
+        await Bet.write.release({ account: hacker.account })
+      })
+
+      // Partial release
+      await confirmedAfterDisputeOccurredAndNoOneDecidedOnTheWinningOption(async (Bet, chip, { hacker }) => {
+        const maxReleaseCount = await Bet.read.maxReleaseCount()
+        assert.equal(await Bet.read.releasedOffset(), 0n)
+
+        for (let i = 0; i < maxReleaseCount; i++) {
+          await Bet.write.release([1n], { account: hacker.account })
+        }
+        assert.equal(await Bet.read.releasedOffset(), maxReleaseCount)
+      })
+    })
+
+    it('Release when confirmed after dispute occurred, and punish disputer', async () => {
+      await confirmedAfterDisputeOccurredAndPunishDisputer(async (Bet, chip, { hacker }) => {
+        await Bet.write.release({ account: hacker.account })
+      })
+
+      // Partial release
+      await confirmedAfterDisputeOccurredAndPunishDisputer(async (Bet, chip, { hacker }) => {
+        const maxReleaseCount = await Bet.read.maxReleaseCount()
+        assert.equal(await Bet.read.releasedOffset(), 0n)
+
+        for (let i = 0; i < maxReleaseCount; i++) {
+          await Bet.write.release([1n], { account: hacker.account })
+        }
+        assert.equal(await Bet.read.releasedOffset(), maxReleaseCount)
+      })
+    })
+
+    it('Release when confirmed after dispute occurred, and punish decider', async () => {
+      await confirmedAfterDisputeOccurredAndPunishDecider(async (Bet, chip, { hacker }) => {
+        await Bet.write.release({ account: hacker.account })
+      })
+
+      // Partial release
+      await confirmedAfterDisputeOccurredAndPunishDecider(async (Bet, chip, { hacker }) => {
+        const maxReleaseCount = await Bet.read.maxReleaseCount()
+        assert.equal(await Bet.read.releasedOffset(), 0n)
+
+        for (let i = 0; i < maxReleaseCount; i++) {
+          await Bet.write.release([1n], { account: hacker.account })
+        }
+        assert.equal(await Bet.read.releasedOffset(), maxReleaseCount)
+      })
     })
 
     it('Invalid release', async () => {

@@ -105,6 +105,12 @@ abstract contract BetActionDispute is IBetActionDispute, IErrors {
     return _disputedRecords;
   }
 
+  function disputedRecords(uint256 offset, uint256 limit)
+  public view
+  returns (Record[] memory) {
+    return _disputedRecords.slice(offset, limit);
+  }
+
   function disputedRecordCount()
   public view
   returns (uint256) {

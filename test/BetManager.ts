@@ -17,7 +17,6 @@ import { deployBetChip } from './common/chip'
 import { deployBetVotingEscrow } from './common/vote'
 import { testReceivable } from './asserts/Receivable'
 import { testWithdrawable } from './asserts/Withdrawable'
-import type { Address } from 'viem'
 import type { ContractTypes } from '../types'
 
 const DAY = 24n * 3600n

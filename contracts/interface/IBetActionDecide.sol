@@ -41,6 +41,11 @@ interface IBetActionDecide {
   function decidedRecords() external view returns (Record[] memory);
 
   /**
+   * @dev Returns the records of the decision.
+   */
+  function decidedRecords(uint256 offset, uint256 limit) external view returns (Record[] memory);
+
+  /**
    * @dev Returns the count of the records of the decision.
    */
   function decidedRecordCount() external view returns (uint256);
