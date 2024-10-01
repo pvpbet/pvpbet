@@ -2,11 +2,8 @@
 pragma solidity ^0.8.20;
 
 import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import {AccountLevel} from "./base/AccountLevel.sol";
 import {Receivable} from "./base/Receivable.sol";
-import {RewardDistributable} from "./base/RewardDistributable.sol";
 import {Upgradeable} from "./base/Upgradeable.sol";
-import {UseBetManager} from "./base/UseBetManager.sol";
 import {UseGovTokenStaking} from "./base/UseGovTokenStaking.sol";
 import {Withdrawable} from "./base/Withdrawable.sol";
 import {IBet} from "./interface/IBet.sol";
@@ -18,9 +15,8 @@ import {IErrors} from "./interface/IErrors.sol";
 import {IGovTokenStaking} from "./interface/IGovTokenStaking.sol";
 import {AddressLib} from "./lib/Address.sol";
 import {MathLib} from "./lib/Math.sol";
-import {StakedRecord, StakedRecordLib, StakedRecordArrayLib, UnlockWaitingPeriod} from "./lib/StakedRecord.sol";
 
-contract BetVotingEscrow is IBetVotingEscrow, IErrors, ERC20Upgradeable, Upgradeable, Receivable, Withdrawable, RewardDistributable, AccountLevel, UseBetManager, UseGovTokenStaking {
+contract BetVotingEscrow is IBetVotingEscrow, IErrors, ERC20Upgradeable, Upgradeable, Receivable, Withdrawable, UseGovTokenStaking {
   function name()
   public view override(ERC20Upgradeable, Upgradeable)
   returns (string memory) {
@@ -35,8 +31,6 @@ contract BetVotingEscrow is IBetVotingEscrow, IErrors, ERC20Upgradeable, Upgrade
 
   using MathLib for uint256;
   using AddressLib for address;
-  using StakedRecordLib for StakedRecord;
-  using StakedRecordArrayLib for StakedRecord[];
 
   error InvalidStatus(IBet.Status status);
   error InvalidTarget(address target);
@@ -58,26 +52,8 @@ contract BetVotingEscrow is IBetVotingEscrow, IErrors, ERC20Upgradeable, Upgrade
   function _authorizeWithdraw(address sender)
   internal view override(Withdrawable) onlyOwner {}
 
-  function _authorizeUpdateAccountLevel(address sender)
-  internal view override(AccountLevel) onlyBet {}
-
-  function _authorizeUpdateBetManager(address sender)
-  internal view override(UseBetManager) onlyOwner {}
-
   function _authorizeUpdateGovTokenStaking(address sender)
   internal view override(UseGovTokenStaking) onlyOwner {}
-
-  function _rewardDistribute(address token, uint256 amount)
-  internal override(RewardDistributable) {
-    StakedRecord[] memory stakedRecords = IGovTokenStaking(govTokenStaking()).stakedRecords();
-    uint256 total = stakedRecords.sumWeight();
-    uint256 length = stakedRecords.length;
-    for (uint256 i = 0; i < length; i = i.unsafeInc()) {
-      StakedRecord memory record = stakedRecords[i];
-      uint256 value = amount.mulDiv(record.getWeight(), total);
-      _rewardDistributeTo(record.account, token, value);
-    }
-  }
 
   function mint(address account, uint256 value)
   external
@@ -155,7 +131,8 @@ contract BetVotingEscrow is IBetVotingEscrow, IErrors, ERC20Upgradeable, Upgrade
 
   function _decide(address account, address target, uint256 value)
   private {
-    if (IGovTokenStaking(govTokenStaking()).isStaked(account)) {
+    uint256 stakedAmount = IGovTokenStaking(govTokenStaking()).stakedAmount(account);
+    if (stakedAmount > 0) {
       uint256 balance = balanceOf(account);
       if (balance < value) {
         revert VoteInsufficientAvailableBalance(account, balance, value);
@@ -169,7 +146,7 @@ contract BetVotingEscrow is IBetVotingEscrow, IErrors, ERC20Upgradeable, Upgrade
 
   function _arbitrate(address account, address target, uint256 value)
   private {
-    uint256 stakedAmount = IGovTokenStaking(govTokenStaking()).stakedAmount(account, UnlockWaitingPeriod.WEEK12);
+    uint256 stakedAmount = IGovTokenStaking(govTokenStaking()).stakedAmount(account, IGovTokenStaking.UnlockWaitingPeriod.WEEK12);
     if (stakedAmount > 0) {
       IBetActionArbitrate(target).arbitrate(account, value > 0 ? stakedAmount : 0);
     } else {
@@ -178,15 +155,16 @@ contract BetVotingEscrow is IBetVotingEscrow, IErrors, ERC20Upgradeable, Upgrade
   }
 
   function isAbleToDecide(address account)
-  external view
+  public view
   returns (bool) {
-    return IGovTokenStaking(govTokenStaking()).isStaked(account);
+    uint256 stakedAmount = IGovTokenStaking(govTokenStaking()).stakedAmount(account);
+    return stakedAmount > 0;
   }
 
   function isAbleToArbitrate(address account)
-  external view
+  public view
   returns (bool) {
-    uint256 stakedAmount = IGovTokenStaking(govTokenStaking()).stakedAmount(account, UnlockWaitingPeriod.WEEK12);
+    uint256 stakedAmount = IGovTokenStaking(govTokenStaking()).stakedAmount(account, IGovTokenStaking.UnlockWaitingPeriod.WEEK12);
     return stakedAmount > 0;
   }
 

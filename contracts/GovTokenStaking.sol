@@ -10,8 +10,7 @@ import {IGovTokenStaking} from "./interface/IGovTokenStaking.sol";
 import {AddressLib} from "./lib/Address.sol";
 import {MathLib} from "./lib/Math.sol";
 import {TransferLib} from "./lib/Transfer.sol";
-import {StakedRecord, StakedRecordLib, StakedRecordArrayLib, UnlockWaitingPeriod} from "./lib/StakedRecord.sol";
-import {UnstakedRecord, UnstakedRecordLib, UnstakedRecordArrayLib} from "./lib/UnstakedRecord.sol";
+import {UnstakedRecord, UnstakedRecordArrayLib} from "./lib/UnstakedRecord.sol";
 
 contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseGovToken, UseVoteToken {
   function name()
@@ -26,31 +25,42 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseGovToken,
     return "1.0.0";
   }
 
-  using MathLib for uint256;
   using AddressLib for address;
+  using MathLib for uint256;
   using TransferLib for address;
-  using StakedRecordLib for StakedRecord;
-  using StakedRecordArrayLib for StakedRecord[];
-  using UnstakedRecordLib for UnstakedRecord;
   using UnstakedRecordArrayLib for UnstakedRecord[];
 
   error CannotRestake();
   error InvalidUnlockWaitingPeriod();
+  error NoClaimableRewards();
   error NoStakedRecordFound();
   error NoUnstakedRecordFound();
   error StakedAmountDeductionFailed();
   error StakedAmountInsufficientBalance(address account, UnlockWaitingPeriod, uint256 balance, uint256 value);
 
-  StakedRecord[] private _stakedRecords;
-  UnstakedRecord[] private _unstakedRecords;
-  bool private _withdrawing;
+  uint256 private _amountPerWeight;
+  uint256 private _stakedTotalWeight;
+  mapping(UnlockWaitingPeriod => uint256) private _stakedTotalAmountOf;
+  mapping(address account => uint256) private _stakedTotalWeightOf;
+  mapping(address account => mapping(UnlockWaitingPeriod => uint256)) private _stakedAmountOf;
+  mapping(address account => UnstakedRecord[]) private _unstakedRecordsOf;
 
-  function initialize(address initialGovToken, address initialVoteToken)
+  mapping(address token => uint256 amount) private _accRewardPerWeightOf;
+  mapping(address account => mapping(address token => uint256)) private _rewardDebtOf;
+  mapping(address account => mapping(address token => uint256)) private _claimedRewardOf;
+  address[] private _rewardTokens;
+
+  function initialize(
+    address initialGovToken,
+    address initialVoteToken,
+    address[] memory initialRewardTokens
+  )
   public
   initializer {
     initialize();
     _setGovToken(initialGovToken);
     _setVoteToken(initialVoteToken);
+    _setRewardTokens(initialRewardTokens);
   }
 
   function _authorizeUpdateGovToken(address sender)
@@ -59,90 +69,140 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseGovToken,
   function _authorizeUpdateVoteToken(address sender)
   internal view override(UseVoteToken) onlyOwner {}
 
-  function stakeMinValue()
-  public view
-  returns (uint256) {
-    return 10 ** govToken().decimals();
+  function _setGovToken(address newGovToken)
+  internal override(UseGovToken) {
+    _amountPerWeight = 10 ** newGovToken.decimals();
+    super._setGovToken(newGovToken);
+  }
+
+  function _stakedAmountIncrease(address account, UnlockWaitingPeriod unlockWaitingPeriod, uint256 amount)
+  private {
+    _stakedAmountOf[account][unlockWaitingPeriod] = _stakedAmountOf[account][unlockWaitingPeriod].unsafeAdd(amount);
+    _stakedTotalAmountOf[unlockWaitingPeriod] = _stakedTotalAmountOf[unlockWaitingPeriod].unsafeAdd(amount);
+  }
+
+  function _stakedAmountDecrease(address account, UnlockWaitingPeriod unlockWaitingPeriod, uint256 amount)
+  private {
+    _stakedAmountOf[account][unlockWaitingPeriod] = _stakedAmountOf[account][unlockWaitingPeriod].unsafeSub(amount);
+    _stakedTotalAmountOf[unlockWaitingPeriod] = _stakedTotalAmountOf[unlockWaitingPeriod].unsafeSub(amount);
+  }
+
+  function _stakedWeightIncrease(address account, uint256 weight)
+  private {
+    _stakedTotalWeight = _stakedTotalWeight.unsafeAdd(weight);
+    _stakedTotalWeightOf[account] = _stakedTotalWeightOf[account].unsafeAdd(weight);
+  }
+
+  function _stakedWeightDecrease(address account, uint256 weight)
+  private {
+    _stakedTotalWeight = _stakedTotalWeight.unsafeSub(weight);
+    _stakedTotalWeightOf[account] = _stakedTotalWeightOf[account].unsafeSub(weight);
+  }
+
+  function _rewardDebtIncrease(address account, uint256 weight)
+  private {
+    uint256 length = _rewardTokens.length;
+    for (uint256 i = 0; i < length; i = i.unsafeInc()) {
+      address token = _rewardTokens[i];
+      _rewardDebtOf[account][token] = _rewardDebtOf[account][token].unsafeAdd(
+        weight.unsafeMul(_accRewardPerWeightOf[token])
+      );
+    }
+  }
+
+  function _rewardDebtDecrease(address account, uint256 weight)
+  private {
+    uint256 length = _rewardTokens.length;
+    for (uint256 i = 0; i < length; i = i.unsafeInc()) {
+      address token = _rewardTokens[i];
+      uint256 reward = _getTokenReward(account, token, weight);
+      if (reward > 0) {
+        _claim(account, token, reward);
+      }
+      _rewardDebtOf[account][token] = _rewardDebtOf[account][token].unsafeSub(
+        weight.unsafeMul(_accRewardPerWeightOf[token])
+      );
+    }
+  }
+
+  function _checkStakedAmount(address account, UnlockWaitingPeriod unlockWaitingPeriod, uint256 amount)
+  private view {
+    uint256 stakedAmount_ = _stakedAmountOf[account][unlockWaitingPeriod];
+    if (stakedAmount_ == 0) revert NoStakedRecordFound();
+    if (stakedAmount_ < amount) revert StakedAmountInsufficientBalance(account, unlockWaitingPeriod, stakedAmount_, amount);
+  }
+
+  function _mintStakingCertificate(address account, uint256 amount)
+  private {
+    IBetVotingEscrow(voteToken()).mint(account, amount);
+  }
+
+  function _burnStakingCertificate(address account, uint256 amount)
+  private {
+    IBetVotingEscrow(voteToken()).burn(account, amount);
   }
 
   function stake(UnlockWaitingPeriod unlockWaitingPeriod, uint256 amount)
   external {
     if (unlockWaitingPeriod == UnlockWaitingPeriod.NONE) revert InvalidUnlockWaitingPeriod();
-    if (amount < stakeMinValue()) revert InvalidAmount();
-
+    if (amount == 0) revert InvalidAmount();
     address account = msg.sender;
     account.transferToContract(govToken(), amount);
     _mintStakingCertificate(account, amount);
     _stake(account, unlockWaitingPeriod, amount);
-    emit Staked(account, unlockWaitingPeriod, amount);
   }
 
   function _stake(address account, UnlockWaitingPeriod unlockWaitingPeriod, uint256 amount)
   private {
-    (,uint256 index) = _stakedRecords.find(account, unlockWaitingPeriod);
-    if (index > 0) {
-      _stakedRecords[index.unsafeDec()].addAmount(amount);
-    } else {
-      _stakedRecords.add(
-        StakedRecord(account, unlockWaitingPeriod, amount)
-      );
-    }
+    _stakedAmountIncrease(account, unlockWaitingPeriod, amount);
+    uint256 weight = _getWeight(unlockWaitingPeriod, amount);
+    _rewardDebtIncrease(account, weight);
+    _stakedWeightIncrease(account, weight);
+    emit Staked(account, unlockWaitingPeriod, amount);
   }
 
   function unstake(UnlockWaitingPeriod unlockWaitingPeriod)
   external {
     address account = msg.sender;
-    (StakedRecord memory record,) = _getStakedRecord(account, unlockWaitingPeriod);
-    uint256 amount = record.amount;
-
-    record.removeFrom(_stakedRecords);
+    uint256 amount = _stakedAmountOf[account][unlockWaitingPeriod];
+    _checkStakedAmount(account, unlockWaitingPeriod, amount);
     _burnStakingCertificate(account, amount);
-    _unstakedRecords.add(
-      UnstakedRecord(
-        account,
-        unlockWaitingPeriod,
-        amount,
-        0,
-        0
-      )
+    _unstake(account, unlockWaitingPeriod, amount);
+    _unstakedRecordsOf[account].add(
+      UnstakedRecord(unlockWaitingPeriod, amount, 0)
     );
-    emit Unstaked(account, unlockWaitingPeriod, amount);
   }
 
   function unstake(UnlockWaitingPeriod unlockWaitingPeriod, uint256 amount)
   external {
-    if (amount < stakeMinValue()) revert InvalidAmount();
-
     address account = msg.sender;
-    (,uint256 index) = _getStakedRecord(account, unlockWaitingPeriod, amount);
-    StakedRecord storage record = _stakedRecords[index.unsafeDec()];
-
-    amount = amount.unsafeAdd(record.subAmount(amount, stakeMinValue(), _stakedRecords));
+    _checkStakedAmount(account, unlockWaitingPeriod, amount);
     _burnStakingCertificate(account, amount);
-    _unstakedRecords.add(
-      UnstakedRecord(
-        account,
-        unlockWaitingPeriod,
-        amount,
-        0,
-        0
-      )
+    _unstake(account, unlockWaitingPeriod, amount);
+    _unstakedRecordsOf[account].add(
+      UnstakedRecord(unlockWaitingPeriod, amount, 0)
     );
+  }
+
+  function _unstake(address account, UnlockWaitingPeriod unlockWaitingPeriod, uint256 amount)
+  private {
+    _stakedAmountDecrease(account, unlockWaitingPeriod, amount);
+    uint256 weight = _getWeight(unlockWaitingPeriod, amount);
+    _rewardDebtDecrease(account, weight);
+    _stakedWeightDecrease(account, weight);
     emit Unstaked(account, unlockWaitingPeriod, amount);
   }
 
   function restake(uint256 index)
   external {
-    if (index >= _unstakedRecords.length) revert NoUnstakedRecordFound();
-    UnstakedRecord memory record = _unstakedRecords[index];
     address account = msg.sender;
-    if (record.account != account) revert UnauthorizedAccess(account);
+    if (index >= _unstakedRecordsOf[account].length) revert NoUnstakedRecordFound();
+    UnstakedRecord memory record = _unstakedRecordsOf[account][index];
     if (block.timestamp > record.unlockTime) revert CannotRestake();
 
-    record.removeFrom(_unstakedRecords);
-    _mintStakingCertificate(record.account, record.amount);
-    _stake(record.account, record.unlockWaitingPeriod, record.amount);
-    emit Staked(record.account, record.unlockWaitingPeriod, record.amount);
+    _unstakedRecordsOf[account].remove(index);
+    _mintStakingCertificate(account, record.amount);
+    _stake(account, record.unlockWaitingPeriod, record.amount);
   }
 
   function extendUnlockWaitingPeriod(UnlockWaitingPeriod from, UnlockWaitingPeriod to)
@@ -151,48 +211,35 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseGovToken,
     if (from >= to) revert InvalidUnlockWaitingPeriod();
 
     address account = msg.sender;
-    (StakedRecord memory record,) = _getStakedRecord(account, from);
+    uint256 amount = _stakedAmountOf[account][from];
+    _checkStakedAmount(account, from, amount);
 
-    record.removeFrom(_stakedRecords);
-    emit Unstaked(account, from, record.amount);
-    _stake(account, to, record.amount);
-    emit Staked(account, to, record.amount);
+    _unstake(account, from, amount);
+    _stake(account, to, amount);
   }
 
   function extendUnlockWaitingPeriod(UnlockWaitingPeriod from, UnlockWaitingPeriod to, uint256 amount)
   external {
     if (to == UnlockWaitingPeriod.NONE) revert InvalidUnlockWaitingPeriod();
     if (from >= to) revert InvalidUnlockWaitingPeriod();
-    if (amount < stakeMinValue()) revert InvalidAmount();
 
     address account = msg.sender;
-    (,uint256 index) = _getStakedRecord(account, from, amount);
-    StakedRecord storage record = _stakedRecords[index.unsafeDec()];
+    _checkStakedAmount(account, from, amount);
 
-    amount = amount.unsafeAdd(record.subAmount(amount, stakeMinValue(), _stakedRecords));
-    emit Unstaked(account, from, amount);
+    _unstake(account, from, amount);
     _stake(account, to, amount);
-    emit Staked(account, to, amount);
   }
 
   function withdraw()
   external {
-    if (_withdrawing) return;
-    _withdrawing = true;
-
-    uint256 blockTimestamp = block.timestamp;
-    uint256 i = _unstakedRecords.length;
-    while (i > 0) {
-      i = i.unsafeDec();
-      UnstakedRecord memory record = _unstakedRecords[i];
-      if (blockTimestamp > record.unlockTime) {
-        record.removeFrom(_unstakedRecords);
-        record.account.transferFromContract(govToken(), record.amount);
-        emit Withdrawn(record.account, record.unlockWaitingPeriod, record.amount);
-      }
+    address account = msg.sender;
+    UnstakedRecord[] memory records = _unstakedRecordsOf[account].removeByUnlocked();
+    uint256 length = records.length;
+    for (uint256 i = 0; i < length; i = i.unsafeInc()) {
+      UnstakedRecord memory record = records[i];
+      account.transferFromContract(govToken(), record.amount);
+      emit Withdrawn(account, record.unlockWaitingPeriod, record.amount);
     }
-
-    _withdrawing = false;
   }
 
   function deductStakedAmountAndTransfer(address account, uint256 amount, address custodian)
@@ -217,134 +264,180 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseGovToken,
   function _deductStakedAmount(address account, UnlockWaitingPeriod unlockWaitingPeriod, uint256 amount)
   private
   returns (uint256 remainingAmount) {
-    (,uint256 index) = _stakedRecords.find(account, unlockWaitingPeriod);
-    if (index > 0) {
-      StakedRecord storage record = _stakedRecords[index.unsafeDec()];
-      if (record.amount >= amount) {
-        amount.unsafeAdd(record.subAmount(amount, stakeMinValue(), _stakedRecords));
-        remainingAmount = 0;
-      } else {
-        record.removeFrom(_stakedRecords);
-        remainingAmount = amount.unsafeSub(record.amount);
-      }
+    uint256 stakedAmount_ = _stakedAmountOf[account][unlockWaitingPeriod];
+    if (stakedAmount_ >= amount) {
+      _unstake(account, unlockWaitingPeriod, amount);
+      remainingAmount = 0;
     } else {
-      remainingAmount = amount;
+      _unstake(account, unlockWaitingPeriod, stakedAmount_);
+      remainingAmount = amount.unsafeSub(stakedAmount_);
     }
-  }
-
-  function _mintStakingCertificate(address account, uint256 amount)
-  private {
-    IBetVotingEscrow(voteToken()).mint(account, amount);
-  }
-
-  function _burnStakingCertificate(address account, uint256 amount)
-  private {
-    IBetVotingEscrow(voteToken()).burn(account, amount);
-  }
-
-  function _getStakedRecord(address account, UnlockWaitingPeriod unlockWaitingPeriod)
-  private view
-  returns (StakedRecord memory, uint256) {
-    (StakedRecord memory record, uint256 index) = _stakedRecords.find(account, unlockWaitingPeriod);
-    if (index == 0) revert NoStakedRecordFound();
-    return (record, index);
-  }
-
-  function _getStakedRecord(address account, UnlockWaitingPeriod unlockWaitingPeriod, uint256 amount)
-  private view
-  returns (StakedRecord memory, uint256) {
-    (StakedRecord memory record, uint256 index) = _stakedRecords.find(account, unlockWaitingPeriod);
-    if (index == 0) revert NoStakedRecordFound();
-    if (record.amount < amount) revert StakedAmountInsufficientBalance(record.account, record.unlockWaitingPeriod, record.amount, amount);
-    return (record, index);
-  }
-
-  function isStaked(address account)
-  external view
-  returns (bool) {
-    StakedRecord memory record;
-    (record,) = _stakedRecords.find(account, UnlockWaitingPeriod.WEEK);
-    if (record.account == account) return true;
-    (record,) = _stakedRecords.find(account, UnlockWaitingPeriod.WEEK12);
-    if (record.account == account) return true;
-    return false;
+    return remainingAmount;
   }
 
   function stakedAmount()
   external view
   returns (uint256) {
-    return _stakedRecords.sumAmount();
+    uint256 stakedTotalAmount;
+    uint256 length = uint256(type(UnlockWaitingPeriod).max).unsafeInc();
+    for (uint256 i = 0; i < length; i = i.unsafeInc()) {
+      UnlockWaitingPeriod unlockWaitingPeriod = UnlockWaitingPeriod(i);
+      if (unlockWaitingPeriod == UnlockWaitingPeriod.NONE) continue;
+      stakedTotalAmount = stakedTotalAmount.unsafeAdd(_stakedTotalAmountOf[unlockWaitingPeriod]);
+    }
+    return stakedTotalAmount;
   }
 
   function stakedAmount(UnlockWaitingPeriod unlockWaitingPeriod)
   external view
   returns (uint256) {
-    return _stakedRecords.sumAmount(unlockWaitingPeriod);
+    return _stakedTotalAmountOf[unlockWaitingPeriod];
   }
 
   function stakedAmount(address account)
   external view
   returns (uint256) {
-    (StakedRecord memory a,) = _stakedRecords.find(account, UnlockWaitingPeriod.WEEK);
-    (StakedRecord memory b,) = _stakedRecords.find(account, UnlockWaitingPeriod.WEEK12);
-    return a.amount.unsafeAdd(b.amount);
+    uint256 stakedTotalAmount;
+    uint256 length = uint256(type(UnlockWaitingPeriod).max).unsafeInc();
+    for (uint256 i = 0; i < length; i = i.unsafeInc()) {
+      UnlockWaitingPeriod unlockWaitingPeriod = UnlockWaitingPeriod(i);
+      if (unlockWaitingPeriod == UnlockWaitingPeriod.NONE) continue;
+      stakedTotalAmount = stakedTotalAmount.unsafeAdd(_stakedAmountOf[account][unlockWaitingPeriod]);
+    }
+    return stakedTotalAmount;
   }
 
   function stakedAmount(address account, UnlockWaitingPeriod unlockWaitingPeriod)
   external view
   returns (uint256) {
-    (StakedRecord memory record,) = _stakedRecords.find(account, unlockWaitingPeriod);
-    return record.amount;
+    return _stakedAmountOf[account][unlockWaitingPeriod];
   }
 
   function stakedWeight()
   external view
   returns (uint256) {
-    return _stakedRecords.sumWeight();
+    return _stakedTotalWeight;
   }
 
   function stakedWeight(address account)
   external view
   returns (uint256) {
-    (StakedRecord memory a,) = _stakedRecords.find(account, UnlockWaitingPeriod.WEEK);
-    (StakedRecord memory b,) = _stakedRecords.find(account, UnlockWaitingPeriod.WEEK12);
-    return a.getWeight().unsafeAdd(b.getWeight());
-  }
-
-  function stakedRecord(address account, UnlockWaitingPeriod unlockWaitingPeriod)
-  external view
-  returns (StakedRecord memory) {
-    (StakedRecord memory record,) = _stakedRecords.find(account, unlockWaitingPeriod);
-    return record;
-  }
-
-  function stakedRecordCount()
-  external view
-  returns (uint256) {
-    return _stakedRecords.length;
-  }
-
-  function stakedRecordCount(UnlockWaitingPeriod unlockWaitingPeriod)
-  external view
-  returns (uint256) {
-    return _stakedRecords.find(unlockWaitingPeriod).length;
-  }
-
-  function stakedRecords()
-  external view
-  returns (StakedRecord[] memory) {
-    return _stakedRecords;
+    return _stakedTotalWeightOf[account];
   }
 
   function unstakedRecords(address account)
   external view
   returns (UnstakedRecord[] memory) {
-    return _unstakedRecords.find(account);
+    return _unstakedRecordsOf[account];
   }
 
   function unstakedRecords(address account, UnlockWaitingPeriod unlockWaitingPeriod)
   external view
   returns (UnstakedRecord[] memory) {
-    return _unstakedRecords.find(account, unlockWaitingPeriod);
+    return _unstakedRecordsOf[account].findByUnlockWaitingPeriod(unlockWaitingPeriod);
+  }
+
+  function rewardTokens()
+  external view
+  returns (address[] memory) {
+    return _rewardTokens;
+  }
+
+  function setRewardTokens(address[] memory tokens)
+  external {
+    _setRewardTokens(tokens);
+  }
+
+  function _setRewardTokens(address[] memory tokens)
+  private {
+    _rewardTokens = tokens;
+    emit RewardTokenSet(tokens);
+  }
+
+  function distribute()
+  external payable {
+    _distribute(address(0), msg.value);
+  }
+
+  function distribute(address token, uint256 amount)
+  external {
+    _distribute(token, amount);
+  }
+
+  function _distribute(address token, uint256 amount)
+  private {
+    address sender = msg.sender;
+    sender.transferToContract(token, amount);
+    if (_stakedTotalWeight > 0) {
+      _accRewardPerWeightOf[token] = _accRewardPerWeightOf[token].unsafeAdd(
+        amount.unsafeDiv(_stakedTotalWeight)
+      );
+    }
+    emit Distributed(sender, token, amount);
+  }
+
+  function claimedRewards(address account)
+  external view
+  returns (uint256) {
+    return _claimedRewardOf[account][address(0)];
+  }
+
+  function claimedRewards(address account, address token)
+  external view
+  returns (uint256) {
+    return _claimedRewardOf[account][token];
+  }
+
+  function unclaimedRewards(address account)
+  external view
+  returns (uint256) {
+    return _getTokenReward(account, address(0), _stakedTotalWeightOf[account]);
+  }
+
+  function unclaimedRewards(address account, address token)
+  external view
+  returns (uint256) {
+    return _getTokenReward(account, token, _stakedTotalWeightOf[account]);
+  }
+
+  function claim()
+  external {
+    address account = msg.sender;
+    address token = address(0);
+    uint256 reward = _getTokenReward(account, token, _stakedTotalWeightOf[account]);
+    if (reward == 0) revert NoClaimableRewards();
+    _claim(account, token, reward);
+  }
+
+  function claim(address token)
+  external {
+    address account = msg.sender;
+    uint256 reward = _getTokenReward(account, token, _stakedTotalWeightOf[account]);
+    if (reward == 0) revert NoClaimableRewards();
+    _claim(account, token, reward);
+  }
+
+  function _claim(address account, address token, uint256 reward)
+  private {
+    _rewardDebtOf[account][token] = _rewardDebtOf[account][token].unsafeAdd(reward);
+    _claimedRewardOf[account][token] = _claimedRewardOf[account][token].unsafeAdd(reward);
+    account.transferFromContract(token, reward);
+    emit Claimed(account, token, reward);
+  }
+
+  function _getTokenReward(address account, address token, uint256 weight)
+  private view
+  returns (uint256) {
+    uint256 rewardDebt = _stakedTotalWeightOf[account] > 0
+      ? _rewardDebtOf[account][token].mulDiv(weight, _stakedTotalWeightOf[account])
+      : 0;
+    return weight.unsafeMul(_accRewardPerWeightOf[token]).unsafeSub(rewardDebt);
+  }
+
+  function _getWeight(UnlockWaitingPeriod unlockWaitingPeriod, uint256 amount)
+  private view
+  returns (uint256) {
+    uint256 weight = amount.unsafeDiv(_amountPerWeight);
+    return unlockWaitingPeriod == UnlockWaitingPeriod.WEEK12 ? weight.unsafeMul(2) : weight;
   }
 }

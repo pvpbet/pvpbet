@@ -1,20 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {StakedRecord, UnlockWaitingPeriod} from "../lib/StakedRecord.sol";
 import {UnstakedRecord} from "../lib/UnstakedRecord.sol";
 
 interface IGovTokenStaking {
+  enum UnlockWaitingPeriod {
+    NONE,
+    WEEK,
+    WEEK12
+  }
+
+  event RewardTokenSet(address[] tokens);
+  event Claimed(address indexed account, address indexed token, uint256 amount);
+  event Distributed(address indexed sender, address indexed token, uint256 amount);
   event Staked(address indexed account, UnlockWaitingPeriod, uint256 amount);
   event Unstaked(address indexed account, UnlockWaitingPeriod, uint256 amount);
   event Withdrawn(address indexed account, UnlockWaitingPeriod, uint256 amount);
-
-  /**
-   * @dev Returns the stake minimum value.
-   *
-   * If it is below this value, it will be considered a dust attack.
-   */
-  function stakeMinValue() external view returns (uint256);
 
   /**
    * @dev Stakes a specified amount of governance tokens and mints a staking certificate.
@@ -89,11 +90,6 @@ interface IGovTokenStaking {
   function batchDeductStakedAmountAndTransfer(address[] calldata accounts, uint256[] calldata amounts, address custodian) external;
 
   /**
-   * @dev Returns whether the account is staked.
-   */
-  function isStaked(address account) external view returns (bool);
-
-  /**
   * @dev Returns the total staked amount.
    */
   function stakedAmount() external view returns (uint256);
@@ -124,26 +120,6 @@ interface IGovTokenStaking {
   function stakedWeight(address account) external view returns (uint256);
 
   /**
-   * @dev Returns the staked record of the account by the unlock waiting period.
-   */
-  function stakedRecord(address account, UnlockWaitingPeriod) external view returns (StakedRecord memory);
-
-  /**
-   * @dev Returns the total number of staked records.
-   */
-  function stakedRecordCount() external view returns (uint256);
-
-  /**
-   * @dev Returns the total number of staked records by the unlock waiting period.
-   */
-  function stakedRecordCount(UnlockWaitingPeriod) external view returns (uint256);
-
-  /**
-   * @dev Returns the staked records.
-   */
-  function stakedRecords() external view returns (StakedRecord[] memory);
-
-  /**
    * @dev Returns the unstaked records of the account.
    */
   function unstakedRecords(address account) external view returns (UnstakedRecord[] memory);
@@ -152,4 +128,54 @@ interface IGovTokenStaking {
    * @dev Returns the unstaked records of the account by the unlock waiting period.
    */
   function unstakedRecords(address account, UnlockWaitingPeriod) external view returns (UnstakedRecord[] memory);
+
+  /**
+   * @dev Returns the reward tokens.
+   */
+  function rewardTokens() external view returns (address[] memory);
+
+  /**
+   * @dev Sets the reward tokens.
+   */
+  function setRewardTokens(address[] calldata tokens) external;
+
+  /**
+   * @dev Distribute a specified amount of ETH.
+   */
+  function distribute() external payable;
+
+  /**
+   * @dev Distribute a specified amount of ERC20 token.
+   */
+  function distribute(address token, uint256 amount) external;
+
+  /**
+   * @dev Returns the claimed ETH rewards of the account.
+   */
+  function claimedRewards(address account) external view returns (uint256);
+
+  /**
+   * @dev Returns the claimed ERC20 token rewards of the account.
+   */
+  function claimedRewards(address account, address token) external view returns (uint256);
+
+  /**
+   * @dev Returns the unclaimed ETH rewards of the account.
+   */
+  function unclaimedRewards(address account) external view returns (uint256);
+
+  /**
+   * @dev Returns the unclaimed ERC20 token rewards of the account.
+   */
+  function unclaimedRewards(address account, address token) external view returns (uint256);
+
+  /**
+   * @dev Claim the ETH rewards.
+   */
+  function claim() external;
+
+  /**
+   * @dev Claim the ERC20 token rewards.
+   */
+  function claim(address token) external;
 }

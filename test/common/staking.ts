@@ -1,4 +1,6 @@
 import { ignition } from 'hardhat'
+import { isAddressEqual, zeroAddress } from 'viem'
+import { erc20Approve } from '../../utils'
 import GovTokenStakingModule from '../../ignition/modules/GovTokenStaking'
 import type { Address } from 'viem'
 import type { WalletClient } from '@nomicfoundation/hardhat-viem/types'
@@ -12,6 +14,7 @@ export enum UnlockWaitingPeriod {
 
 export async function deployGovTokenStaking(
   govToken: Address,
+  chipToken: Address,
   voteToken: Address,
 ) {
   const { GovTokenStaking } = await ignition.deploy(GovTokenStakingModule, {
@@ -19,6 +22,10 @@ export async function deployGovTokenStaking(
       GovTokenStaking: {
         govToken,
         voteToken,
+        rewardTokens: [
+          zeroAddress,
+          chipToken,
+        ],
       },
     },
   })
@@ -52,4 +59,18 @@ export async function withdraw(
   GovTokenStaking: ContractTypes['GovTokenStaking'],
 ) {
   await GovTokenStaking.write.withdraw({ account: owner.account })
+}
+
+export async function distribute(
+  owner: WalletClient,
+  GovTokenStaking: ContractTypes['GovTokenStaking'],
+  token: Address,
+  amount: bigint,
+) {
+  if (isAddressEqual(zeroAddress, token)) {
+    await GovTokenStaking.write.distribute({ account: owner.account, value: amount })
+  } else {
+    await erc20Approve(owner, token, GovTokenStaking.address, amount)
+    await GovTokenStaking.write.distribute([token, amount], { account: owner.account })
+  }
 }

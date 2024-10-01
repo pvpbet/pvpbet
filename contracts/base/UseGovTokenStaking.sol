@@ -30,7 +30,7 @@ abstract contract UseGovTokenStaking is IUseGovTokenStaking, IErrors {
   }
 
   function _setGovTokenStaking(address newGovTokenStaking)
-  internal {
+  internal virtual {
     _govTokenStaking = newGovTokenStaking;
     emit GovTokenStakingSet(newGovTokenStaking);
   }

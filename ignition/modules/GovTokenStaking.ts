@@ -10,10 +10,11 @@ export default buildModule('GovTokenStaking', m => {
   )
   const initialize = m.encodeFunctionCall(
     implementation,
-    'initialize(address,address)',
+    'initialize(address,address,address[])',
     [
       m.getParameter('govToken'),
       m.getParameter('voteToken'),
+      m.getParameter('rewardTokens'),
     ],
   )
   const proxy = m.contract('ERC1967Proxy', [implementation, initialize])

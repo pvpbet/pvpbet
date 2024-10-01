@@ -1,4 +1,4 @@
-import { loadFixture, time } from '@nomicfoundation/hardhat-toolbox-viem/network-helpers'
+import { loadFixture } from '@nomicfoundation/hardhat-toolbox-viem/network-helpers'
 import { assert } from 'chai'
 import { viem } from 'hardhat'
 import {
@@ -29,11 +29,10 @@ describe('BetManager', () => {
     const [owner, user, hacker] = await viem.getWalletClients()
 
     const BetChip = await deployBetChip(zeroAddress)
-    const GovToken = await deployGovToken()
     const BetVotingEscrow = await deployBetVotingEscrow()
+    const GovToken = await deployGovToken()
     const BetManager = await deployBetManager(GovToken.address, BetChip.address, BetVotingEscrow.address)
     const BetConfigurator = await viem.getContractAt('BetConfigurator', await BetManager.read.betConfigurator())
-    await BetVotingEscrow.write.setBetManager([BetManager.address])
 
     await GovToken.write.transfer([user.account.address, parseUnits('1000000', 18)])
 

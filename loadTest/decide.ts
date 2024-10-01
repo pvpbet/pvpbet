@@ -4,7 +4,7 @@ import { exec, getLocalWalletClient, readJson } from '../utils'
 import type { Address, Hash } from 'viem'
 
 const betAddress = process.env.LOAD_TEST_BET_ADDRESS as Address
-const count = 100
+const count = 2000
 
 exec(async () => {
   const contracts = (await readJson('./contracts.json')) as Record<string, Address>

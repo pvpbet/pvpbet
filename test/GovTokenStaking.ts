@@ -3,6 +3,8 @@ import { assert } from 'chai'
 import { viem } from 'hardhat'
 import {
   getAddress,
+  isAddressEqual,
+  parseEther,
   parseUnits,
   zeroAddress,
 } from 'viem'
@@ -12,8 +14,13 @@ import {
   deployTestTokens,
 } from './common'
 import {
+  buyChip,
+  deployBetChip,
+} from './common/chip'
+import {
   UnlockWaitingPeriod,
   deployGovTokenStaking,
+  distribute,
   stake,
   unstake,
   withdraw,
@@ -36,16 +43,26 @@ describe('GovTokenStaking', () => {
     const testTokens = await deployTestTokens()
     await claimTestTokens(owner, testTokens)
 
-    const GovToken = await deployGovToken()
+    const { USDC } = testTokens
+    const BetChip = await deployBetChip(USDC.address)
     const BetVotingEscrow = await deployBetVotingEscrow()
-    const GovTokenStaking = await deployGovTokenStaking(GovToken.address, BetVotingEscrow.address)
+    const GovToken = await deployGovToken()
+    const GovTokenStaking = await deployGovTokenStaking(GovToken.address, BetChip.address, BetVotingEscrow.address)
 
     await BetVotingEscrow.write.setGovTokenStaking([GovTokenStaking.address])
     await GovToken.write.transfer([user.account.address, parseUnits('1000000', 18)])
     await GovToken.write.transfer([hacker.account.address, parseUnits('1000000', 18)])
 
+    await buyChip(
+      owner,
+      BetChip,
+      USDC.address,
+      parseUnits('1000000', await USDC.read.decimals()),
+    )
+
     return {
       ...testTokens,
+      BetChip,
       BetVotingEscrow,
       GovToken,
       GovTokenStaking,
@@ -126,7 +143,7 @@ describe('GovTokenStaking', () => {
   })
 
   describe('Staking', async () => {
-    it('#stake() #stakedRecords()', async () => {
+    it('#stake() #stakedAmount()', async () => {
       const {
         GovToken,
         GovTokenStaking,
@@ -134,6 +151,7 @@ describe('GovTokenStaking', () => {
         hacker,
       } = await loadFixture(deployFixture)
       const stakeAmount = parseUnits('80000', 18)
+      const amountPerWeight = 10n ** 18n
 
       await assert.isRejected(
         stake(user, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK12 + 1, stakeAmount),
@@ -173,46 +191,10 @@ describe('GovTokenStaking', () => {
       )
       assert.equal(
         await GovTokenStaking.read.stakedWeight(),
-        accounts.reduce((acc, cur) => acc + cur.stakedAmountForWeek + cur.stakedAmountForWeek12 * 2n, 0n),
-      )
-      assert.equal(
-        await GovTokenStaking.read.stakedRecordCount(),
-        3n,
-      )
-      assert.equal(
-        await GovTokenStaking.read.stakedRecordCount([UnlockWaitingPeriod.WEEK]),
-        2n,
-      )
-      assert.equal(
-        await GovTokenStaking.read.stakedRecordCount([UnlockWaitingPeriod.WEEK12]),
-        1n,
-      )
-      assert.deepEqual(
-        await GovTokenStaking.read.stakedRecords(),
-        accounts.reduce((acc: { account: Address, unlockWaitingPeriod: number, amount: bigint }[], cur) => {
-          if (cur.stakedAmountForWeek !== 0n) {
-            acc.push({
-              account: getAddress(cur.wallet.account.address),
-              unlockWaitingPeriod: UnlockWaitingPeriod.WEEK,
-              amount: cur.stakedAmountForWeek,
-            })
-          }
-          if (cur.stakedAmountForWeek12 !== 0n) {
-            acc.push({
-              account: getAddress(cur.wallet.account.address),
-              unlockWaitingPeriod: UnlockWaitingPeriod.WEEK12,
-              amount: cur.stakedAmountForWeek12,
-            })
-          }
-          return acc
-        }, []),
+        accounts.reduce((acc, cur) => acc + cur.stakedAmountForWeek + cur.stakedAmountForWeek12 * 2n, 0n) / amountPerWeight,
       )
 
       for (const { wallet, stakedAmountForWeek, stakedAmountForWeek12 } of accounts) {
-        assert.equal(
-          await GovTokenStaking.read.isStaked([wallet.account.address]),
-          true,
-        )
         assert.equal(
           await GovTokenStaking.read.stakedAmount([wallet.account.address]),
           stakedAmountForWeek + stakedAmountForWeek12,
@@ -232,24 +214,7 @@ describe('GovTokenStaking', () => {
 
         assert.equal(
           await GovTokenStaking.read.stakedWeight([wallet.account.address]),
-          stakedAmountForWeek + stakedAmountForWeek12 * 2n,
-        )
-
-        assert.deepEqual(
-          await GovTokenStaking.read.stakedRecord([wallet.account.address, UnlockWaitingPeriod.WEEK]),
-          {
-            account: stakedAmountForWeek === 0n ? zeroAddress : getAddress(wallet.account.address),
-            unlockWaitingPeriod: UnlockWaitingPeriod.WEEK,
-            amount: stakedAmountForWeek,
-          },
-        )
-        assert.deepEqual(
-          await GovTokenStaking.read.stakedRecord([wallet.account.address, UnlockWaitingPeriod.WEEK12]),
-          {
-            account: stakedAmountForWeek12 === 0n ? zeroAddress : getAddress(wallet.account.address),
-            unlockWaitingPeriod: UnlockWaitingPeriod.WEEK12,
-            amount: stakedAmountForWeek12,
-          },
+          (stakedAmountForWeek + stakedAmountForWeek12 * 2n) / amountPerWeight,
         )
       }
     })
@@ -298,7 +263,6 @@ describe('GovTokenStaking', () => {
           unstakeStartTimeMap[wallet.account.address].push(await time.latest())
         }
 
-        let j = 0
         for (const { wallet, unlockWaitingPeriod } of accounts) {
           assert.equal(
             await BetVotingEscrow.read.balanceOf([wallet.account.address]),
@@ -309,28 +273,13 @@ describe('GovTokenStaking', () => {
             stakedAmount,
           )
           assert.deepEqual(
-            await GovTokenStaking.read.stakedRecord([wallet.account.address, unlockWaitingPeriod]),
-            {
-              account: stakedAmount === 0n ? zeroAddress : getAddress(wallet.account.address),
-              unlockWaitingPeriod: unlockWaitingPeriod,
-              amount: stakedAmount,
-            },
-          )
-          assert.equal(
-            await GovTokenStaking.read.stakedRecordCount(),
-            stakedAmount === 0n ? 2n : 4n,
-          )
-          assert.deepEqual(
             await GovTokenStaking.read.unstakedRecords([wallet.account.address, unlockWaitingPeriod]),
             unstakeStartTimeMap[wallet.account.address].map((unstakeStartTime, index) => ({
-              account: getAddress(wallet.account.address),
               unlockWaitingPeriod: unlockWaitingPeriod,
               amount: unstakeAmountArr[index],
               unlockTime: BigInt(unstakeStartTime) + Time[unlockWaitingPeriod],
-              index: BigInt(index * 2 + j),
             })),
           )
-          j++
         }
       }
     })
@@ -356,8 +305,8 @@ describe('GovTokenStaking', () => {
       }
 
       assert.equal(
-        await GovTokenStaking.read.stakedRecordCount(),
-        4n,
+        await GovTokenStaking.read.stakedAmount(),
+        stakeAmount * 4n,
       )
 
       const unstakeAmountArr: bigint[] = []
@@ -376,8 +325,8 @@ describe('GovTokenStaking', () => {
       }
 
       assert.equal(
-        await GovTokenStaking.read.stakedRecordCount(),
-        2n,
+        await GovTokenStaking.read.stakedAmount(),
+        stakeAmount * 2n,
       )
 
       for (let i = 0; i < length; i++) {
@@ -386,10 +335,13 @@ describe('GovTokenStaking', () => {
           await GovTokenStaking.write.restake([0n], { account: wallet.account })
         }
 
-        let j = 0
         for (const { wallet, unlockWaitingPeriod } of accounts) {
           assert.equal(
             await BetVotingEscrow.read.balanceOf([wallet.account.address]),
+            stakeAmount + stakedAmount,
+          )
+          assert.equal(
+            await GovTokenStaking.read.stakedAmount([wallet.account.address]),
             stakeAmount + stakedAmount,
           )
           assert.equal(
@@ -397,35 +349,20 @@ describe('GovTokenStaking', () => {
             stakedAmount,
           )
           assert.deepEqual(
-            await GovTokenStaking.read.stakedRecord([wallet.account.address, unlockWaitingPeriod]),
-            {
-              account: getAddress(wallet.account.address),
-              unlockWaitingPeriod: unlockWaitingPeriod,
-              amount: stakedAmount,
-            },
-          )
-          assert.equal(
-            await GovTokenStaking.read.stakedRecordCount(),
-            4n,
-          )
-          assert.deepEqual(
             await GovTokenStaking.read.unstakedRecords([wallet.account.address, unlockWaitingPeriod]),
             unstakeStartTimeMap[wallet.account.address].slice(i + 1).map((unstakeStartTime, index) => ({
-              account: getAddress(wallet.account.address),
               unlockWaitingPeriod: unlockWaitingPeriod,
               amount: unstakeAmountArr[i + 1 + index],
               unlockTime: BigInt(unstakeStartTime) + Time[unlockWaitingPeriod],
-              index: BigInt(index * 2 + j),
             })),
           )
-          j++
         }
-
-        assert.equal(
-          await GovTokenStaking.read.stakedRecordCount(),
-          4n,
-        )
       }
+
+      assert.equal(
+        await GovTokenStaking.read.stakedAmount(),
+        stakeAmount * 4n,
+      )
     })
 
     it('#extendUnlockWaitingPeriod()', async () => {
@@ -538,19 +475,16 @@ describe('GovTokenStaking', () => {
         GovToken,
         GovTokenStaking,
         user,
-        hacker,
       } = await loadFixture(deployFixture)
       const stakeAmount = parseUnits('80000', 18)
       await stake(user, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK, stakeAmount)
       await stake(user, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK12, stakeAmount)
-      await stake(hacker, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK, stakeAmount)
-      await stake(hacker, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK12, stakeAmount)
 
-      const unstakeAmount = stakeAmount / 2n
+      const unstakeAmount = stakeAmount / 4n
       await unstake(user, GovTokenStaking, UnlockWaitingPeriod.WEEK, unstakeAmount)
       await unstake(user, GovTokenStaking, UnlockWaitingPeriod.WEEK12, unstakeAmount)
-      await unstake(hacker, GovTokenStaking, UnlockWaitingPeriod.WEEK, unstakeAmount)
-      await unstake(hacker, GovTokenStaking, UnlockWaitingPeriod.WEEK12, unstakeAmount)
+      await unstake(user, GovTokenStaking, UnlockWaitingPeriod.WEEK, unstakeAmount)
+      await unstake(user, GovTokenStaking, UnlockWaitingPeriod.WEEK12, unstakeAmount)
 
       await checkBalance(
         async () => {
@@ -558,7 +492,6 @@ describe('GovTokenStaking', () => {
         },
         [
           [user.account.address, GovToken.address, 0n],
-          [hacker.account.address, GovToken.address, 0n],
         ],
       )
 
@@ -568,66 +501,290 @@ describe('GovTokenStaking', () => {
           await withdraw(user, GovTokenStaking)
         },
         [
-          [user.account.address, GovToken.address, unstakeAmount],
-          [hacker.account.address, GovToken.address, unstakeAmount],
+          [user.account.address, GovToken.address, unstakeAmount * 2n],
         ],
       )
 
-      await unstake(user, GovTokenStaking, UnlockWaitingPeriod.WEEK)
-      await unstake(user, GovTokenStaking, UnlockWaitingPeriod.WEEK12)
-      await unstake(hacker, GovTokenStaking, UnlockWaitingPeriod.WEEK)
-      await unstake(hacker, GovTokenStaking, UnlockWaitingPeriod.WEEK12)
       await time.increase(Time[UnlockWaitingPeriod.WEEK12])
       await checkBalance(
         async () => {
           await withdraw(user, GovTokenStaking)
         },
         [
-          [user.account.address, GovToken.address, stakeAmount * 2n - unstakeAmount],
-          [hacker.account.address, GovToken.address, stakeAmount * 2n - unstakeAmount],
+          [user.account.address, GovToken.address, unstakeAmount * 2n],
+        ],
+      )
+
+      await unstake(user, GovTokenStaking, UnlockWaitingPeriod.WEEK)
+      await unstake(user, GovTokenStaking, UnlockWaitingPeriod.WEEK12)
+      await time.increase(Time[UnlockWaitingPeriod.WEEK12])
+      await checkBalance(
+        async () => {
+          await withdraw(user, GovTokenStaking)
+        },
+        [
+          [user.account.address, GovToken.address, unstakeAmount * 4n],
         ],
       )
     })
+  })
 
-    it('Preventing dust attacks', async () => {
+  describe('Distribute rewards', () => {
+    it('#distribute() #claimedRewards() #unclaimedRewards()', async () => {
       const {
+        BetChip,
         GovToken,
         GovTokenStaking,
-        BetVotingEscrow,
+        owner,
         user,
+        hacker,
       } = await loadFixture(deployFixture)
-      const stakeAmount = parseUnits('80000', 18)
-      const stakeMinValue = await GovTokenStaking.read.stakeMinValue()
+      const accounts = [
+        { wallet: owner, unlockWaitingPeriod: UnlockWaitingPeriod.WEEK12, stakeRatio: 2n },
+        { wallet: user, unlockWaitingPeriod: UnlockWaitingPeriod.WEEK12, stakeRatio: 5n },
+        { wallet: hacker, unlockWaitingPeriod: UnlockWaitingPeriod.WEEK, stakeRatio: 3n },
+      ]
+      const tokens: [Address, bigint][] = [
+        [zeroAddress, parseEther('10')],
+        [BetChip.address, parseUnits('10000', 6)],
+      ]
 
-      await assert.isRejected(
-        stake(user, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK, stakeMinValue - 1n),
-        'InvalidAmount',
-      )
+      for (const { wallet } of accounts) {
+        for (const [token] of tokens) {
+          assert.equal(
+            isAddressEqual(zeroAddress, token)
+              ? await GovTokenStaking.read.claimedRewards([wallet.account.address])
+              : await GovTokenStaking.read.claimedRewards([wallet.account.address, token]),
+            0n,
+          )
+          assert.equal(
+            isAddressEqual(zeroAddress, token)
+              ? await GovTokenStaking.read.unclaimedRewards([wallet.account.address])
+              : await GovTokenStaking.read.unclaimedRewards([wallet.account.address, token]),
+            0n,
+          )
+        }
+      }
 
-      await stake(user, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK, stakeAmount)
-      assert.equal(
-        await GovTokenStaking.read.stakedRecordCount(),
-        1n,
-      )
+      for (const [token, amount] of tokens) {
+        await distribute(owner, GovTokenStaking, token, amount)
+      }
 
-      await assert.isRejected(
-        unstake(user, GovTokenStaking, UnlockWaitingPeriod.WEEK, stakeMinValue - 1n),
-        'InvalidAmount',
-      )
+      for (const { wallet } of accounts) {
+        for (const [token] of tokens) {
+          assert.equal(
+            isAddressEqual(zeroAddress, token)
+              ? await GovTokenStaking.read.claimedRewards([wallet.account.address])
+              : await GovTokenStaking.read.claimedRewards([wallet.account.address, token]),
+            0n,
+          )
+          assert.equal(
+            isAddressEqual(zeroAddress, token)
+              ? await GovTokenStaking.read.unclaimedRewards([wallet.account.address])
+              : await GovTokenStaking.read.unclaimedRewards([wallet.account.address, token]),
+            0n,
+          )
+        }
+      }
 
-      await checkBalance(
-        async () => {
-          await unstake(user, GovTokenStaking, UnlockWaitingPeriod.WEEK, stakeAmount - stakeMinValue + 1n)
-        },
-        [
-          [user.account.address, BetVotingEscrow.address, -stakeAmount],
-        ],
-      )
+      // Staking
+      const stakedTotalAmount = parseUnits('100000', 18)
+      const stakeCount = accounts.reduce((acc, cur) => acc + cur.stakeRatio, 0n)
+      for (const { wallet, unlockWaitingPeriod, stakeRatio } of accounts) {
+        await stake(wallet, GovToken, GovTokenStaking, unlockWaitingPeriod, stakedTotalAmount * stakeRatio / stakeCount)
+      }
 
-      assert.equal(
-        await GovTokenStaking.read.stakedRecordCount(),
-        0n,
-      )
+      for (const [token, amount] of tokens) {
+        await distribute(owner, GovTokenStaking, token, amount)
+      }
+
+      const stakedTotalWeight = await GovTokenStaking.read.stakedWeight()
+      for (const { wallet } of accounts) {
+        const stakedWeight = await GovTokenStaking.read.stakedWeight([wallet.account.address])
+        for (const [token, amount] of tokens) {
+          assert.equal(
+            isAddressEqual(zeroAddress, token)
+              ? await GovTokenStaking.read.claimedRewards([wallet.account.address])
+              : await GovTokenStaking.read.claimedRewards([wallet.account.address, token]),
+            0n,
+          )
+          assert.equal(
+            isAddressEqual(zeroAddress, token)
+              ? await GovTokenStaking.read.unclaimedRewards([wallet.account.address])
+              : await GovTokenStaking.read.unclaimedRewards([wallet.account.address, token]),
+            amount / stakedTotalWeight * stakedWeight,
+          )
+        }
+      }
+    })
+
+    it('#claim()', async () => {
+      const {
+        BetChip,
+        GovToken,
+        GovTokenStaking,
+        owner,
+        user,
+        hacker,
+      } = await loadFixture(deployFixture)
+      const accounts = [
+        { wallet: owner, unlockWaitingPeriod: UnlockWaitingPeriod.WEEK12, stakeRatio: 2n },
+        { wallet: user, unlockWaitingPeriod: UnlockWaitingPeriod.WEEK12, stakeRatio: 5n },
+        { wallet: hacker, unlockWaitingPeriod: UnlockWaitingPeriod.WEEK, stakeRatio: 3n },
+      ]
+      const tokens: [Address, bigint][] = [
+        [zeroAddress, parseEther('10')],
+        [BetChip.address, parseUnits('10000', 6)],
+      ]
+
+      // Staking
+      const stakedTotalAmount = parseUnits('100000', 18)
+      const stakeCount = accounts.reduce((acc, cur) => acc + cur.stakeRatio, 0n)
+      for (const { wallet, unlockWaitingPeriod, stakeRatio } of accounts) {
+        await stake(wallet, GovToken, GovTokenStaking, unlockWaitingPeriod, stakedTotalAmount * stakeRatio / stakeCount)
+      }
+
+      for (const { wallet } of accounts) {
+        for (const [token] of tokens) {
+          await assert.isRejected(
+            isAddressEqual(zeroAddress, token)
+              ? GovTokenStaking.write.claim({ account: wallet.account })
+              : GovTokenStaking.write.claim([token], { account: wallet.account }),
+            'NoClaimableRewards',
+          )
+        }
+      }
+
+      for (const [token, amount] of tokens) {
+        await distribute(owner, GovTokenStaking, token, amount)
+      }
+
+      const stakedTotalWeight = await GovTokenStaking.read.stakedWeight()
+      for (const { wallet } of accounts) {
+        const stakedWeight = await GovTokenStaking.read.stakedWeight([wallet.account.address])
+        for (const [token, amount] of tokens) {
+          await checkBalance(
+            async () => {
+              isAddressEqual(zeroAddress, token)
+                ? await GovTokenStaking.write.claim({ account: wallet.account })
+                : await GovTokenStaking.write.claim([token], { account: wallet.account })
+            },
+            [
+              [wallet.account.address, token, amount / stakedTotalWeight * stakedWeight],
+            ],
+          )
+        }
+      }
+
+      for (const { wallet } of accounts) {
+        const stakedWeight = await GovTokenStaking.read.stakedWeight([wallet.account.address])
+        for (const [token, amount] of tokens) {
+          assert.equal(
+            isAddressEqual(zeroAddress, token)
+              ? await GovTokenStaking.read.claimedRewards([wallet.account.address])
+              : await GovTokenStaking.read.claimedRewards([wallet.account.address, token]),
+            amount / stakedTotalWeight * stakedWeight,
+          )
+          assert.equal(
+            isAddressEqual(zeroAddress, token)
+              ? await GovTokenStaking.read.unclaimedRewards([wallet.account.address])
+              : await GovTokenStaking.read.unclaimedRewards([wallet.account.address, token]),
+            0n,
+          )
+        }
+      }
+    })
+
+    it('As staking increases, the reward distribution is correct', async () => {
+      const {
+        BetChip,
+        GovToken,
+        GovTokenStaking,
+        owner,
+        user,
+        hacker,
+      } = await loadFixture(deployFixture)
+      const accounts = [
+        { wallet: owner, unlockWaitingPeriod: UnlockWaitingPeriod.WEEK12 },
+        { wallet: user, unlockWaitingPeriod: UnlockWaitingPeriod.WEEK12 },
+        { wallet: hacker, unlockWaitingPeriod: UnlockWaitingPeriod.WEEK },
+      ]
+
+      const tokens: [Address, bigint][] = [
+        [zeroAddress, parseEther('10')],
+        [BetChip.address, parseUnits('10000', 6)],
+      ]
+
+      const stakeAmount = parseUnits('10000', 18)
+      const claimedRewards = {} as Record<Address, Record<Address, bigint>>
+      const unclaimedRewards = {} as Record<Address, Record<Address, bigint>>
+
+      for (const { wallet } of accounts) {
+        claimedRewards[wallet.account.address] = {} as Record<Address, bigint>
+        unclaimedRewards[wallet.account.address] = {} as Record<Address, bigint>
+        for (const [token] of tokens) {
+          claimedRewards[wallet.account.address][token] = 0n
+          unclaimedRewards[wallet.account.address][token] = 0n
+        }
+      }
+
+      let stakedTotalWeight = 0n
+      const amountPerWeight = 10n ** 18n
+      for (const { wallet, unlockWaitingPeriod } of accounts) {
+        await stake(wallet, GovToken, GovTokenStaking, unlockWaitingPeriod, stakeAmount)
+        const stakedWeight = stakeAmount / amountPerWeight * (unlockWaitingPeriod === UnlockWaitingPeriod.WEEK12 ? 2n : 1n)
+        stakedTotalWeight += stakedWeight
+        assert.equal(
+          await GovTokenStaking.read.stakedWeight([wallet.account.address]),
+          stakedWeight,
+        )
+        assert.equal(
+          await GovTokenStaking.read.stakedWeight(),
+          stakedTotalWeight,
+        )
+
+        for (const [token, amount] of tokens) {
+          await distribute(owner, GovTokenStaking, token, amount)
+
+          for (const item of accounts) {
+            const itemStakedWeight = await GovTokenStaking.read.stakedWeight([item.wallet.account.address])
+            const itemReward = amount / stakedTotalWeight * itemStakedWeight
+            unclaimedRewards[item.wallet.account.address][token] += itemReward
+            assert.equal(
+              isAddressEqual(zeroAddress, token)
+                ? await GovTokenStaking.read.claimedRewards([item.wallet.account.address])
+                : await GovTokenStaking.read.claimedRewards([item.wallet.account.address, token]),
+              claimedRewards[item.wallet.account.address][token],
+            )
+            assert.equal(
+              isAddressEqual(zeroAddress, token)
+                ? await GovTokenStaking.read.unclaimedRewards([item.wallet.account.address])
+                : await GovTokenStaking.read.unclaimedRewards([item.wallet.account.address, token]),
+              unclaimedRewards[item.wallet.account.address][token],
+            )
+          }
+
+          await GovTokenStaking.write.claim([token], { account: wallet.account })
+          const reward = amount / stakedTotalWeight * stakedWeight
+          unclaimedRewards[wallet.account.address][token] -= reward
+          claimedRewards[wallet.account.address][token] += reward
+
+          for (const item of accounts) {
+            assert.equal(
+              isAddressEqual(zeroAddress, token)
+                ? await GovTokenStaking.read.claimedRewards([item.wallet.account.address])
+                : await GovTokenStaking.read.claimedRewards([item.wallet.account.address, token]),
+              claimedRewards[item.wallet.account.address][token],
+            )
+            assert.equal(
+              isAddressEqual(zeroAddress, token)
+                ? await GovTokenStaking.read.unclaimedRewards([item.wallet.account.address])
+                : await GovTokenStaking.read.unclaimedRewards([item.wallet.account.address, token]),
+              unclaimedRewards[item.wallet.account.address][token],
+            )
+          }
+        }
+      }
     })
   })
 })

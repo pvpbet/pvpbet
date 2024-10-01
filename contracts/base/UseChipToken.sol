@@ -30,7 +30,7 @@ abstract contract UseChipToken is IUseChipToken, IErrors {
   }
 
   function _setChipToken(address newChipToken)
-  internal {
+  internal virtual {
     _chipToken = newChipToken;
     emit ChipTokenSet(newChipToken);
   }

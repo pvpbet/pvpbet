@@ -46,7 +46,6 @@ import {
 import { deployBetVotingEscrow } from './common/vote'
 import {
   checkBalance,
-  checkVoteLevel,
   isBetClosed,
   isCorrectStakeReward,
 } from './asserts'
@@ -70,12 +69,11 @@ describe('Bet', () => {
 
     const { USDC } = testTokens
     const BetChip = await deployBetChip(USDC.address)
-    const GovToken = await deployGovToken()
     const BetVotingEscrow = await deployBetVotingEscrow()
-    const GovTokenStaking = await deployGovTokenStaking(GovToken.address, BetVotingEscrow.address)
+    const GovToken = await deployGovToken()
+    const GovTokenStaking = await deployGovTokenStaking(GovToken.address, BetChip.address, BetVotingEscrow.address)
     const BetManager = await deployBetManager(GovToken.address, BetChip.address, BetVotingEscrow.address)
 
-    await BetVotingEscrow.write.setBetManager([BetManager.address])
     await BetVotingEscrow.write.setGovTokenStaking([GovTokenStaking.address])
     await GovToken.write.transfer([user.account.address, parseUnits('1000000', 18)])
     await GovToken.write.transfer([hacker.account.address, parseUnits('1000000', 18)])
@@ -1651,7 +1649,7 @@ describe('Bet', () => {
       ) => Promise<void>,
     ) {
       const data = await loadFixture(deployFixture)
-        const {
+      const {
         BetChip,
         BetVotingEscrow,
         BetManager,
@@ -1703,17 +1701,7 @@ describe('Bet', () => {
 
         await checkBalance(
           async () => {
-            await checkVoteLevel(
-              BetVotingEscrow,
-              async () => {
-                await release(Bet, chip, data)
-              },
-              [
-                [owner.account.address, 0n],
-                [user.account.address, 0n],
-                [hacker.account.address, 0n],
-              ],
-            )
+            await release(Bet, chip, data)
           },
           [
             [Bet.address, chip, 0n],
@@ -1730,7 +1718,6 @@ describe('Bet', () => {
 
         await isBetClosed(Bet, chip)
         await isCorrectStakeReward(
-          BetVotingEscrow,
           GovTokenStaking,
           chip,
           [
@@ -1820,17 +1807,7 @@ describe('Bet', () => {
 
         await checkBalance(
           async () => {
-            await checkVoteLevel(
-              BetVotingEscrow,
-              async () => {
-                await release(Bet, chip, data)
-              },
-              [
-                [owner.account.address, 0n],
-                [user.account.address, 0n],
-                [hacker.account.address, 0n],
-              ],
-            )
+            await release(Bet, chip, data)
           },
           [
             [Bet.address, chip, -(userDisputedAmount + hackerDisputedAmount)],
@@ -1847,7 +1824,6 @@ describe('Bet', () => {
 
         await isBetClosed(Bet, chip)
         await isCorrectStakeReward(
-          BetVotingEscrow,
           GovTokenStaking,
           chip,
           [
@@ -1934,17 +1910,7 @@ describe('Bet', () => {
 
         await checkBalance(
           async () => {
-            await checkVoteLevel(
-              BetVotingEscrow,
-              async () => {
-                await release(Bet, chip, data)
-              },
-              [
-                [owner.account.address, 1n],
-                [user.account.address, 0n],
-                [hacker.account.address, 0n],
-              ],
-            )
+            await release(Bet, chip, data)
           },
           [
             [Bet.address, chip, -(userDisputedAmount + hackerDisputedAmount)],
@@ -1961,7 +1927,6 @@ describe('Bet', () => {
 
         await isBetClosed(Bet, chip)
         await isCorrectStakeReward(
-          BetVotingEscrow,
           GovTokenStaking,
           chip,
           [
@@ -2048,17 +2013,7 @@ describe('Bet', () => {
 
         await checkBalance(
           async () => {
-            await checkVoteLevel(
-              BetVotingEscrow,
-              async () => {
-                await release(Bet, chip, data)
-              },
-              [
-                [owner.account.address, 1n],
-                [user.account.address, 0n],
-                [hacker.account.address, 0n],
-              ],
-            )
+            await release(Bet, chip, data)
           },
           [
             [options[0], chip, -ownerWageredAmount],
@@ -2074,7 +2029,6 @@ describe('Bet', () => {
 
         await isBetClosed(Bet, chip)
         await isCorrectStakeReward(
-          BetVotingEscrow,
           GovTokenStaking,
           chip,
           [
@@ -2180,17 +2134,7 @@ describe('Bet', () => {
 
         await checkBalance(
           async () => {
-            await checkVoteLevel(
-              BetVotingEscrow,
-              async () => {
-                await release(Bet, chip, data)
-              },
-              [
-                [owner.account.address, 0n],
-                [user.account.address, 0n],
-                [hacker.account.address, 0n],
-              ],
-            )
+            await release(Bet, chip, data)
           },
           [
             [Bet.address, chip, -(userDisputedAmount + hackerDisputedAmount)],
@@ -2210,7 +2154,6 @@ describe('Bet', () => {
 
         await isBetClosed(Bet, chip)
         await isCorrectStakeReward(
-          BetVotingEscrow,
           GovTokenStaking,
           chip,
           [
@@ -2314,17 +2257,7 @@ describe('Bet', () => {
 
         await checkBalance(
           async () => {
-            await checkVoteLevel(
-              BetVotingEscrow,
-              async () => {
-                await release(Bet, chip, data)
-              },
-              [
-                [owner.account.address, 0n],
-                [user.account.address, 1n],
-                [hacker.account.address, 1n],
-              ],
-            )
+            await release(Bet, chip, data)
           },
           [
             [Bet.address, chip, -ownerDisputedAmount],
@@ -2341,7 +2274,6 @@ describe('Bet', () => {
 
         await isBetClosed(Bet, chip)
         await isCorrectStakeReward(
-          BetVotingEscrow,
           GovTokenStaking,
           chip,
           [
@@ -2454,17 +2386,7 @@ describe('Bet', () => {
 
         await checkBalance(
           async () => {
-            await checkVoteLevel(
-              BetVotingEscrow,
-              async () => {
-                await release(Bet, chip, data)
-              },
-              [
-                [owner.account.address, 0n],
-                [user.account.address, 1n],
-                [hacker.account.address, 1n],
-              ],
-            )
+            await release(Bet, chip, data)
           },
           [
             [Bet.address, chip, -(userDisputedAmount + hackerDisputedAmount)],
@@ -2484,7 +2406,6 @@ describe('Bet', () => {
 
         await isBetClosed(Bet, chip)
         await isCorrectStakeReward(
-          BetVotingEscrow,
           GovTokenStaking,
           chip,
           [

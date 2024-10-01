@@ -4,8 +4,6 @@ import { viem } from 'hardhat'
 import {
   encodeFunctionData,
   getAddress,
-  isAddressEqual,
-  parseEther,
   parseUnits,
   zeroAddress,
 } from 'viem'
@@ -15,20 +13,17 @@ import {
   deployGovToken,
   deployTestTokens,
 } from './common'
+import { deployBetChip } from './common/chip'
 import {
   UnlockWaitingPeriod,
   deployGovTokenStaking,
   stake,
   unstake,
 } from './common/staking'
-import {
-  deployBetVotingEscrow,
-  distribute,
-} from './common/vote'
+import { deployBetVotingEscrow } from './common/vote'
 import { checkBalance } from './asserts'
 import { testReceivable } from './asserts/Receivable'
 import { testWithdrawable } from './asserts/Withdrawable'
-import type { Address } from 'viem'
 import type { ContractTypes } from '../types'
 
 describe('BetVotingEscrow', () => {
@@ -39,9 +34,11 @@ describe('BetVotingEscrow', () => {
     const testTokens = await deployTestTokens()
     await claimTestTokens(owner, testTokens)
 
-    const GovToken = await deployGovToken()
+    const { USDC } = testTokens
+    const BetChip = await deployBetChip(USDC.address)
     const BetVotingEscrow = await deployBetVotingEscrow()
-    const GovTokenStaking = await deployGovTokenStaking(GovToken.address, BetVotingEscrow.address)
+    const GovToken = await deployGovToken()
+    const GovTokenStaking = await deployGovTokenStaking(GovToken.address, BetChip.address, BetVotingEscrow.address)
 
     await BetVotingEscrow.write.setGovTokenStaking([GovTokenStaking.address])
     await GovToken.write.transfer([user.account.address, parseUnits('1000000', 18)])
@@ -49,6 +46,7 @@ describe('BetVotingEscrow', () => {
 
     return {
       ...testTokens,
+      BetChip,
       BetVotingEscrow,
       GovToken,
       GovTokenStaking,
@@ -105,24 +103,6 @@ describe('BetVotingEscrow', () => {
       await BetVotingEscrow.write.setGovTokenStaking([zeroAddress], { account: owner.account })
       assert.equal(
         await BetVotingEscrow.read.govTokenStaking(),
-        zeroAddress,
-      )
-    })
-
-    it('#betManager() #setBetManager()', async () => {
-      const {
-        BetVotingEscrow,
-        owner,
-        hacker,
-      } = await loadFixture(deployFixture)
-      await assert.isRejected(
-        BetVotingEscrow.write.setBetManager([zeroAddress], { account: hacker.account }),
-        'OwnableUnauthorizedAccount',
-      )
-
-      await BetVotingEscrow.write.setBetManager([zeroAddress], { account: owner.account })
-      assert.equal(
-        await BetVotingEscrow.read.betManager(),
         zeroAddress,
       )
     })
@@ -203,172 +183,6 @@ describe('BetVotingEscrow', () => {
         await BetVotingEscrow.read.isAbleToArbitrate([user.account.address]),
         true,
       )
-    })
-  })
-
-  describe('Distribute rewards', () => {
-    it('#distribute() #claimedRewards() #unclaimedRewards()', async () => {
-      const {
-        BetVotingEscrow,
-        DAI,
-        GovToken,
-        GovTokenStaking,
-        owner,
-        user,
-        hacker,
-      } = await loadFixture(deployFixture)
-      const accounts = [
-        { wallet: owner, unlockWaitingPeriod: UnlockWaitingPeriod.WEEK12, stakingRatio: 2n, rewardRatio: 4n },
-        { wallet: user, unlockWaitingPeriod: UnlockWaitingPeriod.WEEK12, stakingRatio: 5n, rewardRatio: 10n },
-        { wallet: hacker, unlockWaitingPeriod: UnlockWaitingPeriod.WEEK, stakingRatio: 3n, rewardRatio: 3n },
-      ]
-      const tokens: [Address, bigint][] = [
-        [zeroAddress, parseEther('10')],
-        [DAI.address, parseUnits('10000', 18)],
-      ]
-
-      for (const { wallet } of accounts) {
-        for (const [token] of tokens) {
-          assert.equal(
-            isAddressEqual(zeroAddress, token)
-              ? await BetVotingEscrow.read.claimedRewards([wallet.account.address])
-              : await BetVotingEscrow.read.claimedRewards([wallet.account.address, token]),
-            0n,
-          )
-          assert.equal(
-            isAddressEqual(zeroAddress, token)
-              ? await BetVotingEscrow.read.unclaimedRewards([wallet.account.address])
-              : await BetVotingEscrow.read.unclaimedRewards([wallet.account.address, token]),
-            0n,
-          )
-        }
-      }
-
-      for (const [token, amount] of tokens) {
-        await distribute(owner, BetVotingEscrow, token, amount)
-      }
-
-      for (const { wallet } of accounts) {
-        for (const [token] of tokens) {
-          assert.equal(
-            isAddressEqual(zeroAddress, token)
-              ? await BetVotingEscrow.read.claimedRewards([wallet.account.address])
-              : await BetVotingEscrow.read.claimedRewards([wallet.account.address, token]),
-            0n,
-          )
-          assert.equal(
-            isAddressEqual(zeroAddress, token)
-              ? await BetVotingEscrow.read.unclaimedRewards([wallet.account.address])
-              : await BetVotingEscrow.read.unclaimedRewards([wallet.account.address, token]),
-            0n,
-          )
-        }
-      }
-
-      // Staking
-      const stakingTotalAmount = parseUnits('100000', 18)
-      const stakingCount = accounts.reduce((acc, cur) => acc + cur.stakingRatio, 0n)
-      for (const { wallet, unlockWaitingPeriod, stakingRatio } of accounts) {
-        await stake(wallet, GovToken, GovTokenStaking, unlockWaitingPeriod, stakingTotalAmount * stakingRatio / stakingCount)
-      }
-
-      for (const [token, amount] of tokens) {
-        await distribute(owner, BetVotingEscrow, token, amount)
-      }
-
-      const rewardCount = accounts.reduce((acc, cur) => acc + cur.rewardRatio, 0n)
-      for (const { wallet, rewardRatio } of accounts) {
-        for (const [token, amount] of tokens) {
-          assert.equal(
-            isAddressEqual(zeroAddress, token)
-              ? await BetVotingEscrow.read.claimedRewards([wallet.account.address])
-              : await BetVotingEscrow.read.claimedRewards([wallet.account.address, token]),
-            0n,
-          )
-          assert.equal(
-            isAddressEqual(zeroAddress, token)
-              ? await BetVotingEscrow.read.unclaimedRewards([wallet.account.address])
-              : await BetVotingEscrow.read.unclaimedRewards([wallet.account.address, token]),
-            amount * rewardRatio / rewardCount,
-          )
-        }
-      }
-    })
-
-    it('#claim()', async () => {
-      const {
-        BetVotingEscrow,
-        DAI,
-        GovToken,
-        GovTokenStaking,
-        owner,
-        user,
-        hacker,
-      } = await loadFixture(deployFixture)
-      const accounts = [
-        { wallet: owner, unlockWaitingPeriod: UnlockWaitingPeriod.WEEK12, stakingRatio: 2n, rewardRatio: 4n },
-        { wallet: user, unlockWaitingPeriod: UnlockWaitingPeriod.WEEK12, stakingRatio: 5n, rewardRatio: 10n },
-        { wallet: hacker, unlockWaitingPeriod: UnlockWaitingPeriod.WEEK, stakingRatio: 3n, rewardRatio: 3n },
-      ]
-      const tokens: [Address, bigint][] = [
-        [zeroAddress, parseEther('10')],
-        [DAI.address, parseUnits('10000', 18)],
-      ]
-
-      // Staking
-      const stakingTotalAmount = parseUnits('100000', 18)
-      const stakingCount = accounts.reduce((acc, cur) => acc + cur.stakingRatio, 0n)
-      for (const { wallet, unlockWaitingPeriod, stakingRatio } of accounts) {
-        await stake(wallet, GovToken, GovTokenStaking, unlockWaitingPeriod, stakingTotalAmount * stakingRatio / stakingCount)
-      }
-
-      for (const { wallet } of accounts) {
-        for (const [token] of tokens) {
-          await assert.isRejected(
-            isAddressEqual(zeroAddress, token)
-              ? BetVotingEscrow.write.claim({ account: wallet.account })
-              : BetVotingEscrow.write.claim([token], { account: wallet.account }),
-            'NoClaimableRewards',
-          )
-        }
-      }
-
-      for (const [token, amount] of tokens) {
-        await distribute(owner, BetVotingEscrow, token, amount)
-      }
-
-      const rewardCount = accounts.reduce((acc, cur) => acc + cur.rewardRatio, 0n)
-      for (const { wallet, rewardRatio } of accounts) {
-        for (const [token, amount] of tokens) {
-          await checkBalance(
-            async () => {
-              isAddressEqual(zeroAddress, token)
-                ? await BetVotingEscrow.write.claim({ account: wallet.account })
-                : await BetVotingEscrow.write.claim([token], { account: wallet.account })
-            },
-            [
-              [wallet.account.address, token, amount * rewardRatio / rewardCount],
-            ],
-          )
-        }
-      }
-
-      for (const { wallet, rewardRatio } of accounts) {
-        for (const [token, amount] of tokens) {
-          assert.equal(
-            isAddressEqual(zeroAddress, token)
-              ? await BetVotingEscrow.read.claimedRewards([wallet.account.address])
-              : await BetVotingEscrow.read.claimedRewards([wallet.account.address, token]),
-            amount * rewardRatio / rewardCount,
-          )
-          assert.equal(
-            isAddressEqual(zeroAddress, token)
-              ? await BetVotingEscrow.read.unclaimedRewards([wallet.account.address])
-              : await BetVotingEscrow.read.unclaimedRewards([wallet.account.address, token]),
-            0n,
-          )
-        }
-      }
     })
   })
 
@@ -775,69 +589,6 @@ describe('BetVotingEscrow', () => {
         await erc20Transfer(user, BetVotingEscrow.address, TestBetOption.address, 1n)
         assert.equal(await TestBetOption.read.arbitrated(), true)
       }
-    })
-  })
-
-  describe('Level', () => {
-    it('#level() #levelUp() #levelDown()', async () => {
-      const {
-        BetVotingEscrow,
-        owner,
-        user,
-      } = await loadFixture(deployFixture)
-      const TestBetManager = await viem.deployContract('TestBetManager')
-      await BetVotingEscrow.write.setBetManager([TestBetManager.address], { account: owner.account })
-      const TestBet = await viem.deployContract('TestBet', [
-        0,
-        zeroAddress,
-        BetVotingEscrow.address,
-      ])
-      const TestBetOption = await viem.deployContract('TestBetOption', [TestBet.address])
-      await TestBetManager.write.setBet([TestBet.address], { account: owner.account })
-
-      const levelUp = (unauthorized: boolean = false) => {
-        return (unauthorized ? TestBetOption.write.functionCall : TestBet.write.functionCall)(
-          [
-            BetVotingEscrow.address,
-            encodeFunctionData({
-              abi: BetVotingEscrow.abi,
-              functionName: 'levelUp',
-              args: [user.account.address],
-            }),
-          ],
-          { account: owner.account },
-        )
-      }
-
-      const levelDown = (unauthorized: boolean = false) => {
-        return (unauthorized ? TestBetOption.write.functionCall : TestBet.write.functionCall)(
-          [
-            BetVotingEscrow.address,
-            encodeFunctionData({
-              abi: BetVotingEscrow.abi,
-              functionName: 'levelDown',
-              args: [user.account.address],
-            }),
-          ],
-          { account: owner.account },
-        )
-      }
-
-      assert.equal(await BetVotingEscrow.read.level([user.account.address]), 0n)
-      await assert.isRejected(levelUp(true), 'UnauthorizedAccess')
-
-      for (let i = 0; i < 4; i++) {
-        await levelUp()
-      }
-      assert.equal(await BetVotingEscrow.read.level([user.account.address]), 4n)
-
-      await assert.isRejected(levelDown(true), 'UnauthorizedAccess')
-
-      await levelDown()
-      assert.equal(await BetVotingEscrow.read.level([user.account.address]), 1n)
-
-      await levelDown()
-      assert.equal(await BetVotingEscrow.read.level([user.account.address]), 0n)
     })
   })
 

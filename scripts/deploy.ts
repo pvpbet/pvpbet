@@ -1,5 +1,5 @@
 import { viem, ignition } from 'hardhat'
-import { parseUnits } from 'viem'
+import { parseUnits, zeroAddress } from 'viem'
 import { exec, writeJson } from '../utils'
 import GovTokenModule from '../ignition/modules/GovToken'
 import GovTokenStakingModule from '../ignition/modules/GovTokenStaking'
@@ -41,6 +41,10 @@ exec(async () => {
       GovTokenStaking: {
         govToken: GovToken.address,
         voteToken: BetVotingEscrow.address,
+        rewardTokens: [
+          zeroAddress,
+          BetChip.address,
+        ],
       },
     },
   })

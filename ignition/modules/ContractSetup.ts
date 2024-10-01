@@ -7,7 +7,6 @@ export default buildModule('ContractSetup', m => {
 
   m.call(BetManager, 'setCreationFee', [m.getParameter('creationFee')])
   m.call(BetConfigurator, 'setOriginAllowlist', [m.getParameter('originAllowlist')])
-  m.call(BetVotingEscrow, 'setBetManager', [m.getParameter('BetManager')])
   m.call(BetVotingEscrow, 'setGovTokenStaking', [m.getParameter('GovTokenStaking')])
 
   return {}

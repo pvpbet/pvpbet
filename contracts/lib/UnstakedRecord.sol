@@ -1,26 +1,29 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {UnlockWaitingPeriod} from "./StakedRecord.sol";
+import {IGovTokenStaking} from "../interface/IGovTokenStaking.sol";
 import {MathLib} from "./Math.sol";
 
 struct UnstakedRecord {
-  address account;
-  UnlockWaitingPeriod unlockWaitingPeriod;
+  IGovTokenStaking.UnlockWaitingPeriod unlockWaitingPeriod;
   uint256 amount;
   uint256 unlockTime;
-  uint256 index;
-}
-
-library UnstakedRecordLib {
-  function removeFrom(UnstakedRecord memory record, UnstakedRecord[] storage records)
-  internal {
-    UnstakedRecordArrayLib.remove(records, record.index);
-  }
 }
 
 library UnstakedRecordArrayLib {
   using MathLib for uint256;
+
+  function add(UnstakedRecord[] storage records, UnstakedRecord memory record)
+  internal {
+    if (record.unlockWaitingPeriod == IGovTokenStaking.UnlockWaitingPeriod.WEEK12) {
+      record.unlockTime = block.timestamp.unsafeAdd(12 weeks);
+    } else if (record.unlockWaitingPeriod == IGovTokenStaking.UnlockWaitingPeriod.WEEK) {
+      record.unlockTime = block.timestamp.unsafeAdd(1 weeks);
+    } else {
+      record.unlockTime = block.timestamp;
+    }
+    records.push(record);
+  }
 
   function remove(UnstakedRecord[] storage records, uint256 index)
   internal {
@@ -28,73 +31,61 @@ library UnstakedRecordArrayLib {
     if (index >= length) return;
     uint256 max = length.unsafeDec();
     for (uint256 i = index; i < max; i = i.unsafeInc()) {
-      UnstakedRecord memory record = records[i.unsafeInc()];
-      record.index = i;
-      records[i] = record;
+      records[i] = records[i.unsafeInc()];
     }
     records.pop();
   }
 
-  function add(UnstakedRecord[] storage records, UnstakedRecord memory record)
-  internal {
-    if (record.unlockWaitingPeriod == UnlockWaitingPeriod.WEEK12) {
-      record.unlockTime = block.timestamp.unsafeAdd(12 weeks);
-    } else if (record.unlockWaitingPeriod == UnlockWaitingPeriod.WEEK) {
-      record.unlockTime = block.timestamp.unsafeAdd(1 weeks);
-    } else {
-      record.unlockTime = block.timestamp;
+  function removeByUnlocked(UnstakedRecord[] storage records)
+  internal
+  returns (UnstakedRecord[] memory) {
+    uint256 blockTimestamp = block.timestamp;
+    uint256 count = 0;
+    uint256 length = records.length;
+    UnstakedRecord[] memory matchedRecords = new UnstakedRecord[](length);
+    for (uint256 i = 0; i < length; i = i.unsafeInc()) {
+      UnstakedRecord memory record = records[i];
+      if (blockTimestamp > record.unlockTime) {
+        matchedRecords[count] = record;
+        count = count.unsafeInc();
+      } else if (count > 0) {
+        records[i.unsafeSub(count)] = record;
+      }
     }
-    record.index = records.length;
-    records.push(record);
+
+    if (count > 0) {
+      for (uint256 i = 0; i < count; i = i.unsafeInc()) {
+        records.pop();
+      }
+    }
+
+    if (count < length) {
+      assembly {
+        mstore(matchedRecords, count)
+      }
+    }
+
+    return matchedRecords;
   }
 
-  function find(UnstakedRecord[] memory records, address account)
+  function findByUnlockWaitingPeriod(UnstakedRecord[] memory records, IGovTokenStaking.UnlockWaitingPeriod unlockWaitingPeriod)
   internal pure
   returns (UnstakedRecord[] memory) {
-    uint256 length = records.length;
-
     uint256 count = 0;
+    uint256 length = records.length;
+    UnstakedRecord[] memory matchedRecords = new UnstakedRecord[](length);
     for (uint256 i = 0; i < length; i = i.unsafeInc()) {
-      if (records[i].account == account) {
+      UnstakedRecord memory record = records[i];
+      if (record.unlockWaitingPeriod == unlockWaitingPeriod) {
+        matchedRecords[count] = record;
         count = count.unsafeInc();
       }
     }
-
-    UnstakedRecord[] memory accountRecords = new UnstakedRecord[](count);
-    uint256 j = 0;
-    for (uint256 i = 0; i < length; i = i.unsafeInc()) {
-      UnstakedRecord memory record = records[i];
-      if (record.account == account) {
-        accountRecords[j] = record;
-        j = j.unsafeInc();
+    if (count < length) {
+      assembly {
+        mstore(matchedRecords, count)
       }
     }
-
-    return accountRecords;
-  }
-
-  function find(UnstakedRecord[] memory records, address account, UnlockWaitingPeriod unlockWaitingPeriod)
-  internal pure
-  returns (UnstakedRecord[] memory) {
-    uint256 length = records.length;
-
-    uint256 count = 0;
-    for (uint256 i = 0; i < length; i = i.unsafeInc()) {
-      if (records[i].account == account) {
-        count = count.unsafeInc();
-      }
-    }
-
-    UnstakedRecord[] memory accountRecords = new UnstakedRecord[](count);
-    uint256 j = 0;
-    for (uint256 i = 0; i < length; i = i.unsafeInc()) {
-      UnstakedRecord memory record = records[i];
-      if (record.account == account && record.unlockWaitingPeriod == unlockWaitingPeriod) {
-        accountRecords[j] = record;
-        j = j.unsafeInc();
-      }
-    }
-
-    return accountRecords;
+    return matchedRecords;
   }
 }

@@ -30,7 +30,7 @@ abstract contract UseVoteToken is IUseVoteToken, IErrors {
   }
 
   function _setVoteToken(address newVoteToken)
-  internal {
+  internal virtual {
     _voteToken = newVoteToken;
     emit VoteTokenSet(newVoteToken);
   }

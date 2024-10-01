@@ -22,7 +22,7 @@ abstract contract UseGovToken is IUseGovToken {
   }
 
   function _setGovToken(address newGovToken)
-  internal {
+  internal virtual {
     _govToken = newGovToken;
     emit GovTokenSet(newGovToken);
   }

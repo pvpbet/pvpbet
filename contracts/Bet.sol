@@ -5,13 +5,13 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {BetActionArbitrate} from "./base/BetActionArbitrate.sol";
 import {BetActionDispute} from "./base/BetActionDispute.sol";
-import {IAccountLevel} from "./interface/IAccountLevel.sol";
 import {IBet} from "./interface/IBet.sol";
 import {IBetActionDecide} from "./interface/IBetActionDecide.sol";
 import {IBetActionWager} from "./interface/IBetActionWager.sol";
 import {IBetOptionFactory} from "./interface/IBetOptionFactory.sol";
+import {IGovTokenStaking} from "./interface/IGovTokenStaking.sol";
+import {IUseGovTokenStaking} from "./interface/IUseGovTokenStaking.sol";
 import {IMetadata} from "./interface/IMetadata.sol";
-import {IRewardDistributable} from "./interface/IRewardDistributable.sol";
 import {AddressLib} from "./lib/Address.sol";
 import {MathLib} from "./lib/Math.sol";
 import {Record, RecordArrayLib} from "./lib/Record.sol";
@@ -49,6 +49,7 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
   address private _chip;
   address private _vote;
   address private _govToken;
+  address private _govTokenStaking;
   address private _betManager;
   address private _unconfirmedWinningOption;
   address private _confirmedWinningOption;
@@ -89,6 +90,7 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
     _chip = chip_;
     _vote = vote_;
     _govToken = govToken_;
+    _govTokenStaking = IUseGovTokenStaking(vote_).govTokenStaking();
     _betManager = betManager;
     _calculateParameters();
     _createBetOptions(betOptionFactory);
@@ -640,13 +642,12 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
 
     if (_releasedOffset > start && offset < end) {
       (uint256 relativeOffset, uint256 relativeLimit) = _getRelativeOffsetAndLimit(start, end, offset, _releasedOffset);
-
-      Record[] memory records = relativeOffset == 0 && relativeLimit >= count
-        ? actionArbitrate.arbitratedRecords()
-        : actionArbitrate.arbitratedRecords(relativeOffset, relativeLimit);
-
       if (relativeOffset == 0) this.collectDisputedChips();
-      records.distribute(
+      (
+        relativeOffset == 0 && relativeLimit >= count
+          ? actionArbitrate.arbitratedRecords()
+          : actionArbitrate.arbitratedRecords(relativeOffset, relativeLimit)
+      ).distribute(
         _chip,
         disputedAmount(),
         actionArbitrate.arbitratedAmount()
@@ -666,12 +667,11 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
     if (_releasedOffset > start && offset < end) {
       (uint256 relativeOffset, uint256 relativeLimit) = _getRelativeOffsetAndLimit(start, end, offset, _releasedOffset);
 
-      Record[] memory records = relativeOffset == 0 && relativeLimit >= count
-        ? actionDecide.decidedRecords()
-        : actionDecide.decidedRecords(relativeOffset, relativeLimit);
-
-      actionDecide.confiscateDecidedVotes(relativeLimit);
-      _deciderLevelDown(records);
+      if (relativeOffset == 0 && relativeLimit >= count) {
+        actionDecide.confiscateDecidedVotes();
+      } else {
+        actionDecide.confiscateDecidedVotes(relativeLimit);
+      }
     }
 
     start = end;
@@ -689,12 +689,11 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
 
     if (_releasedOffset > start && offset < end) {
       (uint256 relativeOffset, uint256 relativeLimit) = _getRelativeOffsetAndLimit(start, end, offset, _releasedOffset);
-
-      Record[] memory records = relativeOffset == 0 && relativeLimit >= count
-        ? actionArbitrate.arbitratedRecords()
-        : actionArbitrate.arbitratedRecords(relativeOffset, relativeLimit);
-
-      records.distribute(
+      (
+        relativeOffset == 0 && relativeLimit >= count
+          ? actionArbitrate.arbitratedRecords()
+          : actionArbitrate.arbitratedRecords(relativeOffset, relativeLimit)
+      ).distribute(
         _govToken,
         confiscatedAmount,
         actionArbitrate.arbitratedAmount()
@@ -750,13 +749,11 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
 
     if (_releasedOffset > start && offset < end) {
       (uint256 relativeOffset, uint256 relativeLimit) = _getRelativeOffsetAndLimit(start, end, offset, _releasedOffset);
-
-      Record[] memory records = relativeOffset == 0 && relativeLimit >= count
-        ? actionDecide.decidedRecords()
-        : actionDecide.decidedRecords(relativeOffset, relativeLimit);
-
-      records.distribute(_chip, amount, actionDecide.decidedAmount());
-      _deciderLevelUp(records);
+      (
+        relativeOffset == 0 && relativeLimit >= count
+          ? actionDecide.decidedRecords()
+          : actionDecide.decidedRecords(relativeOffset, relativeLimit)
+      ).distribute(_chip, amount, actionDecide.decidedAmount());
     }
 
     return end;
@@ -771,12 +768,11 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
 
     if (_releasedOffset > start && offset < end) {
       (uint256 relativeOffset, uint256 relativeLimit) = _getRelativeOffsetAndLimit(start, end, offset, _releasedOffset);
-
-      Record[] memory records = relativeOffset == 0 && relativeLimit >= count
-        ? actionWager.wageredRecords()
-        : actionWager.wageredRecords(relativeOffset, relativeLimit);
-
-      records.distribute(_chip, amount, actionWager.wageredAmount());
+      (
+        relativeOffset == 0 && relativeLimit >= count
+          ? actionWager.wageredRecords()
+          : actionWager.wageredRecords(relativeOffset, relativeLimit)
+      ).distribute(_chip, amount, actionWager.wageredAmount());
     }
 
     return end;
@@ -785,13 +781,13 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
   function _distributeProtocolReward(uint256 amount)
   private {
     if (_chip == address(0)) {
-      _vote.functionCallWithValue(
+      _govTokenStaking.functionCallWithValue(
         abi.encodeWithSignature("distribute()"),
         amount
       );
     } else {
-      IERC20(_chip).approve(_vote, amount);
-      IRewardDistributable(_vote).distribute(_chip, amount);
+      IERC20(_chip).approve(_govTokenStaking, amount);
+      IGovTokenStaking(_govTokenStaking).distribute(_chip, amount);
     }
   }
 
@@ -871,26 +867,6 @@ contract Bet is IBet, Initializable, IMetadata, BetActionArbitrate, BetActionDis
     relativeOffset = offset > start ? offset.unsafeSub(start) : 0;
     relativeLimit = releasedOffset_.min(end).unsafeSub(start).unsafeSub(relativeOffset);
     return (relativeOffset, relativeLimit);
-  }
-
-  function _deciderLevelUp(Record[] memory records)
-  private {
-    uint256 length = records.length;
-    address[] memory accounts = new address[](length);
-    for (uint256 i = 0; i < length; i = i.unsafeInc()) {
-      accounts[i] = records[i].account;
-    }
-    IAccountLevel(_vote).levelUpBatch(accounts);
-  }
-
-  function _deciderLevelDown(Record[] memory records)
-  private {
-    uint256 length = records.length;
-    address[] memory accounts = new address[](length);
-    for (uint256 i = 0; i < length; i = i.unsafeInc()) {
-      accounts[i] = records[i].account;
-    }
-    IAccountLevel(_vote).levelDownBatch(accounts);
   }
 
   function _destroy()
