@@ -7,7 +7,7 @@ const WEEK = DAY * 7
 const WEEK12 = WEEK * 12
 
 exec(async () => {
-  const seconds = HOUR * 60
+  const seconds = DAY * 2.5
   await time.increase(seconds)
   console.log(`Time increased by ${seconds} seconds`)
 })

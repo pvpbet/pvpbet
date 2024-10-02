@@ -22,7 +22,7 @@ export enum BetStatus {
 export const BetDetails = {
   title: 'Musk VS Zuckerberg',
   description: 'Musk VS Zuckerberg, who will win?',
-  iconURL: 'https://example.com/icons/icon.png',
+  iconURL: 'https://cf-img-a-in.tosshub.com/sites/visualstory/stories/2023_06/story_45383/assets/4.jpeg',
   forumURL: '',
   options: [
     'Musk',

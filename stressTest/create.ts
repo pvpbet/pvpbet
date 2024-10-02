@@ -17,8 +17,8 @@ exec(async () => {
     await BetManager.write.createBet(
       [
         Object.assign({}, BetDetails, { title: `[${i + 1}] ${BetDetails.title}` }),
-        DAY * 3n,
-        DAY * 3n,
+        DAY * 2n * BigInt(i + 1),
+        DAY * 2n,
       ],
     )
     console.log(`${i + 1} have been created.`)
