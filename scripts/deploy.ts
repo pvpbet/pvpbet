@@ -8,7 +8,7 @@ import ContractSetupModule from '../ignition/modules/ContractSetup'
 import GovTokenModule from '../ignition/modules/GovToken'
 import GovTokenStakingModule from '../ignition/modules/GovTokenStaking'
 import TestUSDCModule from '../ignition/modules/TestUSDC'
-import parameters from '../ignition/parameters.json'
+import parameters from '../ignition/parameters_sepolia.json'
 import type { Address } from 'viem'
 
 exec(async () => {
