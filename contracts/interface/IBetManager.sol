@@ -73,4 +73,14 @@ interface IBetManager {
    * @dev Returns true if the address is a bet contract.
    */
   function isBet(address bet) external view returns (bool);
+
+  /**
+   * @dev Returns the version of the bet contract.
+   */
+  function betVersion() external view returns (string memory);
+
+  /**
+   * @dev Returns the version of the bet option contract.
+   */
+  function betOptionVersion() external view returns (string memory);
 }

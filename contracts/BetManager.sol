@@ -11,6 +11,7 @@ import {IBet} from "./interface/IBet.sol";
 import {IBetConfigurator} from "./interface/IBetConfigurator.sol";
 import {IBetFactory} from "./interface/IBetFactory.sol";
 import {IBetManager} from "./interface/IBetManager.sol";
+import {IMetadata} from "./interface/IMetadata.sol";
 import {StringLib} from "./lib/String.sol";
 import {TransferLib} from "./lib/Transfer.sol";
 
@@ -205,5 +206,17 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, UseCh
   external view
   returns (bool) {
     return _betMap[bet];
+  }
+
+  function betVersion()
+  public view
+  returns (string memory) {
+    return IMetadata(_betFactory).version();
+  }
+
+  function betOptionVersion()
+  public view
+  returns (string memory) {
+    return IMetadata(_betOptionFactory).version();
   }
 }
