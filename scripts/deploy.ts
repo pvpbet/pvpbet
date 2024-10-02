@@ -1,6 +1,7 @@
-import { viem, ignition } from 'hardhat'
+import { ignition } from 'hardhat'
 import { parseUnits, zeroAddress } from 'viem'
 import { exec, writeJson } from '../utils'
+import { buildModule } from '@nomicfoundation/hardhat-ignition/modules'
 import GovTokenModule from '../ignition/modules/GovToken'
 import GovTokenStakingModule from '../ignition/modules/GovTokenStaking'
 import BetChipModule from '../ignition/modules/BetChip'
@@ -10,10 +11,15 @@ import ContractSetupModule from '../ignition/modules/ContractSetup'
 import parameters from '../ignition/parameters.json'
 import type { Address } from 'viem'
 
+const USDCModule = buildModule('USDC', m => {
+  const USDC = m.contract('USDC')
+  return { USDC }
+})
+
 exec(async () => {
   const contracts: Record<string, Address> = {}
 
-  const USDC = await viem.deployContract('USDC')
+  const { USDC } = await ignition.deploy(USDCModule)
   await USDC.write.mint([parseUnits('10000000000', 6)])
   contracts.USDC = USDC.address
   console.log(`USDC deployed to: ${USDC.address}`)

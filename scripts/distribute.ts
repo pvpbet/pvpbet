@@ -7,16 +7,16 @@ exec(async () => {
   const contracts = (await readJson('./contracts.json')) as Record<string, Address>
   const USDC = await viem.getContractAt('USDC', contracts.USDC)
   const BetChip = await viem.getContractAt('BetChip', contracts.BetChip)
-  const BetVotingEscrow = await viem.getContractAt('BetVotingEscrow', contracts.BetVotingEscrow)
+  const GovTokenStaking = await viem.getContractAt('GovTokenStaking', contracts.GovTokenStaking)
 
   const ethAmount = parseEther('10')
-  await BetVotingEscrow.write.distribute({ value: ethAmount })
+  await GovTokenStaking.write.distribute({ value: ethAmount })
 
   const decimals = await BetChip.read.decimals()
   const chipAmount = parseUnits('10000', decimals)
   await USDC.write.approve([BetChip.address, chipAmount])
   await BetChip.write.deposit([chipAmount])
-  await BetChip.write.approve([BetVotingEscrow.address, chipAmount])
-  await BetVotingEscrow.write.distribute([BetChip.address, chipAmount])
+  await BetChip.write.approve([GovTokenStaking.address, chipAmount])
+  await GovTokenStaking.write.distribute([BetChip.address, chipAmount])
   console.log('The rewards distribution has been completed.')
 })
