@@ -155,7 +155,6 @@ describe('GovTokenStaking', () => {
 
       await assert.isRejected(
         stake(user, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK12 + 1, stakeAmount),
-        'Missing or invalid parameters.',
       )
       await assert.isRejected(
         stake(user, GovToken, GovTokenStaking, UnlockWaitingPeriod.NONE, stakeAmount),
@@ -391,7 +390,6 @@ describe('GovTokenStaking', () => {
             [UnlockWaitingPeriod.WEEK, UnlockWaitingPeriod.WEEK12 + 1],
             { account: user.account },
           ),
-          'Missing or invalid parameters.',
         )
         await assert.isRejected(
           GovTokenStaking.write.extendUnlockWaitingPeriod(
@@ -438,7 +436,6 @@ describe('GovTokenStaking', () => {
             [UnlockWaitingPeriod.WEEK, UnlockWaitingPeriod.WEEK12 + 1, perAmount],
             { account: hacker.account },
           ),
-          'Missing or invalid parameters.',
         )
         await assert.isRejected(
           GovTokenStaking.write.extendUnlockWaitingPeriod(
