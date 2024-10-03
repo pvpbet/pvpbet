@@ -154,7 +154,7 @@ abstract contract BetActionWager is IBetActionWager, IErrors {
       _wageredChipsReleased = true;
     } else {
       uint256 maxLength = _wageredRecords.length;
-      if (limit == 0) limit = maxLength.sub(offset);
+      if (limit == 0) limit = maxLength.unsafeSub(offset);
       _releasedOffset = offset.add(limit).min(maxLength);
       if (_releasedOffset == maxLength) {
         _wageredChipsReleased = true;

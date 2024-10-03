@@ -52,17 +52,6 @@ library RecordArrayLib {
     return foundRecord;
   }
 
-  function sumAmount(Record[] memory records)
-  internal pure
-  returns (uint256) {
-    uint256 sum = 0;
-    uint256 length = records.length;
-    for (uint256 i = 0; i < length; i = i.unsafeInc()) {
-      sum = sum.unsafeAdd(records[i].amount);
-    }
-    return sum;
-  }
-
   function slice(Record[] memory records, uint256 offset, uint256 limit)
   internal pure
   returns (Record[] memory) {
@@ -74,6 +63,17 @@ library RecordArrayLib {
       result[i.unsafeSub(offset)] = records[i];
     }
     return result;
+  }
+
+  function sumAmount(Record[] memory records)
+  internal pure
+  returns (uint256) {
+    uint256 sum = 0;
+    uint256 length = records.length;
+    for (uint256 i = 0; i < length; i = i.unsafeInc()) {
+      sum = sum.unsafeAdd(records[i].amount);
+    }
+    return sum;
   }
 
   function distribute(Record[] memory records, address token, uint256 amount)

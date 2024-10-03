@@ -14,6 +14,8 @@ interface IBet {
     uint256 protocolRewardRatio;
     uint256 creatorRewardRatio;
     uint256 deciderRewardRatio;
+    uint256 countPerRelease;
+    uint256 countPerPenalize;
   }
 
   struct BetDetails {
@@ -174,17 +176,32 @@ interface IBet {
   function release(uint256 limit) external;
 
   /**
-   * @dev Returns the release count of the partial release.
+   * @dev Returns the progress of the partial release.
    */
-  function maxReleaseCount() external view returns (uint256);
-
-  /**
-   * @dev Returns the offset of the partial release.
-   */
-  function releasedOffset() external view returns (uint256);
+  function releasedProgress() external view returns (uint256 done, uint256 total);
 
   /**
    * @dev Returns true if the bet has been released.
    */
   function released() external view returns (bool);
+
+  /**
+   * @dev Penalizes based on results.
+   */
+  function penalize() external;
+
+  /**
+   * @dev Partial penalize, used when the required gas for penalize is too large.
+   */
+  function penalize(uint256 limit) external;
+
+  /**
+   * @dev Returns the progress of the partial penalize.
+   */
+  function penalizedProgress() external view returns (uint256 done, uint256 total);
+
+  /**
+   * @dev Returns true if the bet has been penalized.
+   */
+  function penalized() external view returns (bool);
 }

@@ -39,6 +39,8 @@ contract BetConfigurator is IBetConfigurator, Ownable {
   uint256 private _protocolRewardRatio;
   uint256 private _creatorRewardRatio;
   uint256 private _deciderRewardRatio;
+  uint256 private _countPerRelease;
+  uint256 private _countPerPenalize;
 
   constructor() Ownable(msg.sender) {
     _minOptionsCount = 2;
@@ -62,6 +64,9 @@ contract BetConfigurator is IBetConfigurator, Ownable {
     _protocolRewardRatio = 1;
     _creatorRewardRatio = 1;
     _deciderRewardRatio = 5;
+
+    _countPerRelease = 1000;
+    _countPerPenalize = 200;
   }
 
   function validateTitle(string calldata title)
@@ -119,7 +124,9 @@ contract BetConfigurator is IBetConfigurator, Ownable {
       confirmDisputeAmountRatio: _confirmDisputeAmountRatio,
       protocolRewardRatio: _protocolRewardRatio,
       creatorRewardRatio: _creatorRewardRatio,
-      deciderRewardRatio: _deciderRewardRatio
+      deciderRewardRatio: _deciderRewardRatio,
+      countPerRelease: _countPerRelease,
+      countPerPenalize: _countPerPenalize
     });
   }
 
@@ -319,5 +326,27 @@ contract BetConfigurator is IBetConfigurator, Ownable {
   function setDeciderRewardRatio(uint256 newDeciderRewardRatio)
   external onlyOwner {
     _deciderRewardRatio = newDeciderRewardRatio;
+  }
+
+  function countPerRelease()
+  external view
+  returns (uint256) {
+    return _countPerRelease;
+  }
+
+  function setCountPerRelease(uint256 newCountPerRelease)
+  external onlyOwner {
+    _countPerRelease = newCountPerRelease;
+  }
+
+  function countPerPenalize()
+  external view
+  returns (uint256) {
+    return _countPerPenalize;
+  }
+
+  function setCountPerPenalize(uint256 newCountPerPenalize)
+  external onlyOwner {
+    _countPerPenalize = newCountPerPenalize;
   }
 }

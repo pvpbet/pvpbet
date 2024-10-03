@@ -166,7 +166,7 @@ abstract contract BetActionDecide is IBetActionDecide, IErrors {
       _decidedVotesReleased = true;
     } else {
       uint256 maxLength = _decidedRecords.length;
-      if (limit == 0) limit = maxLength.sub(offset);
+      if (limit == 0) limit = maxLength.unsafeSub(offset);
       _releasedOffset = offset.add(limit).min(maxLength);
       if (_releasedOffset == maxLength) {
         _decidedVotesReleased = true;

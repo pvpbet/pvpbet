@@ -156,7 +156,7 @@ abstract contract BetActionDispute is IBetActionDispute, IErrors {
       _disputedChipsReleased = true;
     } else {
       uint256 maxLength = _disputedRecords.length;
-      if (limit == 0) limit = maxLength.sub(offset);
+      if (limit == 0) limit = maxLength.unsafeSub(offset);
       _releasedOffset = offset.add(limit).min(maxLength);
       if (_releasedOffset == maxLength) {
         _disputedChipsReleased = true;

@@ -54,4 +54,9 @@ interface IBetConfigurator {
   function setCreatorRewardRatio(uint256 newCreatorRewardRatio) external;
   function deciderRewardRatio() external view returns (uint256);
   function setDeciderRewardRatio(uint256 newDeciderRewardRatio) external;
+
+  function countPerRelease() external view returns (uint256);
+  function setCountPerRelease(uint256 newCountPerRelease) external;
+  function countPerPenalize() external view returns (uint256);
+  function setCountPerPenalize(uint256 newCountPerPenalize) external;
 }
