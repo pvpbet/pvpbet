@@ -3,11 +3,13 @@ import { parseEther, parseUnits } from 'viem'
 import { exec, readJson } from '../utils'
 import type { Address } from 'viem'
 
+const network = process.env.HARDHAT_NETWORK as string
+
 exec(async () => {
-  const contracts = (await readJson('./contracts.json')) as Record<string, Address>
-  const USDC = await viem.getContractAt('USDC', contracts.USDC)
-  const BetChip = await viem.getContractAt('BetChip', contracts.BetChip)
-  const GovTokenStaking = await viem.getContractAt('GovTokenStaking', contracts.GovTokenStaking)
+  const contracts = (await readJson('./contracts.json')) as Record<string, Record<string, Address>>
+  const USDC = await viem.getContractAt('USDC', contracts[network].USDC)
+  const BetChip = await viem.getContractAt('BetChip', contracts[network].BetChip)
+  const GovTokenStaking = await viem.getContractAt('GovTokenStaking', contracts[network].GovTokenStaking)
 
   const ethAmount = parseEther('10')
   await GovTokenStaking.write.distribute({ value: ethAmount })

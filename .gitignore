@@ -6,7 +6,7 @@ node_modules
 /contracts.json
 /keys.json
 /networks.json
-/ignition/parameters*
+/ignition/parameters*.json
 
 # Hardhat files
 /cache

@@ -3,14 +3,15 @@ import { parseEther, parseUnits } from 'viem'
 import { exec, getLocalWalletClient, readJson } from '../utils'
 import type { Address, Hash } from 'viem'
 
+const network = process.env.HARDHAT_NETWORK as string
 const betAddress = process.env.LOAD_TEST_BET_ADDRESS as Address
 const count = 2000
 
 exec(async () => {
-  const contracts = (await readJson('./contracts.json')) as Record<string, Address>
-  const GovToken = await viem.getContractAt('GovToken', contracts.GovToken)
-  const GovTokenStaking = await viem.getContractAt('GovTokenStaking', contracts.GovTokenStaking)
-  const BetVotingEscrow = await viem.getContractAt('BetVotingEscrow', contracts.BetVotingEscrow)
+  const contracts = (await readJson('./contracts.json')) as Record<string, Record<string, Address>>
+  const GovToken = await viem.getContractAt('GovToken', contracts[network].GovToken)
+  const GovTokenStaking = await viem.getContractAt('GovTokenStaking', contracts[network].GovTokenStaking)
+  const BetVotingEscrow = await viem.getContractAt('BetVotingEscrow', contracts[network].BetVotingEscrow)
 
   const { keys } = (await readJson('./keys.json')) as { keys: { adr: Address, key: Hash }[] }
   const Bet = await viem.getContractAt('Bet', betAddress)
@@ -23,7 +24,7 @@ exec(async () => {
   for (let i = 0; i < count; i++) {
     const address = keys[i].adr
     const privateKey = keys[i].key
-    await owner.sendTransaction({ to: address, value: parseEther('0.01') })
+    await owner.sendTransaction({ to: address, value: parseEther('0.00007') })
     await GovToken.write.transfer([address, amountPerTransaction], { account: owner.account })
     const walletClient = await getLocalWalletClient(privateKey)
     await GovToken.write.approve([GovTokenStaking.address, amountPerTransaction], { account: walletClient.account })

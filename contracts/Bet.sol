@@ -827,7 +827,9 @@ contract Bet is IBet, IMetadata, BetActionArbitrate, BetActionDispute {
     if (_penalized) revert BetHasBeenPenalized();
 
     (
-      Status status_,,,
+      Status status_,
+      address unconfirmedWinningOption_,
+      address confirmedWinningOption_,
       bool isPenaltyDisputer_,
       bool isPenaltyDecider_,,
       uint256 maxPenalizeCount_
@@ -835,6 +837,9 @@ contract Bet is IBet, IMetadata, BetActionArbitrate, BetActionDispute {
 
     if (!isPenaltyDisputer_ && !isPenaltyDecider_) revert NoTargetForPenalty();
     if (status_ != Status.CONFIRMED && status_ != Status.CANCELLED) revert BetHasNotEndedYet();
+
+    _unconfirmedWinningOption = unconfirmedWinningOption_;
+    _confirmedWinningOption = confirmedWinningOption_;
 
     uint256 offset = _penalizedOffset;
     _penalizedOffset = limit > 0 ? _penalizedOffset.add(limit) : maxPenalizeCount_;
