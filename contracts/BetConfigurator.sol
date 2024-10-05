@@ -65,7 +65,7 @@ contract BetConfigurator is IBetConfigurator, Ownable {
     _creatorRewardRatio = 1;
     _deciderRewardRatio = 5;
 
-    _countPerRelease = 1000;
+    _countPerRelease = 1600;
     _countPerPenalize = 200;
   }
 

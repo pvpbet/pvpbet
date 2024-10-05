@@ -6,9 +6,15 @@ import '@nomicfoundation/hardhat-verify'
 import '@openzeppelin/hardhat-upgrades'
 import 'hardhat-gas-reporter'
 import 'dotenv/config'
-import * as chains from 'viem/chains'
+import { arbitrum } from 'viem/chains'
+import arbitrumSepolia from './chains/arbitrumSepolia'
 import type { Chain } from 'viem'
 import fs from 'node:fs'
+
+const chains: Record<string, Chain> = {
+  arbitrum,
+  arbitrumSepolia,
+}
 
 let networks: Record<string, Record<string, string>> = {}
 try {
@@ -51,7 +57,7 @@ const config: HardhatUserConfig = {
     }, {}),
     customChains: Object.keys(networks)
       .map((key: string) => {
-        const chain: Chain = chains[key as keyof typeof chains]
+        const chain: Chain = chains[key]
         if (chain) {
           return {
             network: key,
@@ -73,7 +79,7 @@ const config: HardhatUserConfig = {
   networks: Object.fromEntries(
     Object.keys(networks)
       .map((key: string) => {
-        const chain: Chain = chains[key as keyof typeof chains]
+        const chain: Chain = chains[key]
         if (chain) {
           return [
             key,

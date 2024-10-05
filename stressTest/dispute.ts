@@ -8,8 +8,8 @@ const count = 1000
 exec(async () => {
   const { keys } = (await readJson('./keys.json')) as { keys: { adr: Address, key: Hash }[] }
   const Bet = await viem.getContractAt('Bet', betAddress)
-  const minDisputedTotalAmount = await Bet.read.minDisputedTotalAmount()
-  const amountPerTransaction = minDisputedTotalAmount / BigInt(count)
+  const totalAmount = await Bet.read.minDisputedTotalAmount()
+  const amountPerTransaction = totalAmount / BigInt(count)
 
   const [owner] = await viem.getWalletClients()
 

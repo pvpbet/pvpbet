@@ -152,6 +152,10 @@ export function numberFixed(number: string | number, fixed = 2) {
   return Number(Number(number).toFixed(fixed))
 }
 
+export function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
 export async function writeJson(path: string, data: unknown) {
   const jsonData = JSON.stringify(data, null, 2)
   return writeFile(path, jsonData, 'utf8')

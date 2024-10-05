@@ -1734,6 +1734,14 @@ describe('Bet', () => {
         await checkBalance(
           async () => {
             await release(Bet, chip, data)
+            await assert.isRejected(
+              Bet.write.release({ account: owner.account }),
+              'BetHasBeenReleased'
+            )
+            await assert.isRejected(
+              Bet.write.penalize({ account: owner.account }),
+              'NoTargetForPenalty'
+            )
           },
           [
             [Bet.address, chip, 0n],
@@ -1757,15 +1765,6 @@ describe('Bet', () => {
             hacker.account.address,
           ],
           0n,
-        )
-
-        await assert.isRejected(
-          Bet.write.release({ account: owner.account }),
-          'BetHasBeenReleased'
-        )
-        await assert.isRejected(
-          Bet.write.penalize({ account: owner.account }),
-          'NoTargetForPenalty'
         )
 
         await isBetClosed(Bet, chip)
@@ -1850,6 +1849,14 @@ describe('Bet', () => {
         await checkBalance(
           async () => {
             await release(Bet, chip, data)
+            await assert.isRejected(
+              Bet.write.release({ account: owner.account }),
+              'BetHasBeenReleased'
+            )
+            await assert.isRejected(
+              Bet.write.penalize({ account: owner.account }),
+              'NoTargetForPenalty'
+            )
           },
           [
             [Bet.address, chip, -(userDisputedAmount + hackerDisputedAmount)],
@@ -1873,15 +1880,6 @@ describe('Bet', () => {
             hacker.account.address,
           ],
           0n,
-        )
-
-        await assert.isRejected(
-          Bet.write.release({ account: owner.account }),
-          'BetHasBeenReleased'
-        )
-        await assert.isRejected(
-          Bet.write.penalize({ account: owner.account }),
-          'NoTargetForPenalty'
         )
 
         await isBetClosed(Bet, chip)
@@ -1963,6 +1961,14 @@ describe('Bet', () => {
         await checkBalance(
           async () => {
             await release(Bet, chip, data)
+            await assert.isRejected(
+              Bet.write.release({ account: owner.account }),
+              'BetHasBeenReleased'
+            )
+            await assert.isRejected(
+              Bet.write.penalize({ account: owner.account }),
+              'NoTargetForPenalty'
+            )
           },
           [
             [Bet.address, chip, -(userDisputedAmount + hackerDisputedAmount)],
@@ -1994,15 +2000,6 @@ describe('Bet', () => {
             + winnerReward
             + deciderReward
           ),
-        )
-
-        await assert.isRejected(
-          Bet.write.release({ account: owner.account }),
-          'BetHasBeenReleased'
-        )
-        await assert.isRejected(
-          Bet.write.penalize({ account: owner.account }),
-          'NoTargetForPenalty'
         )
 
         await isBetClosed(Bet, chip)
@@ -2076,6 +2073,14 @@ describe('Bet', () => {
         await checkBalance(
           async () => {
             await release(Bet, chip, data)
+            await assert.isRejected(
+              Bet.write.release({ account: owner.account }),
+              'BetHasBeenReleased'
+            )
+            await assert.isRejected(
+              Bet.write.penalize({ account: owner.account }),
+              'NoTargetForPenalty'
+            )
           },
           [
             [options[0], chip, -ownerWageredAmount],
@@ -2107,15 +2112,6 @@ describe('Bet', () => {
           ),
         )
 
-        await assert.isRejected(
-          Bet.write.release({ account: owner.account }),
-          'BetHasBeenReleased'
-        )
-        await assert.isRejected(
-          Bet.write.penalize({ account: owner.account }),
-          'NoTargetForPenalty'
-        )
-
         await isBetClosed(Bet, chip)
       }
     }
@@ -2131,6 +2127,7 @@ describe('Bet', () => {
         chip: Address,
         data: DeployFixtureReturnType,
       ) => Promise<void>,
+      isPenalizeFirst?: boolean,
     ) {
       const data = await loadFixture(deployFixture)
       const {
@@ -2209,61 +2206,69 @@ describe('Bet', () => {
           userConfiscatedVoteReward + hackerConfiscatedVoteReward,
         )
 
-        await checkBalance(
+        const handles = [
           async () => {
-            await release(Bet, chip, data)
+            await checkBalance(
+              async () => {
+                await release(Bet, chip, data)
+                await assert.isRejected(
+                  Bet.write.release([0n], { account: owner.account }),
+                  'BetHasBeenReleased'
+                )
+              },
+              [
+                [Bet.address, chip, -(userDisputedAmount + hackerDisputedAmount)],
+                [options[0], chip, -ownerWageredAmount],
+                [options[1], chip, -(userWageredAmount + hackerWageredAmount)],
+                [owner.account.address, chip, 0n],
+                [user.account.address, chip, creatorReward + userDisputedAmount],
+                [hacker.account.address, chip, hackerDisputedAmount],
+                [owner.account.address, BetVotingEscrow.address, 0n],
+                [user.account.address, BetVotingEscrow.address, userDecidedAmount],
+                [hacker.account.address, BetVotingEscrow.address, hackerDecidedAmount],
+                [owner.account.address, GovToken.address, 0n],
+                [user.account.address, GovToken.address, 0n],
+                [hacker.account.address, GovToken.address, 0n],
+              ],
+            )
+
+            await isCorrectStakeReward(
+              GovTokenStaking,
+              chip,
+              [
+                owner.account.address,
+                user.account.address,
+                hacker.account.address,
+              ],
+              (
+                ownerWageredAmount
+                + userWageredAmount
+                + hackerWageredAmount
+              ) - creatorReward,
+            )
           },
-          [
-            [Bet.address, chip, -(userDisputedAmount + hackerDisputedAmount)],
-            [options[0], chip, -ownerWageredAmount],
-            [options[1], chip, -(userWageredAmount + hackerWageredAmount)],
-            [owner.account.address, chip, 0n],
-            [user.account.address, chip, creatorReward + userDisputedAmount],
-            [hacker.account.address, chip, hackerDisputedAmount],
-            [owner.account.address, BetVotingEscrow.address, 0n],
-            [user.account.address, BetVotingEscrow.address, userDecidedAmount],
-            [hacker.account.address, BetVotingEscrow.address, hackerDecidedAmount],
-            [owner.account.address, GovToken.address, 0n],
-            [user.account.address, GovToken.address, 0n],
-            [hacker.account.address, GovToken.address, 0n],
-          ],
-        )
-
-        await isCorrectStakeReward(
-          GovTokenStaking,
-          chip,
-          [
-            owner.account.address,
-            user.account.address,
-            hacker.account.address,
-          ],
-          (
-            ownerWageredAmount
-            + userWageredAmount
-            + hackerWageredAmount
-          ) - creatorReward,
-        )
-
-        await assert.isRejected(
-          Bet.write.release([0n], { account: owner.account }),
-          'BetHasBeenReleased'
-        )
-
-        await checkBalance(
           async () => {
-            await penalize(Bet, chip, data)
+            await checkBalance(
+              async () => {
+                await penalize(Bet, chip, data)
+                await assert.isRejected(
+                  Bet.write.penalize({ account: owner.account }),
+                  'BetHasBeenPenalized'
+                )
+              },
+              [
+                [owner.account.address, GovToken.address, 0n],
+                [user.account.address, GovToken.address, userConfiscatedVoteReward],
+                [hacker.account.address, GovToken.address, hackerConfiscatedVoteReward],
+              ],
+            )
           },
-          [
-            [owner.account.address, GovToken.address, 0n],
-            [user.account.address, GovToken.address, userConfiscatedVoteReward],
-            [hacker.account.address, GovToken.address, hackerConfiscatedVoteReward],
-          ],
-        )
+        ]
 
-        await assert.isRejected(
-          Bet.write.penalize({ account: owner.account }),
-          'BetHasBeenPenalized'
-        )
+        if (isPenalizeFirst) handles.reverse()
+        for (const handle of handles) {
+          await handle()
+        }
 
         await isBetClosed(Bet, chip)
       }
@@ -2280,6 +2285,7 @@ describe('Bet', () => {
         chip: Address,
         data: DeployFixtureReturnType,
       ) => Promise<void>,
+      isPenalizeFirst?: boolean,
     ) {
       const data = await loadFixture(deployFixture)
       const {
@@ -2359,67 +2365,75 @@ describe('Bet', () => {
           userConfiscatedChipReward + hackerConfiscatedChipReward,
         )
 
-        await checkBalance(
+        const handles = [
           async () => {
-            await release(Bet, chip, data)
+            await checkBalance(
+              async () => {
+                await release(Bet, chip, data)
+                await assert.isRejected(
+                  Bet.write.release([0n], { account: owner.account }),
+                  'BetHasBeenReleased'
+                )
+              },
+              [
+                [Bet.address, chip, 0n],
+                [options[0], chip, -ownerWageredAmount],
+                [options[1], chip, -(userWageredAmount + hackerWageredAmount)],
+                [owner.account.address, chip, 0n],
+                [user.account.address, chip, creatorReward + userWinnerReward + userDeciderReward],
+                [hacker.account.address, chip, hackerWinnerReward + hackerDeciderReward],
+                [owner.account.address, BetVotingEscrow.address, ownerDecidedAmount],
+                [user.account.address, BetVotingEscrow.address, userDecidedAmount],
+                [hacker.account.address, BetVotingEscrow.address, hackerDecidedAmount],
+              ],
+            )
+
+            await isCorrectStakeReward(
+              GovTokenStaking,
+              chip,
+              [
+                owner.account.address,
+                user.account.address,
+                hacker.account.address,
+              ],
+              (
+                ownerWageredAmount
+                + userWageredAmount
+                + hackerWageredAmount
+              ) - (
+                creatorReward
+                + userWinnerReward
+                + userDeciderReward
+                + hackerWinnerReward
+                + hackerDeciderReward
+              ),
+            )
           },
-          [
-            [Bet.address, chip, 0n],
-            [options[0], chip, -ownerWageredAmount],
-            [options[1], chip, -(userWageredAmount + hackerWageredAmount)],
-            [owner.account.address, chip, 0n],
-            [user.account.address, chip, creatorReward + userWinnerReward + userDeciderReward],
-            [hacker.account.address, chip, hackerWinnerReward + hackerDeciderReward],
-            [owner.account.address, BetVotingEscrow.address, ownerDecidedAmount],
-            [user.account.address, BetVotingEscrow.address, userDecidedAmount],
-            [hacker.account.address, BetVotingEscrow.address, hackerDecidedAmount],
-          ],
-        )
-
-        await isCorrectStakeReward(
-          GovTokenStaking,
-          chip,
-          [
-            owner.account.address,
-            user.account.address,
-            hacker.account.address,
-          ],
-          (
-            ownerWageredAmount
-            + userWageredAmount
-            + hackerWageredAmount
-          ) - (
-            creatorReward
-            + userWinnerReward
-            + userDeciderReward
-            + hackerWinnerReward
-            + hackerDeciderReward
-          ),
-        )
-
-        await assert.isRejected(
-          Bet.write.release([0n], { account: owner.account }),
-          'BetHasBeenReleased'
-        )
-
-        await checkBalance(
           async () => {
-            await penalize(Bet, chip, data)
+            await checkBalance(
+              async () => {
+                await penalize(Bet, chip, data)
+                await assert.isRejected(
+                  Bet.write.penalize({ account: owner.account }),
+                  'BetHasBeenPenalized'
+                )
+              },
+              [
+                [Bet.address, chip, -ownerDisputedAmount],
+                [options[0], chip, 0n],
+                [options[1], chip, 0n],
+                [owner.account.address, chip, 0n],
+                [user.account.address, chip, userConfiscatedChipReward],
+                [hacker.account.address, chip, hackerConfiscatedChipReward],
+              ],
+            )
           },
-          [
-            [Bet.address, chip, -ownerDisputedAmount],
-            [options[0], chip, 0n],
-            [options[1], chip, 0n],
-            [owner.account.address, chip, 0n],
-            [user.account.address, chip, userConfiscatedChipReward],
-            [hacker.account.address, chip, hackerConfiscatedChipReward],
-          ],
-        )
+        ]
 
-        await assert.isRejected(
-          Bet.write.penalize({ account: owner.account }),
-          'BetHasBeenPenalized'
-        )
+        if (isPenalizeFirst) handles.reverse()
+        for (const handle of handles) {
+          await handle()
+        }
 
         await isBetClosed(Bet, chip)
       }
@@ -2436,6 +2450,7 @@ describe('Bet', () => {
         chip: Address,
         data: DeployFixtureReturnType,
       ) => Promise<void>,
+      isPenalizeFirst?: boolean,
     ) {
       const data = await loadFixture(deployFixture)
       const {
@@ -2518,64 +2533,72 @@ describe('Bet', () => {
           userConfiscatedVoteReward + hackerConfiscatedVoteReward,
         )
 
-        await checkBalance(
+        const handles = [
           async () => {
-            await release(Bet, chip, data)
+            await checkBalance(
+              async () => {
+                await release(Bet, chip, data)
+                await assert.isRejected(
+                  Bet.write.release([0n], { account: owner.account }),
+                  'BetHasBeenReleased'
+                )
+              },
+              [
+                [Bet.address, chip, -(userDisputedAmount + hackerDisputedAmount)],
+                [options[0], chip, -ownerWageredAmount],
+                [options[1], chip, -(userWageredAmount + hackerWageredAmount)],
+                [owner.account.address, chip, 0n],
+                [user.account.address, chip, creatorReward + userWinnerReward + userDeciderReward + userDisputedAmount],
+                [hacker.account.address, chip, hackerWinnerReward + hackerDeciderReward + hackerDisputedAmount],
+                [owner.account.address, BetVotingEscrow.address, 0n],
+                [user.account.address, BetVotingEscrow.address, userDecidedAmount],
+                [hacker.account.address, BetVotingEscrow.address, hackerDecidedAmount],
+              ],
+            )
+
+            await isCorrectStakeReward(
+              GovTokenStaking,
+              chip,
+              [
+                owner.account.address,
+                user.account.address,
+                hacker.account.address,
+              ],
+              (
+                ownerWageredAmount
+                + userWageredAmount
+                + hackerWageredAmount
+              ) - (
+                creatorReward
+                + userWinnerReward
+                + userDeciderReward
+                + hackerWinnerReward
+                + hackerDeciderReward
+              ),
+            )
           },
-          [
-            [Bet.address, chip, -(userDisputedAmount + hackerDisputedAmount)],
-            [options[0], chip, -ownerWageredAmount],
-            [options[1], chip, -(userWageredAmount + hackerWageredAmount)],
-            [owner.account.address, chip, 0n],
-            [user.account.address, chip, creatorReward + userWinnerReward + userDeciderReward + userDisputedAmount],
-            [hacker.account.address, chip, hackerWinnerReward + hackerDeciderReward + hackerDisputedAmount],
-            [owner.account.address, BetVotingEscrow.address, 0n],
-            [user.account.address, BetVotingEscrow.address, userDecidedAmount],
-            [hacker.account.address, BetVotingEscrow.address, hackerDecidedAmount],
-          ],
-        )
-
-        await isCorrectStakeReward(
-          GovTokenStaking,
-          chip,
-          [
-            owner.account.address,
-            user.account.address,
-            hacker.account.address,
-          ],
-          (
-            ownerWageredAmount
-            + userWageredAmount
-            + hackerWageredAmount
-          ) - (
-            creatorReward
-            + userWinnerReward
-            + userDeciderReward
-            + hackerWinnerReward
-            + hackerDeciderReward
-          ),
-        )
-
-        await assert.isRejected(
-          Bet.write.release([0n], { account: owner.account }),
-          'BetHasBeenReleased'
-        )
-
-        await checkBalance(
           async () => {
-            await penalize(Bet, chip, data)
+            await checkBalance(
+              async () => {
+                await penalize(Bet, chip, data)
+                await assert.isRejected(
+                  Bet.write.penalize({ account: owner.account }),
+                  'BetHasBeenPenalized'
+                )
+              },
+              [
+                [owner.account.address, GovToken.address, 0n],
+                [user.account.address, GovToken.address, userConfiscatedVoteReward],
+                [hacker.account.address, GovToken.address, hackerConfiscatedVoteReward],
+              ],
+            )
           },
-          [
-            [owner.account.address, GovToken.address, 0n],
-            [user.account.address, GovToken.address, userConfiscatedVoteReward],
-            [hacker.account.address, GovToken.address, hackerConfiscatedVoteReward],
-          ],
-        )
+        ]
 
-        await assert.isRejected(
-          Bet.write.penalize({ account: owner.account }),
-          'BetHasBeenPenalized'
-        )
+        if (isPenalizeFirst) handles.reverse()
+        for (const handle of handles) {
+          await handle()
+        }
 
         await isBetClosed(Bet, chip)
       }
@@ -2684,78 +2707,84 @@ describe('Bet', () => {
     })
 
     it('Release when confirmed after dispute occurred, and no one decided on the winning option', async () => {
-      await confirmedAfterDisputeOccurredAndNoOneDecidedOnTheWinningOption(async (Bet, chip, { hacker }) => {
-        await Bet.write.release({ account: hacker.account })
-      }, async (Bet, chip, { hacker }) => {
-        await Bet.write.penalize({ account: hacker.account })
-      })
+      for (const isPenalizeFirst of [false, true]) {
+        await confirmedAfterDisputeOccurredAndNoOneDecidedOnTheWinningOption(async (Bet, chip, { hacker }) => {
+          await Bet.write.release({ account: hacker.account })
+        }, async (Bet, chip, { hacker }) => {
+          await Bet.write.penalize({ account: hacker.account })
+        }, isPenalizeFirst)
 
-      // Step-by-step release and penalize
-      await confirmedAfterDisputeOccurredAndNoOneDecidedOnTheWinningOption(async (Bet, chip, { hacker }) => {
-        const [done, total] = await Bet.read.releasedProgress()
-        assert.equal(done, 0n)
-        for (let i = 0; i < Number(total); i++) {
-          await Bet.write.release([1n], { account: hacker.account })
-        }
-        assert.deepEqual(await Bet.read.releasedProgress(), [total, total])
-      }, async (Bet, chip, { hacker }) => {
-        const [done, total] = await Bet.read.penalizedProgress()
-        assert.equal(done, 0n)
-        for (let i = 0; i < Number(total); i++) {
-          await Bet.write.penalize([1n], { account: hacker.account })
-        }
-        assert.deepEqual(await Bet.read.penalizedProgress(), [total, total])
-      })
+        // Step-by-step release and penalize
+        await confirmedAfterDisputeOccurredAndNoOneDecidedOnTheWinningOption(async (Bet, chip, { hacker }) => {
+          const [done, total] = await Bet.read.releasedProgress()
+          assert.equal(done, 0n)
+          for (let i = 0; i < Number(total); i++) {
+            await Bet.write.release([1n], { account: hacker.account })
+          }
+          assert.deepEqual(await Bet.read.releasedProgress(), [total, total])
+        }, async (Bet, chip, { hacker }) => {
+          const [done, total] = await Bet.read.penalizedProgress()
+          assert.equal(done, 0n)
+          for (let i = 0; i < Number(total); i++) {
+            await Bet.write.penalize([1n], { account: hacker.account })
+          }
+          assert.deepEqual(await Bet.read.penalizedProgress(), [total, total])
+        }, isPenalizeFirst)
+      }
     })
 
     it('Release when confirmed after dispute occurred, and punish disputer', async () => {
-      await confirmedAfterDisputeOccurredAndPunishDisputer(async (Bet, chip, { hacker }) => {
-        await Bet.write.release({ account: hacker.account })
-      }, async (Bet, chip, { hacker }) => {
-        await Bet.write.penalize({ account: hacker.account })
-      })
+      for (const isPenalizeFirst of [false, true]) {
+        await confirmedAfterDisputeOccurredAndPunishDisputer(async (Bet, chip, { hacker }) => {
+          await Bet.write.release({ account: hacker.account })
+        }, async (Bet, chip, { hacker }) => {
+          await Bet.write.penalize({ account: hacker.account })
+        }, isPenalizeFirst)
 
-      // Step-by-step release and penalize
-      await confirmedAfterDisputeOccurredAndPunishDisputer(async (Bet, chip, { hacker }) => {
-        const [done, total] = await Bet.read.releasedProgress()
-        assert.equal(done, 0n)
-        for (let i = 0; i < Number(total); i++) {
-          await Bet.write.release([1n], { account: hacker.account })
-        }
-        assert.deepEqual(await Bet.read.releasedProgress(), [total, total])
-      }, async (Bet, chip, { hacker }) => {
-        const [done, total] = await Bet.read.penalizedProgress()
-        assert.equal(done, 0n)
-        for (let i = 0; i < Number(total); i++) {
-          await Bet.write.penalize([1n], { account: hacker.account })
-        }
-        assert.deepEqual(await Bet.read.penalizedProgress(), [total, total])
-      })
+        // Step-by-step release and penalize
+        await confirmedAfterDisputeOccurredAndPunishDisputer(async (Bet, chip, { hacker }) => {
+          const [done, total] = await Bet.read.releasedProgress()
+          assert.equal(done, 0n)
+          for (let i = 0; i < Number(total); i++) {
+            await Bet.write.release([1n], { account: hacker.account })
+          }
+          assert.deepEqual(await Bet.read.releasedProgress(), [total, total])
+        }, async (Bet, chip, { hacker }) => {
+          const [done, total] = await Bet.read.penalizedProgress()
+          assert.equal(done, 0n)
+          for (let i = 0; i < Number(total); i++) {
+            await Bet.write.penalize([1n], { account: hacker.account })
+          }
+          assert.deepEqual(await Bet.read.penalizedProgress(), [total, total])
+        }, isPenalizeFirst)
+      }
     })
 
     it('Release when confirmed after dispute occurred, and punish decider', async () => {
-      await confirmedAfterDisputeOccurredAndPunishDecider(async (Bet, chip, { hacker }) => {
-        await Bet.write.release({ account: hacker.account })
-      }, async (Bet, chip, { hacker }) => {
-        await Bet.write.penalize({ account: hacker.account })
-      })
+      for (const isPenalizeFirst of [false, true]) {
+        await confirmedAfterDisputeOccurredAndPunishDecider(async (Bet, chip, { hacker }) => {
+          await Bet.write.release({ account: hacker.account })
+        }, async (Bet, chip, { hacker }) => {
+          await Bet.write.penalize({ account: hacker.account })
+        }, isPenalizeFirst)
 
-      // Step-by-step release and penalize
-      await confirmedAfterDisputeOccurredAndPunishDecider(async (Bet, chip, { hacker }) => {
-        const [done, total] = await Bet.read.releasedProgress()
-        assert.equal(done, 0n)
-        for (let i = 0; i < Number(total); i++) {
-          await Bet.write.release([1n], { account: hacker.account })
-        }
-        assert.deepEqual(await Bet.read.releasedProgress(), [total, total])
-      }, async (Bet, chip, { hacker }) => {
-        const [done, total] = await Bet.read.penalizedProgress()
-        assert.equal(done, 0n)
-        for (let i = 0; i < Number(total); i++) {
-          await Bet.write.penalize([1n], { account: hacker.account })
-        }
-        assert.deepEqual(await Bet.read.penalizedProgress(), [total, total])
-      })
+        // Step-by-step release and penalize
+        await confirmedAfterDisputeOccurredAndPunishDecider(async (Bet, chip, { hacker }) => {
+          const [done, total] = await Bet.read.releasedProgress()
+          assert.equal(done, 0n)
+          for (let i = 0; i < Number(total); i++) {
+            await Bet.write.release([1n], { account: hacker.account })
+          }
+          assert.deepEqual(await Bet.read.releasedProgress(), [total, total])
+        }, async (Bet, chip, { hacker }) => {
+          const [done, total] = await Bet.read.penalizedProgress()
+          assert.equal(done, 0n)
+          for (let i = 0; i < Number(total); i++) {
+            await Bet.write.penalize([1n], { account: hacker.account })
+          }
+          assert.deepEqual(await Bet.read.penalizedProgress(), [total, total])
+        }, isPenalizeFirst)
+      }
     })
 
     it('Invalid release', async () => {
