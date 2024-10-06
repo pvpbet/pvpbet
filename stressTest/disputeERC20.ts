@@ -28,12 +28,14 @@ exec(async () => {
     const address = keys[i].adr
     const privateKey = keys[i].key
     let nonce = await publicClient.getTransactionCount({ address: owner.account.address })
-    await owner.sendTransaction({ to: address, value: parseEther('0.00007'), nonce })
+    await owner.sendTransaction({ to: address, value: parseEther('0.00025'), nonce })
     nonce++
     await BetChip.write.transfer([address, amountPerTransaction], { nonce })
     const walletClient = await getLocalWalletClient(privateKey)
-    await BetChip.write.transfer([Bet.address, amountPerTransaction], { account: walletClient.account })
+    const hash = await BetChip.write.transfer([Bet.address, amountPerTransaction], { account: walletClient.account })
     console.log(`${i + 1} Transactions have been sent.`)
+    const transaction = await publicClient.getTransactionReceipt({ hash })
+    console.log(`Gas: ${transaction.gasUsed}`)
   }
 
   console.log('The test has been completed.')

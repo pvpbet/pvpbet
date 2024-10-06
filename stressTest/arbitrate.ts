@@ -20,18 +20,22 @@ exec(async () => {
   const optionLength = options.length
   const amountPerTransaction = parseUnits('100', 18)
 
+  const publicClient = await viem.getPublicClient()
   const [owner] = await viem.getWalletClients()
 
   for (let i = 0; i < count; i++) {
     const address = keys[i].adr
     const privateKey = keys[i].key
-    await owner.sendTransaction({ to: address, value: parseEther('0.00007') })
+    await owner.sendTransaction({ to: address, value: parseEther('0.001') })
     await GovToken.write.transfer([address, amountPerTransaction], { account: owner.account })
     const walletClient = await getLocalWalletClient(privateKey)
     await GovToken.write.approve([GovTokenStaking.address, amountPerTransaction], { account: walletClient.account })
     await GovTokenStaking.write.stake([2, amountPerTransaction], { account: walletClient.account })
-    await BetVotingEscrow.write.transfer([options[Math.floor(Math.random() * optionLength)], 1n], { account: walletClient.account })
+    const index = Math.floor(Math.random() * optionLength)
+    const hash = await BetVotingEscrow.write.transfer([options[index], 1n], { account: walletClient.account })
     console.log(`${i + 1} Transactions have been sent.`)
+    const transaction = await publicClient.getTransactionReceipt({ hash })
+    console.log(`Gas: ${transaction.gasUsed}`)
   }
 
   console.log('The test has been completed.')

@@ -410,7 +410,7 @@ describe('Bet', () => {
           )
           const options = await Bet.read.options()
           await time.increaseTo(await Bet.read.statusDeadline() + 1n)
-          assert.equal(await Bet.read.status(), BetStatus.CANCELLED)
+          assert.equal(await Bet.read.status(), BetStatus.CLOSED)
           await assert.isRejected(
             transfer(user, chip, Bet.address, 1n),
             'CannotReceive',
@@ -427,7 +427,9 @@ describe('Bet', () => {
       const {
         BetChip,
         BetManager,
+        owner,
         user,
+        hacker,
       } = await loadFixture(deployFixture)
       const chips = [
         zeroAddress,
@@ -444,6 +446,12 @@ describe('Bet', () => {
           DAY3,
           useChipERC20,
         )
+        const options = await Bet.read.options()
+        await wager(chip, [
+          [owner, options[0], 2n],
+          [user, options[1], 6n],
+          [hacker, options[1], 1n],
+        ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.CANCELLED)
       }

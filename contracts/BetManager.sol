@@ -181,8 +181,9 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, UseCh
     }
     configurator.validateDuration(wageringPeriodDuration, decidingPeriodDuration);
 
-    if (_creationFee > 0) {
-      msg.sender.transferToContract(govToken(), _creationFee);
+    uint256 creationFee_ = _creationFee;
+    if (creationFee_ > 0) {
+      msg.sender.transferToContract(govToken(), creationFee_);
     }
 
     address bet = IBetFactory(_betFactory).createBet(
@@ -197,7 +198,7 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, UseCh
       address(this),
       _betOptionFactory
     );
-    emit BetCreated(bet, msg.sender);
+    emit BetCreated(bet, msg.sender, block.timestamp);
     _betMap[bet] = true;
     return bet;
   }

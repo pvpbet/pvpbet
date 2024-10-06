@@ -11,6 +11,7 @@ exec(async () => {
   const totalAmount = await Bet.read.minDisputedTotalAmount()
   const amountPerTransaction = totalAmount / BigInt(count)
 
+  const publicClient = await viem.getPublicClient()
   const [owner] = await viem.getWalletClients()
 
   for (let i = 0; i < count; i++) {
@@ -18,8 +19,10 @@ exec(async () => {
     const privateKey = keys[i].key
     await owner.sendTransaction({ to: address, value: amountPerTransaction * 11n / 10n })
     const walletClient = await getLocalWalletClient(privateKey)
-    await walletClient.sendTransaction({ to: Bet.address, value: amountPerTransaction })
+    const hash = await walletClient.sendTransaction({ to: Bet.address, value: amountPerTransaction })
     console.log(`${i + 1} Transactions have been sent.`)
+    const transaction = await publicClient.getTransactionReceipt({ hash })
+    console.log(`Gas: ${transaction.gasUsed}`)
   }
 
   console.log('The test has been completed.')

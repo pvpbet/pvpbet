@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import {IBet} from "../interface/IBet.sol";
 import {IBetOption} from "../interface/IBetOption.sol";
+import {MathLib} from "./Math.sol";
 
 library AddressLib {
   function isContractSender()
@@ -73,5 +74,38 @@ library AddressLib {
       revert AddressEmptyCode(target);
     }
     return result;
+  }
+}
+
+library AddressArrayLib {
+  using MathLib for uint256;
+
+  function remove(address[] storage arr, address account)
+  internal {
+    uint256 length = arr.length;
+    uint256 max = length.unsafeDec();
+    for (uint256 i = 0; i < length; i = i.unsafeInc()) {
+      if (arr[i] == account) {
+        for (uint256 j = i; j < max; j = j.unsafeInc()) {
+          arr[j] = arr[j.unsafeInc()];
+        }
+        arr.pop();
+        break;
+      }
+    }
+  }
+
+  function slice(address[] memory arr, uint256 offset, uint256 limit)
+  internal pure
+  returns (address[] memory) {
+    uint256 length = arr.length;
+    if (offset == 0 && limit == length) return arr;
+    offset = offset.min(length);
+    uint256 end = offset.add(limit).min(length);
+    address[] memory newArr = new address[](end.unsafeSub(offset));
+    for (uint256 i = offset; i < end; i = i.unsafeInc()) {
+      newArr[i.unsafeSub(offset)] = arr[i];
+    }
+    return newArr;
   }
 }

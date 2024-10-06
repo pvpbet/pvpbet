@@ -71,7 +71,7 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseGovToken,
 
   function _setGovToken(address newGovToken)
   internal override(UseGovToken) {
-    _amountPerWeight = 10 ** newGovToken.decimals();
+    _amountPerWeight = MathLib.unsafePow(10, newGovToken.decimals());
     super._setGovToken(newGovToken);
   }
 
@@ -101,9 +101,10 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseGovToken,
 
   function _rewardDebtIncrease(address account, uint256 weight)
   private {
-    uint256 length = _rewardTokens.length;
+    address[] memory rewardTokens_ = _rewardTokens;
+    uint256 length = rewardTokens_.length;
     for (uint256 i = 0; i < length; i = i.unsafeInc()) {
-      address token = _rewardTokens[i];
+      address token = rewardTokens_[i];
       _rewardDebtOf[account][token] = _rewardDebtOf[account][token].unsafeAdd(
         weight.unsafeMul(_accRewardPerWeightOf[token])
       );
@@ -112,9 +113,10 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseGovToken,
 
   function _rewardDebtDecrease(address account, uint256 weight)
   private {
-    uint256 length = _rewardTokens.length;
+    address[] memory rewardTokens_ = _rewardTokens;
+    uint256 length = rewardTokens_.length;
     for (uint256 i = 0; i < length; i = i.unsafeInc()) {
-      address token = _rewardTokens[i];
+      address token = rewardTokens_[i];
       uint256 reward = _getTokenReward(account, token, weight);
       if (reward > 0) {
         _claim(account, token, reward);
@@ -368,9 +370,10 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseGovToken,
   private {
     address sender = msg.sender;
     sender.transferToContract(token, amount);
-    if (_stakedTotalWeight > 0) {
+    uint256 stakedTotalWeight = _stakedTotalWeight;
+    if (stakedTotalWeight > 0) {
       _accRewardPerWeightOf[token] = _accRewardPerWeightOf[token].unsafeAdd(
-        amount.unsafeDiv(_stakedTotalWeight)
+        amount.unsafeDiv(stakedTotalWeight)
       );
     }
     emit Distributed(sender, token, amount);
@@ -428,8 +431,9 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseGovToken,
   function _getTokenReward(address account, address token, uint256 weight)
   private view
   returns (uint256) {
-    uint256 rewardDebt = _stakedTotalWeightOf[account] > 0
-      ? _rewardDebtOf[account][token].mulDiv(weight, _stakedTotalWeightOf[account])
+    uint256 stakedTotalWeight = _stakedTotalWeightOf[account];
+    uint256 rewardDebt = stakedTotalWeight > 0
+      ? _rewardDebtOf[account][token].mulDiv(weight, stakedTotalWeight)
       : 0;
     return weight.unsafeMul(_accRewardPerWeightOf[token]).unsafeSub(rewardDebt);
   }

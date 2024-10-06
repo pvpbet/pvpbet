@@ -8,7 +8,7 @@ interface IBetManager {
   event BetFactorySet(address betFactory);
   event BetOptionFactorySet(address betOptionFactory);
   event CreationFeeSet(uint256 fee);
-  event BetCreated(address indexed bet, address indexed creator);
+  event BetCreated(address indexed bet, address indexed creator, uint256 timestamp);
 
   /**
    * @dev Returns the contract address of the bet configurator.

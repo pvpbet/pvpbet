@@ -83,6 +83,17 @@ contract BetChip is IBetChip, IErrors, ERC20 {
     return true;
   }
 
+  function transferBatch(address[] memory tos, uint256[] memory values)
+  public
+  returns (bool) {
+    address owner = _msgSender();
+    uint256 length = tos.length;
+    for (uint256 i = 0; i < length; i = i.unsafeInc()) {
+      _transfer(owner, tos[i], values[i]);
+    }
+    return true;
+  }
+
   function currency()
   external view
   returns (address) {

@@ -6,6 +6,11 @@ interface IBetChip {
   event Withdrawn(address indexed sender, uint256 amount);
 
   /**
+   * @dev Batch transfer.
+   */
+  function transferBatch(address[] memory tos, uint256[] memory values) external returns (bool);
+
+  /**
    * @dev Returns the contract address of the currency token.
    */
   function currency() external view returns (address);

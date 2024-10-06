@@ -3,20 +3,23 @@ pragma solidity ^0.8.20;
 
 import {IBet} from "../interface/IBet.sol";
 import {IBetActionWager} from "../interface/IBetActionWager.sol";
+import {IBetChip} from "../interface/IBetChip.sol";
 import {IErrors} from "../interface/IErrors.sol";
+import {AddressArrayLib} from "../lib/Address.sol";
 import {MathLib} from "../lib/Math.sol";
-import {Record, RecordArrayLib} from "../lib/Record.sol";
+import {Record} from "../lib/Record.sol";
 import {TransferLib} from "../lib/Transfer.sol";
 
 abstract contract BetActionWager is IBetActionWager, IErrors {
   using MathLib for uint256;
   using TransferLib for address;
-  using RecordArrayLib for Record[];
+  using AddressArrayLib for address[];
 
-  Record[] private _wageredRecords;
-  uint256 private _wageredTotalAmount;
+  address[] private _accounts;
+  mapping(address => uint256) private _amounts;
+  uint256 private _totalAmount;
   uint256 private _releasedOffset;
-  bool private _wageredChipsReleased;
+  bool private _released;
   bool private _collected;
   bool private _refunded;
 
@@ -67,19 +70,21 @@ abstract contract BetActionWager is IBetActionWager, IErrors {
     IBet.Status status = IBet(bet()).statusUpdate();
     if (status > IBet.Status.WAGERING) revert WageringPeriodHasAlreadyEnded();
 
-    uint256 wageredAmount_ = _wageredRecords.remove(player).amount;
+    address chip_ = chip();
+    uint256 wageredAmount_ = _amounts[player];
     if (wageredAmount_ > 0) {
-      player.transferFromContract(chip(), wageredAmount_);
-      _wageredTotalAmount = _wageredTotalAmount.unsafeSub(wageredAmount_);
+      _amounts[player] = 0;
+      _totalAmount = _totalAmount.unsafeSub(wageredAmount_);
+      _accounts.remove(player);
+      player.transferFromContract(chip_, wageredAmount_);
     }
 
     if (amount > 0) {
       if (amount < chipMinValue()) revert InvalidAmount();
-      player.transferToContract(chip(), amount);
-      _wageredRecords.add(
-        Record(player, amount)
-      );
-      _wageredTotalAmount = _wageredTotalAmount.unsafeAdd(amount);
+      player.transferToContract(chip_, amount);
+      _amounts[player] = amount;
+      _totalAmount = _totalAmount.unsafeAdd(amount);
+      _accounts.push(player);
     }
 
     emit Wagered(player, amount);
@@ -88,90 +93,120 @@ abstract contract BetActionWager is IBetActionWager, IErrors {
   function wageredAmount()
   public view
   returns (uint256) {
-    return _wageredTotalAmount;
+    return _totalAmount;
   }
 
   function wageredAmount(address player)
   public view
   returns (uint256) {
-    return _wageredRecords.find(player).amount;
+    return _amounts[player];
   }
 
   function wageredRecords()
   public view
   returns (Record[] memory) {
-    return _wageredRecords;
+    return wageredRecords(0, _accounts.length);
   }
 
   function wageredRecords(uint256 offset, uint256 limit)
   public view
   returns (Record[] memory) {
-    return _wageredRecords.slice(offset, limit);
+    address[] memory accounts = _accounts.slice(offset, limit);
+    uint256 length = accounts.length;
+    Record[] memory arr = new Record[](length);
+    for (uint256 i = 0; i < length; i = i.unsafeInc()) {
+      address account = accounts[i];
+      arr[i] = Record(account, _amounts[account]);
+    }
+    return arr;
   }
 
   function wageredRecordCount()
   public view
   returns (uint256) {
-    return _wageredRecords.length;
+    return _accounts.length;
   }
 
   function collectWageredChips()
-  external
+  public
   onlyBet {
-    if (_wageredChipsReleased || _refunded) return;
-    if (IBet(bet()).status() == IBet.Status.WAGERING) revert WageringPeriodHasNotEndedYet();
+    if (_released || _refunded) return;
+    address bet_ = bet();
+    if (IBet(bet_).status() == IBet.Status.WAGERING) revert WageringPeriodHasNotEndedYet();
     _collected = true;
-    _wageredChipsReleased = true;
+    _released = true;
 
-    if (bet() != address(this)) {
-      bet().transferFromContract(chip(), type(uint256).max);
+    if (bet_ != address(this)) {
+      bet_.transferFromContract(chip(), type(uint256).max);
     }
   }
 
   function refundWageredChips()
-  external
+  public
   onlyBet {
-    if (_wageredChipsReleased || _collected) return;
-    if (IBet(bet()).status() == IBet.Status.WAGERING) revert WageringPeriodHasNotEndedYet();
-    _refunded = true;
-    _refundWageredChips(0);
+    refundWageredChips(0);
   }
 
   function refundWageredChips(uint256 limit)
-  external
+  public
   onlyBet {
-    if (_wageredChipsReleased) return;
+    if (_released) return;
     if (IBet(bet()).status() == IBet.Status.WAGERING) revert WageringPeriodHasNotEndedYet();
     _refunded = true;
-    _refundWageredChips(limit);
+
+    address chip_ = chip();
+    (uint256 start, uint256 end) = _getReleasedRangeOfWageredRecords(limit);
+    if (chip_ == address(0)) {
+      for (uint256 i = start; i < end; i = i.unsafeInc()) {
+        address account = _accounts[i];
+        account.transferFromContract(chip_, _amounts[account], true);
+      }
+    } else {
+      (address[] memory accounts, uint256[] memory amounts) = _getWageredAccountsAndAmounts(start, end);
+      IBetChip(chip_).transferBatch(accounts, amounts);
+    }
   }
 
-  function _refundWageredChips(uint256 limit)
-  private {
+  function _getWageredAccountsAndAmounts(uint256 start, uint256 end)
+  private view
+  returns (address[] memory, uint256[] memory) {
+    uint256 length = end.unsafeSub(start);
+    address[] memory accounts = new address[](length);
+    uint256[] memory amounts = new uint256[](length);
+    for (uint256 i = start; i < end; i = i.unsafeInc()) {
+      address account = _accounts[i];
+      uint256 index = i.unsafeSub(start);
+      accounts[index] = account;
+      amounts[index] = _amounts[account];
+    }
+    return (accounts, amounts);
+  }
+
+  function _getReleasedRangeOfWageredRecords(uint256 limit)
+  private
+  returns (uint256 start, uint256 end) {
     uint256 offset = _releasedOffset;
     bool isAll = offset == 0 && limit == 0;
+    uint256 length = _accounts.length;
     if (isAll) {
-      _wageredChipsReleased = true;
+      start = 0;
+      end = length;
+      _released = true;
     } else {
-      uint256 maxLength = _wageredRecords.length;
-      if (limit == 0) limit = maxLength.unsafeSub(offset);
-      _releasedOffset = offset.add(limit).min(maxLength);
-      if (_releasedOffset == maxLength) {
-        _wageredChipsReleased = true;
+      start = offset;
+      if (limit == 0) limit = length.unsafeSub(start);
+      end = start.add(limit).min(length);
+      if (end == length) {
+        _released = true;
+      } else {
+        _releasedOffset = end;
       }
-    }
-
-    Record[] memory records = isAll ? _wageredRecords : _wageredRecords.slice(offset, limit);
-    uint256 length = records.length;
-    for (uint256 i = 0; i < length; i = i.unsafeInc()) {
-      Record memory record = records[i];
-      record.account.transferFromContract(chip(), record.amount, true);
     }
   }
 
   function wageredChipsReleased()
   public view
   returns (bool) {
-    return _wageredChipsReleased;
+    return _released;
   }
 }

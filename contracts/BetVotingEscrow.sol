@@ -189,7 +189,7 @@ contract BetVotingEscrow is IBetVotingEscrow, IErrors, ERC20Upgradeable, Upgrade
     if (allowance < value) {
       revert VoteInsufficientFixedAllowance(account, allowance, value);
     }
-    _fixedAllowances[account][spender] = _fixedAllowances[account][spender].unsafeSub(value);
+    _fixedAllowances[account][spender] = allowance.unsafeSub(value);
     _fixedBalances[account] = _fixedBalances[account].unsafeSub(value);
   }
 

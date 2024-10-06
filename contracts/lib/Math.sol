@@ -38,6 +38,12 @@ library MathLib {
     }
   }
 
+  function unsafePow(uint256 a, uint256 b) internal pure returns (uint256) {
+    unchecked {
+      return a ** b;
+    }
+  }
+
   function inc(uint256 a) internal pure returns (uint256) {
     if (a < type(uint256).max) {
       unchecked {
@@ -83,6 +89,14 @@ library MathLib {
     unchecked {
       if (b == 0) return 0;
       return a / b;
+    }
+  }
+
+  function pow(uint256 a, uint256 b) internal pure returns (uint256) {
+    unchecked {
+      uint256 c = a ** b;
+      if (c < a) return type(uint256).max;
+      return c;
     }
   }
 
