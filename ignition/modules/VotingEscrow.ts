@@ -1,11 +1,11 @@
 import { buildModule } from '@nomicfoundation/hardhat-ignition/modules'
 
-export default buildModule('BetVotingEscrow', m => {
+export default buildModule('VotingEscrow', m => {
   const implementation = m.contract(
-    'BetVotingEscrow',
+    'VotingEscrow',
     [],
     {
-      id: 'BetVotingEscrowImpl',
+      id: 'VotingEscrowImpl',
     },
   )
   const initialize = m.encodeFunctionCall(
@@ -13,6 +13,6 @@ export default buildModule('BetVotingEscrow', m => {
     'initialize',
   )
   const proxy = m.contract('ERC1967Proxy', [implementation, initialize])
-  const BetVotingEscrow = m.contractAt('BetVotingEscrow', proxy)
-  return { BetVotingEscrow }
+  const VotingEscrow = m.contractAt('VotingEscrow', proxy)
+  return { VotingEscrow }
 })

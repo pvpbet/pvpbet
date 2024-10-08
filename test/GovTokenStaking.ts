@@ -15,7 +15,8 @@ import {
 } from './common'
 import {
   buyChip,
-  deployBetChip,
+  createBetChip,
+  deployBetChipManager,
 } from './common/chip'
 import {
   UnlockWaitingPeriod,
@@ -25,7 +26,7 @@ import {
   unstake,
   withdraw,
 } from './common/staking'
-import { deployBetVotingEscrow } from './common/vote'
+import { deployVotingEscrow } from './common/vote'
 import { checkBalance } from './asserts'
 import type { Address } from 'viem'
 
@@ -44,12 +45,13 @@ describe('GovTokenStaking', () => {
     await claimTestTokens(owner, testTokens)
 
     const { USDC } = testTokens
-    const BetChip = await deployBetChip(USDC.address)
-    const BetVotingEscrow = await deployBetVotingEscrow()
+    const BetChipManager = await deployBetChipManager()
+    const BetChip = await createBetChip(owner, BetChipManager, USDC.address)
+    const VotingEscrow = await deployVotingEscrow()
     const GovToken = await deployGovToken()
-    const GovTokenStaking = await deployGovTokenStaking(GovToken.address, BetChip.address, BetVotingEscrow.address)
+    const GovTokenStaking = await deployGovTokenStaking(VotingEscrow.address, GovToken.address, BetChip.address)
 
-    await BetVotingEscrow.write.setGovTokenStaking([GovTokenStaking.address])
+    await VotingEscrow.write.setGovTokenStaking([GovTokenStaking.address])
     await GovToken.write.transfer([user.account.address, parseUnits('1000000', 18)])
     await GovToken.write.transfer([hacker.account.address, parseUnits('1000000', 18)])
 
@@ -63,7 +65,7 @@ describe('GovTokenStaking', () => {
     return {
       ...testTokens,
       BetChip,
-      BetVotingEscrow,
+      VotingEscrow,
       GovToken,
       GovTokenStaking,
       publicClient,
@@ -123,20 +125,20 @@ describe('GovTokenStaking', () => {
       )
     })
 
-    it('#voteToken() #setVoteToken()', async () => {
+    it('#votingEscrow() #setVotingEscrow()', async () => {
       const {
         GovTokenStaking,
         owner,
         hacker,
       } = await loadFixture(deployFixture)
       await assert.isRejected(
-        GovTokenStaking.write.setVoteToken([zeroAddress], { account: hacker.account }),
+        GovTokenStaking.write.setVotingEscrow([zeroAddress], { account: hacker.account }),
         'OwnableUnauthorizedAccount',
       )
 
-      await GovTokenStaking.write.setVoteToken([zeroAddress], { account: owner.account })
+      await GovTokenStaking.write.setVotingEscrow([zeroAddress], { account: owner.account })
       assert.equal(
-        await GovTokenStaking.read.voteToken(),
+        await GovTokenStaking.read.votingEscrow(),
         zeroAddress,
       )
     })
@@ -222,7 +224,7 @@ describe('GovTokenStaking', () => {
       const {
         GovToken,
         GovTokenStaking,
-        BetVotingEscrow,
+        VotingEscrow,
         user,
         hacker,
       } = await loadFixture(deployFixture)
@@ -264,7 +266,7 @@ describe('GovTokenStaking', () => {
 
         for (const { wallet, unlockWaitingPeriod } of accounts) {
           assert.equal(
-            await BetVotingEscrow.read.balanceOf([wallet.account.address]),
+            await VotingEscrow.read.balanceOf([wallet.account.address]),
             stakeAmount + stakedAmount,
           )
           assert.equal(
@@ -287,7 +289,7 @@ describe('GovTokenStaking', () => {
       const {
         GovToken,
         GovTokenStaking,
-        BetVotingEscrow,
+        VotingEscrow,
         user,
         hacker,
       } = await loadFixture(deployFixture)
@@ -336,7 +338,7 @@ describe('GovTokenStaking', () => {
 
         for (const { wallet, unlockWaitingPeriod } of accounts) {
           assert.equal(
-            await BetVotingEscrow.read.balanceOf([wallet.account.address]),
+            await VotingEscrow.read.balanceOf([wallet.account.address]),
             stakeAmount + stakedAmount,
           )
           assert.equal(

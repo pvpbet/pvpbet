@@ -6,12 +6,14 @@ export interface ContractTypes {
   USDC: GetContractReturnType<ArtifactsMap['USDC']['abi']>
   Bet: GetContractReturnType<ArtifactsMap['Bet']['abi']>
   BetChip: GetContractReturnType<ArtifactsMap['BetChip']['abi']>
+  BetChipFactory: GetContractReturnType<ArtifactsMap['BetChipFactory']['abi']>
+  BetChipManager: GetContractReturnType<ArtifactsMap['BetChipManager']['abi']>
   BetConfigurator: GetContractReturnType<ArtifactsMap['BetConfigurator']['abi']>
   BetFactory: GetContractReturnType<ArtifactsMap['BetFactory']['abi']>
   BetManager: GetContractReturnType<ArtifactsMap['BetManager']['abi']>
   BetOption: GetContractReturnType<ArtifactsMap['BetOption']['abi']>
   BetOptionFactory: GetContractReturnType<ArtifactsMap['BetOptionFactory']['abi']>
-  BetVotingEscrow: GetContractReturnType<ArtifactsMap['BetVotingEscrow']['abi']>
+  VotingEscrow: GetContractReturnType<ArtifactsMap['VotingEscrow']['abi']>
   GovToken: GetContractReturnType<ArtifactsMap['GovToken']['abi']>
   GovTokenStaking: GetContractReturnType<ArtifactsMap['GovTokenStaking']['abi']>
   Receivable: GetContractReturnType<ArtifactsMap['Receivable']['abi']>

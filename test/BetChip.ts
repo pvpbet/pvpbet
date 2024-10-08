@@ -10,7 +10,11 @@ import {
   claimTestTokens,
   deployTestTokens,
 } from './common'
-import { buyChip, deployBetChip } from './common/chip'
+import {
+  buyChip,
+  createBetChip,
+  deployBetChipManager,
+} from './common/chip'
 import { checkBalance } from './asserts'
 
 describe('BetChip', () => {
@@ -22,7 +26,8 @@ describe('BetChip', () => {
     await claimTestTokens(user, testTokens)
 
     const { USDC } = testTokens
-    const BetChip = await deployBetChip(USDC.address)
+    const BetChipManager = await deployBetChipManager()
+    const BetChip = await createBetChip(owner, BetChipManager, USDC.address)
 
     return {
       ...testTokens,

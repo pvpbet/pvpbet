@@ -1,6 +1,7 @@
 import { ignition, viem } from 'hardhat'
 import BetManagerModule from '../../ignition/modules/BetManager'
 import { transfer } from '../../utils'
+import { zeroAddress } from 'viem'
 import type {
   AbiEvent,
   Address,
@@ -32,16 +33,16 @@ export const BetDetails = {
 }
 
 export async function deployBetManager(
-  govToken: Address,
-  chipToken: Address,
-  voteToken: Address,
+  BetChipManager: Address,
+  VotingEscrow: Address,
+  GovToken: Address,
 ) {
   const { BetManager } = await ignition.deploy(BetManagerModule, {
     parameters: {
       BetManager: {
-        govToken,
-        chipToken,
-        voteToken,
+        BetChipManager,
+        VotingEscrow,
+        GovToken,
       },
     },
   })
@@ -54,14 +55,14 @@ export async function createBet(
   details: typeof BetDetails,
   wageringPeriodDuration: bigint,
   decidingPeriodDuration: bigint,
-  useChipERC20: boolean = false,
+  chip?: Address,
 ) {
   const hash = await BetManager.write.createBet(
     [
       details,
       wageringPeriodDuration,
       decidingPeriodDuration,
-      useChipERC20,
+      chip || zeroAddress,
     ],
     { account: owner.account },
   )

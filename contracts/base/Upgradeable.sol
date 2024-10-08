@@ -6,7 +6,7 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {IMetadata} from "../interface/IMetadata.sol";
 
-abstract contract Upgradeable is Initializable, IMetadata, UUPSUpgradeable, OwnableUpgradeable {
+abstract contract Upgradeable is IMetadata, Initializable, UUPSUpgradeable, OwnableUpgradeable {
   function name()
   public view virtual
   returns (string memory);

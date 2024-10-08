@@ -3,16 +3,16 @@ pragma solidity ^0.8.20;
 
 import {Upgradeable} from "./base/Upgradeable.sol";
 import {UseGovToken} from "./base/UseGovToken.sol";
-import {UseVoteToken} from "./base/UseVoteToken.sol";
-import {IBetVotingEscrow} from "./interface/IBetVotingEscrow.sol";
+import {UseVotingEscrow} from "./base/UseVotingEscrow.sol";
 import {IErrors} from "./interface/IErrors.sol";
 import {IGovTokenStaking} from "./interface/IGovTokenStaking.sol";
+import {IVotingEscrow} from "./interface/IVotingEscrow.sol";
 import {AddressLib} from "./lib/Address.sol";
 import {MathLib} from "./lib/Math.sol";
 import {TransferLib} from "./lib/Transfer.sol";
 import {UnstakedRecord, UnstakedRecordArrayLib} from "./lib/UnstakedRecord.sol";
 
-contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseGovToken, UseVoteToken {
+contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseVotingEscrow, UseGovToken {
   function name()
   public pure override
   returns (string memory) {
@@ -51,23 +51,23 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseGovToken,
   address[] private _rewardTokens;
 
   function initialize(
+    address initialVotingEscrow,
     address initialGovToken,
-    address initialVoteToken,
     address[] memory initialRewardTokens
   )
   public
   initializer {
     initialize();
+    _setVotingEscrow(initialVotingEscrow);
     _setGovToken(initialGovToken);
-    _setVoteToken(initialVoteToken);
     _setRewardTokens(initialRewardTokens);
   }
 
+  function _authorizeUpdateVotingEscrow(address sender)
+  internal view override(UseVotingEscrow) onlyOwner {}
+
   function _authorizeUpdateGovToken(address sender)
   internal view override(UseGovToken) onlyOwner {}
-
-  function _authorizeUpdateVoteToken(address sender)
-  internal view override(UseVoteToken) onlyOwner {}
 
   function _setGovToken(address newGovToken)
   internal override(UseGovToken) {
@@ -136,12 +136,12 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseGovToken,
 
   function _mintStakingCertificate(address account, uint256 amount)
   private {
-    IBetVotingEscrow(voteToken()).mint(account, amount);
+    IVotingEscrow(votingEscrow()).mint(account, amount);
   }
 
   function _burnStakingCertificate(address account, uint256 amount)
   private {
-    IBetVotingEscrow(voteToken()).burn(account, amount);
+    IVotingEscrow(votingEscrow()).burn(account, amount);
   }
 
   function stake(UnlockWaitingPeriod unlockWaitingPeriod, uint256 amount)
@@ -246,7 +246,7 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseGovToken,
 
   function deductStakedAmountAndTransfer(address account, uint256 amount, address custodian)
   public
-  onlyVoteContract {
+  onlyVotingEscrow {
     uint256 remainingAmount = amount;
     remainingAmount = _deductStakedAmount(account, UnlockWaitingPeriod.WEEK, remainingAmount);
     if (remainingAmount > 0) remainingAmount = _deductStakedAmount(account, UnlockWaitingPeriod.WEEK12, remainingAmount);
@@ -256,7 +256,7 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseGovToken,
 
   function batchDeductStakedAmountAndTransfer(address[] calldata accounts, uint256[] calldata amounts, address custodian)
   external
-  onlyVoteContract {
+  onlyVotingEscrow {
     uint256 length = accounts.length;
     for (uint256 i = 0; i < length; i = i.unsafeInc()) {
       deductStakedAmountAndTransfer(accounts[i], amounts[i], custodian);

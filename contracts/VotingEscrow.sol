@@ -2,21 +2,19 @@
 pragma solidity ^0.8.20;
 
 import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import {Receivable} from "./base/Receivable.sol";
 import {Upgradeable} from "./base/Upgradeable.sol";
 import {UseGovTokenStaking} from "./base/UseGovTokenStaking.sol";
-import {Withdrawable} from "./base/Withdrawable.sol";
 import {IBet} from "./interface/IBet.sol";
 import {IBetActionArbitrate} from "./interface/IBetActionArbitrate.sol";
 import {IBetActionDecide} from "./interface/IBetActionDecide.sol";
 import {IBetOption} from "./interface/IBetOption.sol";
-import {IBetVotingEscrow} from "./interface/IBetVotingEscrow.sol";
 import {IErrors} from "./interface/IErrors.sol";
 import {IGovTokenStaking} from "./interface/IGovTokenStaking.sol";
+import {IVotingEscrow} from "./interface/IVotingEscrow.sol";
 import {AddressLib} from "./lib/Address.sol";
 import {MathLib} from "./lib/Math.sol";
 
-contract BetVotingEscrow is IBetVotingEscrow, IErrors, ERC20Upgradeable, Upgradeable, Receivable, Withdrawable, UseGovTokenStaking {
+contract VotingEscrow is IVotingEscrow, IErrors, ERC20Upgradeable, Upgradeable, UseGovTokenStaking {
   function name()
   public view override(ERC20Upgradeable, Upgradeable)
   returns (string memory) {
@@ -48,9 +46,6 @@ contract BetVotingEscrow is IBetVotingEscrow, IErrors, ERC20Upgradeable, Upgrade
     Upgradeable.initialize();
     __ERC20_init("PVPBetVotingEscrow", "vePVPB");
   }
-
-  function _authorizeWithdraw(address sender)
-  internal view override(Withdrawable) onlyOwner {}
 
   function _authorizeUpdateGovTokenStaking(address sender)
   internal view override(UseGovTokenStaking) onlyOwner {}

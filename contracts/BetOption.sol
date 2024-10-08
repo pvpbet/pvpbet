@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {BetActionArbitrate} from "./base/BetActionArbitrate.sol";
 import {BetActionDecide} from "./base/BetActionDecide.sol";
 import {BetActionWager} from "./base/BetActionWager.sol";
 import {IBet} from "./interface/IBet.sol";
 import {IBetOption} from "./interface/IBetOption.sol";
+import {IErrors} from "./interface/IErrors.sol";
 import {IMetadata} from "./interface/IMetadata.sol";
 import {AddressLib} from "./lib/Address.sol";
 
-contract BetOption is IBetOption, Initializable, IMetadata, BetActionArbitrate, BetActionDecide, BetActionWager {
+contract BetOption is IBetOption, IErrors, IMetadata, BetActionArbitrate, BetActionDecide, BetActionWager {
   function name()
   public pure
   returns (string memory) {
@@ -25,7 +25,7 @@ contract BetOption is IBetOption, Initializable, IMetadata, BetActionArbitrate, 
 
   using AddressLib for address;
 
-  error InvalidChip();
+  error InvalidInitialization();
 
   string private _version;
   string private _description;
@@ -34,6 +34,7 @@ contract BetOption is IBetOption, Initializable, IMetadata, BetActionArbitrate, 
   address private _vote;
   uint256 private _chipPerQuantity;
   uint256 private _votePerQuantity;
+  bool private _initialized;
 
   function initialize(
     string memory version_,
@@ -44,8 +45,9 @@ contract BetOption is IBetOption, Initializable, IMetadata, BetActionArbitrate, 
     uint256 chipPerQuantity,
     uint256 votePerQuantity
   )
-  public
-  initializer {
+  public {
+    if (_initialized) revert InvalidInitialization();
+    _initialized = true;
     _version = version_;
     _description = description_;
     _bet = bet_;

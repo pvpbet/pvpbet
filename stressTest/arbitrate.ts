@@ -8,10 +8,13 @@ const betAddress = process.env.LOAD_TEST_BET_ADDRESS as Address
 const count = 2000
 
 exec(async () => {
-  const contracts = (await readJson('./contracts.json')) as Record<string, Record<string, Address>>
-  const GovToken = await viem.getContractAt('GovToken', contracts[network].GovToken)
-  const GovTokenStaking = await viem.getContractAt('GovTokenStaking', contracts[network].GovTokenStaking)
-  const BetVotingEscrow = await viem.getContractAt('BetVotingEscrow', contracts[network].BetVotingEscrow)
+  const networks = await readJson('./networks.json')
+  const chainId = networks[network].id
+  const contracts = await readJson(`./ignition/deployments/chain-${chainId}/deployed_addresses.json`)
+
+  const GovToken = await viem.getContractAt('GovToken', contracts['GovToken#GovToken'])
+  const GovTokenStaking = await viem.getContractAt('GovTokenStaking', contracts['GovTokenStaking#GovTokenStaking'])
+  const VotingEscrow = await viem.getContractAt('VotingEscrow', contracts['VotingEscrow#VotingEscrow'])
 
   const { keys } = (await readJson('./keys.json')) as { keys: { adr: Address, key: Hash }[] }
   const Bet = await viem.getContractAt('Bet', betAddress)
@@ -32,7 +35,7 @@ exec(async () => {
     await GovToken.write.approve([GovTokenStaking.address, amountPerTransaction], { account: walletClient.account })
     await GovTokenStaking.write.stake([2, amountPerTransaction], { account: walletClient.account })
     const index = Math.floor(Math.random() * optionLength)
-    const hash = await BetVotingEscrow.write.transfer([options[index], 1n], { account: walletClient.account })
+    const hash = await VotingEscrow.write.transfer([options[index], 1n], { account: walletClient.account })
     console.log(`${i + 1} Transactions have been sent.`)
     const transaction = await publicClient.getTransactionReceipt({ hash })
     console.log(`Gas: ${transaction.gasUsed}`)

@@ -12,8 +12,8 @@ export default buildModule('GovTokenStaking', m => {
     implementation,
     'initialize(address,address,address[])',
     [
-      m.getParameter('govToken'),
-      m.getParameter('voteToken'),
+      m.getParameter('VotingEscrow'),
+      m.getParameter('GovToken'),
       m.getParameter('rewardTokens'),
     ],
   )

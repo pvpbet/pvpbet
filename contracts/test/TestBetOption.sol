@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {IBet} from "../interface/IBet.sol";
-import {IBetVotingEscrow} from "../interface/IBetVotingEscrow.sol";
+import {IVotingEscrow} from "../interface/IVotingEscrow.sol";
 import {AddressLib} from "../lib/Address.sol";
 import {TransferLib} from "../lib/Transfer.sol";
 
@@ -44,7 +44,7 @@ contract TestBetOption {
 
   function decide(address decider, uint256 amount)
   external {
-    IBetVotingEscrow(vote()).fix(decider, amount);
+    IVotingEscrow(vote()).fix(decider, amount);
     decided = true;
   }
 

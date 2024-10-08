@@ -13,18 +13,18 @@ export enum UnlockWaitingPeriod {
 }
 
 export async function deployGovTokenStaking(
-  govToken: Address,
-  chipToken: Address,
-  voteToken: Address,
+  VotingEscrow: Address,
+  GovToken: Address,
+  chip: Address,
 ) {
   const { GovTokenStaking } = await ignition.deploy(GovTokenStakingModule, {
     parameters: {
       GovTokenStaking: {
-        govToken,
-        voteToken,
+        VotingEscrow,
+        GovToken,
         rewardTokens: [
           zeroAddress,
-          chipToken,
+          chip,
         ],
       },
     },

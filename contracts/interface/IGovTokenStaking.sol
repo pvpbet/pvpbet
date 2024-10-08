@@ -75,7 +75,7 @@ interface IGovTokenStaking {
    * @param amount The amount of staked tokens to deduct.
    * @param custodian The address of the custodian to receive the tokens.
    *
-   * Can only be called by the vote token contract.
+   * Can only be called by the voting escrow contract.
    */
   function deductStakedAmountAndTransfer(address account, uint256 amount, address custodian) external;
 
@@ -85,7 +85,7 @@ interface IGovTokenStaking {
    * @param amounts The respective amounts of staked tokens to deduct from each account.
    * @param custodian The address of the custodian to receive the tokens.
    *
-   * Can only be called by the vote token contract.
+   * Can only be called by the voting escrow contract.
    */
   function batchDeductStakedAmountAndTransfer(address[] calldata accounts, uint256[] calldata amounts, address custodian) external;
 

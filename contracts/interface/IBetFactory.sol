@@ -5,7 +5,7 @@ import {IBet} from "./IBet.sol";
 
 interface IBetFactory {
   /**
-	 * @dev Create a bet.
+	 * @dev Creates a bet.
 	 */
   function createBet(
     IBet.BetConfig calldata config,

@@ -8,14 +8,15 @@ import {IBet} from "./interface/IBet.sol";
 import {IBetActionDecide} from "./interface/IBetActionDecide.sol";
 import {IBetActionWager} from "./interface/IBetActionWager.sol";
 import {IBetOptionFactory} from "./interface/IBetOptionFactory.sol";
-import {IUseGovTokenStaking} from "./interface/IUseGovTokenStaking.sol";
+import {IErrors} from "./interface/IErrors.sol";
 import {IMetadata} from "./interface/IMetadata.sol";
+import {IUseGovTokenStaking} from "./interface/IUseGovTokenStaking.sol";
 import {AddressLib} from "./lib/Address.sol";
 import {MathLib} from "./lib/Math.sol";
 import {Record, RecordArrayLib} from "./lib/Record.sol";
 import {TransferLib} from "./lib/Transfer.sol";
 
-contract Bet is IBet, IMetadata, BetActionArbitrate, BetActionDispute {
+contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
   function name()
   public pure
   returns (string memory) {
@@ -36,7 +37,6 @@ contract Bet is IBet, IMetadata, BetActionArbitrate, BetActionDispute {
   error BetHasNotEndedYet();
   error BetHasBeenPenalized();
   error BetHasBeenReleased();
-  error InvalidChip();
   error InvalidInitialization();
   error NoTargetForPenalty();
 

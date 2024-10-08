@@ -19,12 +19,12 @@ export default buildModule('BetManager', m => {
     implementation,
     'initialize(address,address,address,address,address,address)',
     [
+      m.getParameter('BetChipManager'),
       BetConfigurator,
       BetFactory,
       BetOptionFactory,
-      m.getParameter('govToken'),
-      m.getParameter('chipToken'),
-      m.getParameter('voteToken'),
+      m.getParameter('VotingEscrow'),
+      m.getParameter('GovToken'),
     ],
   )
   const proxy = m.contract('ERC1967Proxy', [implementation, initialize])

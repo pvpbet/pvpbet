@@ -10,7 +10,7 @@ interface IUseGovToken {
   function govToken() external view returns (address);
 
   /**
-   * @dev Set the contract address of the governance token.
+   * @dev Sets the contract address of the governance token.
    */
   function setGovToken(address newGovToken) external;
 }

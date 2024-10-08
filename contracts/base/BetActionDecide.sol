@@ -3,8 +3,8 @@ pragma solidity ^0.8.20;
 
 import {IBet} from "../interface/IBet.sol";
 import {IBetActionDecide} from "../interface/IBetActionDecide.sol";
-import {IBetVotingEscrow} from "../interface/IBetVotingEscrow.sol";
 import {IErrors} from "../interface/IErrors.sol";
+import {IVotingEscrow} from "../interface/IVotingEscrow.sol";
 import {AddressArrayLib} from "../lib/Address.sol";
 import {MathLib} from "../lib/Math.sol";
 import {Record} from "../lib/Record.sol";
@@ -76,12 +76,12 @@ abstract contract BetActionDecide is IBetActionDecide, IErrors {
       _amounts[decider] = 0;
       _totalAmount = _totalAmount.unsafeSub(decidedAmount_);
       _accounts.remove(decider);
-      IBetVotingEscrow(vote_).unfix(decider, decidedAmount_);
+      IVotingEscrow(vote_).unfix(decider, decidedAmount_);
     }
 
     if (amount > 0) {
       if (amount < voteMinValue()) revert InvalidAmount();
-      IBetVotingEscrow(vote_).fix(decider, amount);
+      IVotingEscrow(vote_).fix(decider, amount);
       _amounts[decider] = amount;
       _totalAmount = _totalAmount.unsafeAdd(amount);
       _accounts.push(decider);
@@ -143,7 +143,7 @@ abstract contract BetActionDecide is IBetActionDecide, IErrors {
 
     (uint256 start, uint256 end) = _getReleasedRangeOfDecidedRecords(limit);
     (address[] memory accounts, uint256[] memory amounts) = _getDecidedAccountsAndAmounts(start, end);
-    IBetVotingEscrow(vote()).confiscateBatch(accounts, amounts, bet_);
+    IVotingEscrow(vote()).confiscateBatch(accounts, amounts, bet_);
   }
 
   function unfixDecidedVotes()
@@ -161,7 +161,7 @@ abstract contract BetActionDecide is IBetActionDecide, IErrors {
 
     (uint256 start, uint256 end) = _getReleasedRangeOfDecidedRecords(limit);
     (address[] memory accounts, uint256[] memory amounts) = _getDecidedAccountsAndAmounts(start, end);
-    IBetVotingEscrow(vote()).unfixBatch(accounts, amounts);
+    IVotingEscrow(vote()).unfixBatch(accounts, amounts);
   }
 
   function _getDecidedAccountsAndAmounts(uint256 start, uint256 end)

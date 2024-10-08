@@ -13,20 +13,20 @@ import {
   deployGovToken,
   deployTestTokens,
 } from './common'
-import { deployBetChip } from './common/chip'
+import {
+  createBetChip,
+  deployBetChipManager,
+} from './common/chip'
 import {
   UnlockWaitingPeriod,
   deployGovTokenStaking,
   stake,
   unstake,
 } from './common/staking'
-import { deployBetVotingEscrow } from './common/vote'
+import { deployVotingEscrow } from './common/vote'
 import { checkBalance } from './asserts'
-import { testReceivable } from './asserts/Receivable'
-import { testWithdrawable } from './asserts/Withdrawable'
-import type { ContractTypes } from '../types'
 
-describe('BetVotingEscrow', () => {
+describe('VotingEscrow', () => {
   async function deployFixture() {
     const publicClient = await viem.getPublicClient()
     const [owner, user, hacker] = await viem.getWalletClients()
@@ -35,19 +35,20 @@ describe('BetVotingEscrow', () => {
     await claimTestTokens(owner, testTokens)
 
     const { USDC } = testTokens
-    const BetChip = await deployBetChip(USDC.address)
-    const BetVotingEscrow = await deployBetVotingEscrow()
+    const BetChipManager = await deployBetChipManager()
+    const BetChip = await createBetChip(owner, BetChipManager, USDC.address)
+    const VotingEscrow = await deployVotingEscrow()
     const GovToken = await deployGovToken()
-    const GovTokenStaking = await deployGovTokenStaking(GovToken.address, BetChip.address, BetVotingEscrow.address)
+    const GovTokenStaking = await deployGovTokenStaking(VotingEscrow.address, GovToken.address, BetChip.address)
 
-    await BetVotingEscrow.write.setGovTokenStaking([GovTokenStaking.address])
+    await VotingEscrow.write.setGovTokenStaking([GovTokenStaking.address])
     await GovToken.write.transfer([user.account.address, parseUnits('1000000', 18)])
     await GovToken.write.transfer([hacker.account.address, parseUnits('1000000', 18)])
 
     return {
       ...testTokens,
       BetChip,
-      BetVotingEscrow,
+      VotingEscrow,
       GovToken,
       GovTokenStaking,
       publicClient,
@@ -60,29 +61,29 @@ describe('BetVotingEscrow', () => {
   describe('Ownable', () => {
     it('#owner()', async () => {
       const {
-        BetVotingEscrow,
+        VotingEscrow,
         owner,
       } = await loadFixture(deployFixture)
       assert.equal(
-        await BetVotingEscrow.read.owner(),
+        await VotingEscrow.read.owner(),
         getAddress(owner.account.address),
       )
     })
 
     it('#transferOwnership()', async () => {
       const {
-        BetVotingEscrow,
+        VotingEscrow,
         owner,
         hacker,
       } = await loadFixture(deployFixture)
       await assert.isRejected(
-        BetVotingEscrow.write.transferOwnership([hacker.account.address], { account: hacker.account }),
+        VotingEscrow.write.transferOwnership([hacker.account.address], { account: hacker.account }),
         'OwnableUnauthorizedAccount',
       )
 
-      await BetVotingEscrow.write.transferOwnership([hacker.account.address], { account: owner.account })
+      await VotingEscrow.write.transferOwnership([hacker.account.address], { account: owner.account })
       assert.equal(
-        await BetVotingEscrow.read.owner(),
+        await VotingEscrow.read.owner(),
         getAddress(hacker.account.address),
       )
     })
@@ -91,18 +92,18 @@ describe('BetVotingEscrow', () => {
   describe('Config contracts', () => {
     it('#govTokenStaking() #setGovTokenStaking()', async () => {
       const {
-        BetVotingEscrow,
+        VotingEscrow,
         owner,
         hacker,
       } = await loadFixture(deployFixture)
       await assert.isRejected(
-        BetVotingEscrow.write.setGovTokenStaking([zeroAddress], { account: hacker.account }),
+        VotingEscrow.write.setGovTokenStaking([zeroAddress], { account: hacker.account }),
         'OwnableUnauthorizedAccount',
       )
 
-      await BetVotingEscrow.write.setGovTokenStaking([zeroAddress], { account: owner.account })
+      await VotingEscrow.write.setGovTokenStaking([zeroAddress], { account: owner.account })
       assert.equal(
-        await BetVotingEscrow.read.govTokenStaking(),
+        await VotingEscrow.read.govTokenStaking(),
         zeroAddress,
       )
     })
@@ -111,76 +112,76 @@ describe('BetVotingEscrow', () => {
   describe('Mint or Burn through staking', async () => {
     it('#balanceOf()', async () => {
       const {
-        BetVotingEscrow,
+        VotingEscrow,
         GovToken,
         GovTokenStaking,
         user,
       } = await loadFixture(deployFixture)
       assert.equal(
-        await BetVotingEscrow.read.balanceOf([user.account.address]),
+        await VotingEscrow.read.balanceOf([user.account.address]),
         0n,
       )
 
       const stakeAmount = parseUnits('80000', 18)
       await stake(user, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK, stakeAmount)
       assert.equal(
-        await BetVotingEscrow.read.balanceOf([user.account.address]),
+        await VotingEscrow.read.balanceOf([user.account.address]),
         stakeAmount,
       )
 
       await stake(user, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK12, stakeAmount)
       assert.equal(
-        await BetVotingEscrow.read.balanceOf([user.account.address]),
+        await VotingEscrow.read.balanceOf([user.account.address]),
         stakeAmount * 2n,
       )
 
       await unstake(user, GovTokenStaking, UnlockWaitingPeriod.WEEK)
       assert.equal(
-        await BetVotingEscrow.read.balanceOf([user.account.address]),
+        await VotingEscrow.read.balanceOf([user.account.address]),
         stakeAmount,
       )
 
       await unstake(user, GovTokenStaking, UnlockWaitingPeriod.WEEK12)
       assert.equal(
-        await BetVotingEscrow.read.balanceOf([user.account.address]),
+        await VotingEscrow.read.balanceOf([user.account.address]),
         0n,
       )
     })
 
     it('#isAbleToDecide() #isAbleToArbitrate()', async () => {
       const {
-        BetVotingEscrow,
+        VotingEscrow,
         GovToken,
         GovTokenStaking,
         user,
       } = await loadFixture(deployFixture)
       assert.equal(
-        await BetVotingEscrow.read.isAbleToDecide([user.account.address]),
+        await VotingEscrow.read.isAbleToDecide([user.account.address]),
         false,
       )
       assert.equal(
-        await BetVotingEscrow.read.isAbleToArbitrate([user.account.address]),
+        await VotingEscrow.read.isAbleToArbitrate([user.account.address]),
         false,
       )
 
       const stakeAmount = parseUnits('80000', 18)
       await stake(user, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK, stakeAmount)
       assert.equal(
-        await BetVotingEscrow.read.isAbleToDecide([user.account.address]),
+        await VotingEscrow.read.isAbleToDecide([user.account.address]),
         true,
       )
       assert.equal(
-        await BetVotingEscrow.read.isAbleToArbitrate([user.account.address]),
+        await VotingEscrow.read.isAbleToArbitrate([user.account.address]),
         false,
       )
 
       await stake(user, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK12, stakeAmount)
       assert.equal(
-        await BetVotingEscrow.read.isAbleToDecide([user.account.address]),
+        await VotingEscrow.read.isAbleToDecide([user.account.address]),
         true,
       )
       assert.equal(
-        await BetVotingEscrow.read.isAbleToArbitrate([user.account.address]),
+        await VotingEscrow.read.isAbleToArbitrate([user.account.address]),
         true,
       )
     })
@@ -189,7 +190,7 @@ describe('BetVotingEscrow', () => {
   describe('Fixable', () => {
     it('#fix()', async () => {
       const {
-        BetVotingEscrow,
+        VotingEscrow,
         GovToken,
         GovTokenStaking,
         owner,
@@ -198,7 +199,7 @@ describe('BetVotingEscrow', () => {
       const stakeAmount = parseUnits('80000', 18)
       await stake(user, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK, stakeAmount)
       assert.equal(
-        await BetVotingEscrow.read.balanceOf([user.account.address]),
+        await VotingEscrow.read.balanceOf([user.account.address]),
         stakeAmount,
       )
 
@@ -206,19 +207,19 @@ describe('BetVotingEscrow', () => {
       const TestBet = await viem.deployContract('TestBet', [
         0,
         zeroAddress,
-        BetVotingEscrow.address,
+        VotingEscrow.address,
       ])
 
       await assert.isRejected(
-        BetVotingEscrow.write.fix([user.account.address, fixedAmount], { account: owner.account }),
+        VotingEscrow.write.fix([user.account.address, fixedAmount], { account: owner.account }),
         'UnauthorizedAccess',
       )
       await assert.isRejected(
         TestBet.write.functionCall(
           [
-            BetVotingEscrow.address,
+            VotingEscrow.address,
             encodeFunctionData({
-              abi: BetVotingEscrow.abi,
+              abi: VotingEscrow.abi,
               functionName: 'fix',
               args: [user.account.address, fixedAmount],
             }),
@@ -228,13 +229,13 @@ describe('BetVotingEscrow', () => {
         'ERC20InsufficientAllowance',
       )
 
-      await BetVotingEscrow.write.approve([TestBet.address, fixedAmount], { account: user.account })
+      await VotingEscrow.write.approve([TestBet.address, fixedAmount], { account: user.account })
       await assert.isRejected(
         TestBet.write.functionCall(
           [
-            BetVotingEscrow.address,
+            VotingEscrow.address,
             encodeFunctionData({
-              abi: BetVotingEscrow.abi,
+              abi: VotingEscrow.abi,
               functionName: 'fix',
               args: [user.account.address, fixedAmount + 1n],
             }),
@@ -246,9 +247,9 @@ describe('BetVotingEscrow', () => {
 
       await TestBet.write.functionCall(
         [
-          BetVotingEscrow.address,
+          VotingEscrow.address,
           encodeFunctionData({
-            abi: BetVotingEscrow.abi,
+            abi: VotingEscrow.abi,
             functionName: 'fix',
             args: [user.account.address, fixedAmount],
           }),
@@ -256,11 +257,11 @@ describe('BetVotingEscrow', () => {
         { account: owner.account },
       )
       assert.equal(
-        await BetVotingEscrow.read.balanceOf([user.account.address]),
+        await VotingEscrow.read.balanceOf([user.account.address]),
         stakeAmount - fixedAmount,
       )
       assert.equal(
-        await BetVotingEscrow.read.balanceOf([user.account.address, true]),
+        await VotingEscrow.read.balanceOf([user.account.address, true]),
         stakeAmount,
       )
 
@@ -273,7 +274,7 @@ describe('BetVotingEscrow', () => {
 
     it('#unfix()', async () => {
       const {
-        BetVotingEscrow,
+        VotingEscrow,
         GovToken,
         GovTokenStaking,
         owner,
@@ -286,15 +287,15 @@ describe('BetVotingEscrow', () => {
       const TestBet = await viem.deployContract('TestBet', [
         0,
         zeroAddress,
-        BetVotingEscrow.address,
+        VotingEscrow.address,
       ])
 
-      await BetVotingEscrow.write.approve([TestBet.address, fixedAmount], { account: user.account })
+      await VotingEscrow.write.approve([TestBet.address, fixedAmount], { account: user.account })
       await TestBet.write.functionCall(
         [
-          BetVotingEscrow.address,
+          VotingEscrow.address,
           encodeFunctionData({
-            abi: BetVotingEscrow.abi,
+            abi: VotingEscrow.abi,
             functionName: 'fix',
             args: [user.account.address, fixedAmount],
           }),
@@ -303,15 +304,15 @@ describe('BetVotingEscrow', () => {
       )
 
       await assert.isRejected(
-        BetVotingEscrow.write.unfix([user.account.address, fixedAmount], { account: owner.account }),
+        VotingEscrow.write.unfix([user.account.address, fixedAmount], { account: owner.account }),
         'UnauthorizedAccess',
       )
       await assert.isRejected(
         TestBet.write.functionCall(
           [
-            BetVotingEscrow.address,
+            VotingEscrow.address,
             encodeFunctionData({
-              abi: BetVotingEscrow.abi,
+              abi: VotingEscrow.abi,
               functionName: 'unfix',
               args: [user.account.address, fixedAmount + 1n],
             }),
@@ -323,9 +324,9 @@ describe('BetVotingEscrow', () => {
 
       await TestBet.write.functionCall(
         [
-          BetVotingEscrow.address,
+          VotingEscrow.address,
           encodeFunctionData({
-            abi: BetVotingEscrow.abi,
+            abi: VotingEscrow.abi,
             functionName: 'unfix',
             args: [user.account.address, fixedAmount],
           }),
@@ -333,29 +334,29 @@ describe('BetVotingEscrow', () => {
         { account: owner.account },
       )
       assert.equal(
-        await BetVotingEscrow.read.balanceOf([user.account.address]),
+        await VotingEscrow.read.balanceOf([user.account.address]),
         stakeAmount,
       )
       assert.equal(
-        await BetVotingEscrow.read.balanceOf([user.account.address, true]),
+        await VotingEscrow.read.balanceOf([user.account.address, true]),
         stakeAmount,
       )
 
       // Unstake should succeed.
       await unstake(user, GovTokenStaking, UnlockWaitingPeriod.WEEK, stakeAmount)
       assert.equal(
-        await BetVotingEscrow.read.balanceOf([user.account.address]),
+        await VotingEscrow.read.balanceOf([user.account.address]),
         0n,
       )
       assert.equal(
-        await BetVotingEscrow.read.balanceOf([user.account.address, true]),
+        await VotingEscrow.read.balanceOf([user.account.address, true]),
         0n,
       )
     })
 
     it('#confiscate()', async () => {
       const {
-        BetVotingEscrow,
+        VotingEscrow,
         GovToken,
         GovTokenStaking,
         owner,
@@ -368,15 +369,15 @@ describe('BetVotingEscrow', () => {
       const TestBet = await viem.deployContract('TestBet', [
         0,
         zeroAddress,
-        BetVotingEscrow.address,
+        VotingEscrow.address,
       ])
 
-      await BetVotingEscrow.write.approve([TestBet.address, fixedAmount], { account: user.account })
+      await VotingEscrow.write.approve([TestBet.address, fixedAmount], { account: user.account })
       await TestBet.write.functionCall(
         [
-          BetVotingEscrow.address,
+          VotingEscrow.address,
           encodeFunctionData({
-            abi: BetVotingEscrow.abi,
+            abi: VotingEscrow.abi,
             functionName: 'fix',
             args: [user.account.address, fixedAmount],
           }),
@@ -385,15 +386,15 @@ describe('BetVotingEscrow', () => {
       )
 
       await assert.isRejected(
-        BetVotingEscrow.write.confiscate([user.account.address, fixedAmount, owner.account.address], { account: owner.account }),
+        VotingEscrow.write.confiscate([user.account.address, fixedAmount, owner.account.address], { account: owner.account }),
         'UnauthorizedAccess',
       )
       await assert.isRejected(
         TestBet.write.functionCall(
           [
-            BetVotingEscrow.address,
+            VotingEscrow.address,
             encodeFunctionData({
-              abi: BetVotingEscrow.abi,
+              abi: VotingEscrow.abi,
               functionName: 'confiscate',
               args: [user.account.address, fixedAmount + 1n, owner.account.address],
             }),
@@ -407,9 +408,9 @@ describe('BetVotingEscrow', () => {
         async () => {
           await TestBet.write.functionCall(
             [
-              BetVotingEscrow.address,
+              VotingEscrow.address,
               encodeFunctionData({
-                abi: BetVotingEscrow.abi,
+                abi: VotingEscrow.abi,
                 functionName: 'confiscate',
                 args: [user.account.address, fixedAmount, owner.account.address],
               }),
@@ -422,11 +423,11 @@ describe('BetVotingEscrow', () => {
         ],
       )
       assert.equal(
-        await BetVotingEscrow.read.balanceOf([user.account.address]),
+        await VotingEscrow.read.balanceOf([user.account.address]),
         stakeAmount - fixedAmount,
       )
       assert.equal(
-        await BetVotingEscrow.read.balanceOf([user.account.address, true]),
+        await VotingEscrow.read.balanceOf([user.account.address, true]),
         stakeAmount - fixedAmount,
       )
     })
@@ -435,7 +436,7 @@ describe('BetVotingEscrow', () => {
   describe('Transfer', () => {
     it('#transfer() is unable to transfer', async () => {
       const {
-        BetVotingEscrow,
+        VotingEscrow,
         GovToken,
         GovTokenStaking,
         user,
@@ -445,14 +446,14 @@ describe('BetVotingEscrow', () => {
       await stake(user, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK, stakeAmount)
 
       await assert.isRejected(
-        BetVotingEscrow.write.transfer([hacker.account.address, stakeAmount], { account: user.account }),
+        VotingEscrow.write.transfer([hacker.account.address, stakeAmount], { account: user.account }),
         'VoteNotTransferable',
       )
     })
 
     it('#transferFrom() is unable to transfer', async () => {
       const {
-        BetVotingEscrow,
+        VotingEscrow,
         GovToken,
         GovTokenStaking,
         user,
@@ -461,17 +462,17 @@ describe('BetVotingEscrow', () => {
       const stakeAmount = parseUnits('80000', 18)
       await stake(user, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK, stakeAmount)
 
-      await BetVotingEscrow.write.approve([hacker.account.address, stakeAmount], { account: user.account })
+      await VotingEscrow.write.approve([hacker.account.address, stakeAmount], { account: user.account })
       await assert.isRejected(
         // @ts-expect-error
-        BetVotingEscrow.write.transferFrom([user.account.address, hacker.account.address, stakeAmount], { account: hacker.account }),
+        VotingEscrow.write.transferFrom([user.account.address, hacker.account.address, stakeAmount], { account: hacker.account }),
         'VoteNotTransferable',
       )
     })
 
     it('#transfer() is able to decide', async () => {
       const {
-        BetVotingEscrow,
+        VotingEscrow,
         GovToken,
         GovTokenStaking,
         user,
@@ -486,15 +487,15 @@ describe('BetVotingEscrow', () => {
         const TestBet = await viem.deployContract('TestBet', [
           0,
           zeroAddress,
-          BetVotingEscrow.address,
+          VotingEscrow.address,
         ])
         await assert.isRejected(
-          erc20Transfer(user, BetVotingEscrow.address, TestBet.address, decidedAmount),
+          erc20Transfer(user, VotingEscrow.address, TestBet.address, decidedAmount),
           'InvalidStatus',
         )
         const TestBetOption = await viem.deployContract('TestBetOption', [TestBet.address])
         await assert.isRejected(
-          erc20Transfer(user, BetVotingEscrow.address, TestBetOption.address, decidedAmount),
+          erc20Transfer(user, VotingEscrow.address, TestBetOption.address, decidedAmount),
           'InvalidStatus',
         )
       }
@@ -503,33 +504,33 @@ describe('BetVotingEscrow', () => {
         const TestBet = await viem.deployContract('TestBet', [
           1,
           zeroAddress,
-          BetVotingEscrow.address,
+          VotingEscrow.address,
         ])
         await assert.isRejected(
-          erc20Transfer(hacker, BetVotingEscrow.address, TestBet.address, decidedAmount),
+          erc20Transfer(hacker, VotingEscrow.address, TestBet.address, decidedAmount),
           'InvalidStatus',
         )
         await assert.isRejected(
-          erc20Transfer(user, BetVotingEscrow.address, TestBet.address, stakeAmount + 1n),
+          erc20Transfer(user, VotingEscrow.address, TestBet.address, stakeAmount + 1n),
           'InvalidStatus',
         )
         const TestBetOption = await viem.deployContract('TestBetOption', [TestBet.address])
         await assert.isRejected(
-          erc20Transfer(hacker, BetVotingEscrow.address, TestBetOption.address, decidedAmount),
+          erc20Transfer(hacker, VotingEscrow.address, TestBetOption.address, decidedAmount),
           'VotingConditionsNotMet',
         )
         await assert.isRejected(
-          erc20Transfer(user, BetVotingEscrow.address, TestBetOption.address, stakeAmount + 1n),
+          erc20Transfer(user, VotingEscrow.address, TestBetOption.address, stakeAmount + 1n),
           'VoteInsufficientAvailableBalance',
         )
 
         assert.equal(await TestBetOption.read.decided(), false)
         await checkBalance(
           async () => {
-            await erc20Transfer(user, BetVotingEscrow.address, TestBetOption.address, decidedAmount)
+            await erc20Transfer(user, VotingEscrow.address, TestBetOption.address, decidedAmount)
           },
           [
-            [user.account.address, BetVotingEscrow.address, -decidedAmount],
+            [user.account.address, VotingEscrow.address, -decidedAmount],
           ],
         )
         assert.equal(await TestBetOption.read.decided(), true)
@@ -538,7 +539,7 @@ describe('BetVotingEscrow', () => {
 
     it('#transfer() is able to arbitrate', async () => {
       const {
-        BetVotingEscrow,
+        VotingEscrow,
         GovToken,
         GovTokenStaking,
         user,
@@ -552,15 +553,15 @@ describe('BetVotingEscrow', () => {
         const TestBet = await viem.deployContract('TestBet', [
           2,
           zeroAddress,
-          BetVotingEscrow.address,
+          VotingEscrow.address,
         ])
         await assert.isRejected(
-          erc20Transfer(user, BetVotingEscrow.address, TestBet.address, 1n),
+          erc20Transfer(user, VotingEscrow.address, TestBet.address, 1n),
           'InvalidStatus',
         )
         const TestBetOption = await viem.deployContract('TestBetOption', [TestBet.address])
         await assert.isRejected(
-          erc20Transfer(user, BetVotingEscrow.address, TestBetOption.address, 1n),
+          erc20Transfer(user, VotingEscrow.address, TestBetOption.address, 1n),
           'InvalidStatus',
         )
       }
@@ -569,42 +570,26 @@ describe('BetVotingEscrow', () => {
         const TestBet = await viem.deployContract('TestBet', [
           3,
           zeroAddress,
-          BetVotingEscrow.address,
+          VotingEscrow.address,
         ])
         await assert.isRejected(
-          erc20Transfer(hacker, BetVotingEscrow.address, TestBet.address, 1n),
+          erc20Transfer(hacker, VotingEscrow.address, TestBet.address, 1n),
           'VotingConditionsNotMet',
         )
         const TestBetOption = await viem.deployContract('TestBetOption', [TestBet.address])
         await assert.isRejected(
-          erc20Transfer(hacker, BetVotingEscrow.address, TestBetOption.address, 1n),
+          erc20Transfer(hacker, VotingEscrow.address, TestBetOption.address, 1n),
           'VotingConditionsNotMet',
         )
 
         assert.equal(await TestBet.read.arbitrated(), false)
-        await erc20Transfer(user, BetVotingEscrow.address, TestBet.address, 1n)
+        await erc20Transfer(user, VotingEscrow.address, TestBet.address, 1n)
         assert.equal(await TestBet.read.arbitrated(), true)
 
         assert.equal(await TestBetOption.read.arbitrated(), false)
-        await erc20Transfer(user, BetVotingEscrow.address, TestBetOption.address, 1n)
+        await erc20Transfer(user, VotingEscrow.address, TestBetOption.address, 1n)
         assert.equal(await TestBetOption.read.arbitrated(), true)
       }
     })
-  })
-
-  testReceivable(async () => {
-    const { BetVotingEscrow, owner } = await loadFixture(deployFixture)
-    return {
-      Receivable: BetVotingEscrow as unknown as ContractTypes['Receivable'],
-      owner,
-    }
-  })
-
-  testWithdrawable(async () => {
-    const { BetVotingEscrow, owner } = await loadFixture(deployFixture)
-    return {
-      Withdrawable: BetVotingEscrow as unknown as ContractTypes['Withdrawable'],
-      owner,
-    }
   })
 })

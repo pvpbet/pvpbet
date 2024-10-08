@@ -8,9 +8,12 @@ const betAddress = process.env.LOAD_TEST_BET_ADDRESS as Address
 const count = 2000
 
 exec(async () => {
-  const contracts = (await readJson('./contracts.json')) as Record<string, Record<string, Address>>
-  const USDC = await viem.getContractAt('USDC', contracts[network].USDC)
-  const BetChip = await viem.getContractAt('BetChip', contracts[network].BetChip)
+  const networks = await readJson('./networks.json')
+  const chainId = networks[network].id
+  const parameters = await readJson(`./ignition/parameters/chain-${chainId}.json`)
+
+  const USDC = await viem.getContractAt('USDC', parameters.BetChip.token)
+  const BetChip = await viem.getContractAt('BetChip', parameters.BetChip.chip)
 
   const { keys } = (await readJson('./keys.json')) as { keys: { adr: Address, key: Hash }[] }
   const Bet = await viem.getContractAt('Bet', betAddress)

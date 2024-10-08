@@ -1,7 +1,7 @@
 import { ignition } from 'hardhat'
-import BetVotingEscrowModule from '../../ignition/modules/BetVotingEscrow'
+import VotingEscrowModule from '../../ignition/modules/VotingEscrow'
 
-export async function deployBetVotingEscrow() {
-  const { BetVotingEscrow } = await ignition.deploy(BetVotingEscrowModule)
-  return BetVotingEscrow
+export async function deployVotingEscrow() {
+  const { VotingEscrow } = await ignition.deploy(VotingEscrowModule)
+  return VotingEscrow
 }

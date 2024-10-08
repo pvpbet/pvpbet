@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-interface IBetVotingEscrow {
+interface IVotingEscrow {
   event Fixed(address indexed spender, address indexed account, uint256 value);
   event Unfixed(address indexed spender, address indexed account, uint256 value);
   event UnfixedBatch(address indexed spender, address[] indexed accounts, uint256[] values);

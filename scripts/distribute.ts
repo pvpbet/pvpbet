@@ -1,15 +1,17 @@
 import { viem } from 'hardhat'
 import { parseEther, parseUnits } from 'viem'
 import { exec, readJson } from '../utils'
-import type { Address } from 'viem'
 
 const network = process.env.HARDHAT_NETWORK as string
 
 exec(async () => {
-  const contracts = (await readJson('./contracts.json')) as Record<string, Record<string, Address>>
-  const USDC = await viem.getContractAt('USDC', contracts[network].USDC)
-  const BetChip = await viem.getContractAt('BetChip', contracts[network].BetChip)
-  const GovTokenStaking = await viem.getContractAt('GovTokenStaking', contracts[network].GovTokenStaking)
+  const networks = await readJson('./networks.json')
+  const chainId = networks[network].id
+  const contracts = await readJson(`./ignition/deployments/chain-${chainId}/deployed_addresses.json`)
+
+  const USDC = await viem.getContractAt('USDC', contracts['TestUSDC#USDC'])
+  const BetChip = await viem.getContractAt('BetChip', contracts['BetChip#BetChip'])
+  const GovTokenStaking = await viem.getContractAt('GovTokenStaking', contracts['GovTokenStaking#GovTokenStaking'])
 
   const ethAmount = parseEther('10')
   await GovTokenStaking.write.distribute({ value: ethAmount })

@@ -11,6 +11,7 @@ import {IErrors} from "./interface/IErrors.sol";
 import {AddressLib} from "./lib/Address.sol";
 import {MathLib} from "./lib/Math.sol";
 import {TransferLib} from "./lib/Transfer.sol";
+import "hardhat/console.sol";
 
 contract BetChip is IBetChip, IErrors, ERC20 {
   using MathLib for uint256;
@@ -19,18 +20,72 @@ contract BetChip is IBetChip, IErrors, ERC20 {
 
   error ChipInsufficientBalance(address account, uint256 balance, uint256 value);
   error ChipNotExchangeable();
-  error InvalidChip();
+  error InvalidERC20Token();
 
-  address private immutable _currency;
+  address private immutable _token;
+  uint8 private immutable _decimals;
 
-  constructor(address currency_) ERC20("PVPBetChip", "cPVPB") {
-    _currency = currency_;
+  constructor(address token_)
+  ERC20(
+    _getTokenName(token_),
+    _getTokenSymbol(token_)
+  ) {
+    _checkERC20Token(token_);
+    _token = token_;
+    _decimals = ERC20(token_).decimals();
+  }
+
+  function _getTokenName(address token_)
+  private view
+  returns (string memory) {
+    if (token_.code.length == 0) revert InvalidERC20Token();
+    try ERC20(token_).name() returns (string memory name) {
+      return string.concat("PVPBetChipWrapped", name);
+    } catch {
+      revert InvalidERC20Token();
+    }
+  }
+
+  function _getTokenSymbol(address token_)
+  private view
+  returns (string memory) {
+    if (token_.code.length == 0) revert InvalidERC20Token();
+    try ERC20(token_).symbol() returns (string memory symbol) {
+      return string.concat("cw", symbol);
+    } catch {
+      revert InvalidERC20Token();
+    }
+  }
+
+  function _checkERC20Token(address token_)
+  private {
+    if (token_.code.length == 0) revert InvalidERC20Token();
+
+    try ERC20(token_).balanceOf(address(this)) returns (uint256) {}
+    catch {
+      revert InvalidERC20Token();
+    }
+
+    try ERC20(token_).transfer(address(this), 0) returns (bool) {}
+    catch {
+      revert InvalidERC20Token();
+    }
+
+    try ERC20(token_).allowance(address(this), address(this)) returns (uint256) {}
+    catch {
+      revert InvalidERC20Token();
+    }
+
+    try ERC20(token_).transferFrom(address(this), address(this), 0) returns (bool) {}
+    catch {
+      revert InvalidERC20Token();
+    }
   }
 
   function decimals()
   public view override
   returns (uint8) {
-    return _currency.decimals();
+    return _decimals;
   }
 
   function transfer(address to, uint256 value)
@@ -94,42 +149,42 @@ contract BetChip is IBetChip, IErrors, ERC20 {
     return true;
   }
 
-  function currency()
+  function token()
   external view
   returns (address) {
-    return _currency;
+    return _token;
   }
 
-  function deposit(uint256 amount)
+  function deposit(uint256 value)
   external {
-    address sender = _msgSender();
-    _ensureValidAmount(amount);
-    _mintToAccount(sender, amount);
-    emit Deposited(sender, amount);
+    address owner = _msgSender();
+    _ensureValidAmount(value);
+    _mintToAccount(owner, value);
+    emit Deposited(owner, value);
   }
 
-  function withdraw(uint256 amount)
+  function withdraw(uint256 value)
   external {
-    address sender = _msgSender();
-    _ensureValidAmount(amount);
-    _burnFromAccount(sender, amount);
-    emit Withdrawn(sender, amount);
+    address owner = _msgSender();
+    _ensureValidAmount(value);
+    _burnFromAccount(owner, value);
+    emit Withdrawn(owner, value);
   }
 
-  function _ensureValidAmount(uint256 amount)
+  function _ensureValidAmount(uint256 value)
   private pure {
-    if (amount == 0) revert InvalidAmount();
+    if (value == 0) revert InvalidAmount();
   }
 
-  function _mintToAccount(address account, uint256 amount)
+  function _mintToAccount(address account, uint256 value)
   private {
-    account.transferToContract(_currency, amount);
-    _mint(account, amount);
+    account.transferToContract(_token, value);
+    _mint(account, value);
   }
 
-  function _burnFromAccount(address account, uint256 amount)
+  function _burnFromAccount(address account, uint256 value)
   private {
-    _burn(account, amount);
-    account.transferFromContract(_currency, amount);
+    _burn(account, value);
+    account.transferFromContract(_token, value);
   }
 }

@@ -10,7 +10,7 @@ interface IUseGovTokenStaking {
   function govTokenStaking() external view returns (address);
 
   /**
-   * @dev Set the contract address of the governance token staking.
+   * @dev Sets the contract address of the governance token staking.
    */
   function setGovTokenStaking(address newGovTokenStaking) external;
 }

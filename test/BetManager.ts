@@ -7,14 +7,20 @@ import {
   parseUnits,
   zeroAddress,
 } from 'viem'
-import { deployGovToken } from './common'
+import {
+  deployGovToken,
+  deployTestTokens,
+} from './common'
 import {
   BetDetails,
   createBet,
   deployBetManager,
 } from './common/bet'
-import { deployBetChip } from './common/chip'
-import { deployBetVotingEscrow } from './common/vote'
+import {
+  createBetChip,
+  deployBetChipManager,
+} from './common/chip'
+import { deployVotingEscrow } from './common/vote'
 import { testReceivable } from './asserts/Receivable'
 import { testWithdrawable } from './asserts/Withdrawable'
 import type { ContractTypes } from '../types'
@@ -28,17 +34,21 @@ describe('BetManager', () => {
     const publicClient = await viem.getPublicClient()
     const [owner, user, hacker] = await viem.getWalletClients()
 
-    const BetChip = await deployBetChip(zeroAddress)
-    const BetVotingEscrow = await deployBetVotingEscrow()
+    const testTokens = await deployTestTokens()
+    const { USDC } = testTokens
+    const BetChipManager = await deployBetChipManager()
+    const BetChip = await createBetChip(owner, BetChipManager, USDC.address)
+    const VotingEscrow = await deployVotingEscrow()
     const GovToken = await deployGovToken()
-    const BetManager = await deployBetManager(GovToken.address, BetChip.address, BetVotingEscrow.address)
+    const BetManager = await deployBetManager(BetChipManager.address, VotingEscrow.address, GovToken.address)
     const BetConfigurator = await viem.getContractAt('BetConfigurator', await BetManager.read.betConfigurator())
 
     await GovToken.write.transfer([user.account.address, parseUnits('1000000', 18)])
 
     return {
+      ...testTokens,
       BetChip,
-      BetVotingEscrow,
+      VotingEscrow,
       BetManager,
       BetConfigurator,
       GovToken,
@@ -81,6 +91,24 @@ describe('BetManager', () => {
   })
 
   describe('Configure the contracts', () => {
+    it('#betChipManager() #setBetChipManager()', async () => {
+      const {
+        BetManager,
+        owner,
+        hacker,
+      } = await loadFixture(deployFixture)
+      await assert.isRejected(
+        BetManager.write.setBetChipManager([zeroAddress], { account: hacker.account }),
+        'OwnableUnauthorizedAccount',
+      )
+
+      await BetManager.write.setBetChipManager([zeroAddress], { account: owner.account })
+      assert.equal(
+        await BetManager.read.betChipManager(),
+        zeroAddress,
+      )
+    })
+
     it('#betConfigurator() #setBetConfigurator()', async () => {
       const {
         BetManager,
@@ -153,38 +181,20 @@ describe('BetManager', () => {
       )
     })
 
-    it('#chipToken() #setChipToken()', async () => {
+    it('#votingEscrow() #setVotingEscrow()', async () => {
       const {
         BetManager,
         owner,
         hacker,
       } = await loadFixture(deployFixture)
       await assert.isRejected(
-        BetManager.write.setChipToken([zeroAddress], { account: hacker.account }),
+        BetManager.write.setVotingEscrow([zeroAddress], { account: hacker.account }),
         'OwnableUnauthorizedAccount',
       )
 
-      await BetManager.write.setChipToken([zeroAddress], { account: owner.account })
+      await BetManager.write.setVotingEscrow([zeroAddress], { account: owner.account })
       assert.equal(
-        await BetManager.read.chipToken(),
-        zeroAddress,
-      )
-    })
-
-    it('#voteToken() #setVoteToken()', async () => {
-      const {
-        BetManager,
-        owner,
-        hacker,
-      } = await loadFixture(deployFixture)
-      await assert.isRejected(
-        BetManager.write.setVoteToken([zeroAddress], { account: hacker.account }),
-        'OwnableUnauthorizedAccount',
-      )
-
-      await BetManager.write.setVoteToken([zeroAddress], { account: owner.account })
-      assert.equal(
-        await BetManager.read.voteToken(),
+        await BetManager.read.votingEscrow(),
         zeroAddress,
       )
     })
@@ -194,7 +204,7 @@ describe('BetManager', () => {
     it('Bet configuration', async () => {
       const {
         BetChip,
-        BetVotingEscrow,
+        VotingEscrow,
         BetManager,
         BetConfigurator,
         user,
@@ -206,22 +216,21 @@ describe('BetManager', () => {
 
       const betConfig = await BetConfigurator.read.betConfig()
       const chipDecimals = await BetChip.read.decimals()
-      const voteDecimals = await BetVotingEscrow.read.decimals()
+      const voteDecimals = await VotingEscrow.read.decimals()
 
       for (const chip of chips) {
-        const useChipERC20 = isAddressEqual(chip, BetChip.address)
         const Bet = await createBet(
           user,
           BetManager,
           BetDetails,
           WEEK,
           DAY3,
-          useChipERC20,
+          chip,
         )
         assert.deepEqual(await Bet.read.config(), betConfig)
         assert.equal(
           await Bet.read.minWageredTotalAmount(),
-          useChipERC20 ? parseUnits(String(betConfig.minWageredTotalQuantityERC20), chipDecimals) : betConfig.minWageredTotalAmountETH,
+          isAddressEqual(chip, BetChip.address) ? parseUnits(String(betConfig.minWageredTotalQuantityERC20), chipDecimals) : betConfig.minWageredTotalAmountETH,
         )
         assert.equal(await Bet.read.minDecidedTotalAmount(), parseUnits(String(betConfig.minDecidedTotalQuantity), voteDecimals))
         assert.equal(await Bet.read.minArbitratedTotalAmount(), parseUnits(String(betConfig.minArbitratedTotalQuantity), voteDecimals))
@@ -230,6 +239,7 @@ describe('BetManager', () => {
 
     it('Restrictions on creation', async () => {
       const {
+        USDC,
         BetChip,
         BetManager,
         BetConfigurator,
@@ -254,7 +264,6 @@ describe('BetManager', () => {
       const forumURL = 'https://example.com/foo'
 
       for (const chip of chips) {
-        const useChipERC20 = isAddressEqual(chip, BetChip.address)
         await assert.isRejected(
           createBet(
             user,
@@ -268,7 +277,7 @@ describe('BetManager', () => {
             ),
             MIN_WAGERING_PERIOD_DURATION,
             MIN_DECISION_PERIOD_DURATION,
-            useChipERC20,
+            chip,
           ),
           'InvalidTitle',
         )
@@ -286,7 +295,7 @@ describe('BetManager', () => {
             ),
             MIN_WAGERING_PERIOD_DURATION,
             MIN_DECISION_PERIOD_DURATION,
-            useChipERC20,
+            chip,
           ),
           'InvalidDescription',
         )
@@ -304,7 +313,7 @@ describe('BetManager', () => {
             ),
             WEEK,
             DAY3,
-            useChipERC20,
+            chip,
           ),
           'InvalidOptionCount',
         )
@@ -322,7 +331,7 @@ describe('BetManager', () => {
             ),
             WEEK,
             DAY3,
-            useChipERC20,
+            chip,
           ),
           'InvalidOptionCount',
         )
@@ -340,7 +349,7 @@ describe('BetManager', () => {
             ),
             WEEK,
             DAY3,
-            useChipERC20,
+            chip,
           ),
           'InvalidUrl',
         )
@@ -352,7 +361,7 @@ describe('BetManager', () => {
             BetDetails,
             MIN_WAGERING_PERIOD_DURATION - 1n,
             MIN_DECISION_PERIOD_DURATION,
-            useChipERC20,
+            chip,
           ),
           'InvalidWageringPeriodDuration',
         )
@@ -364,7 +373,7 @@ describe('BetManager', () => {
             BetDetails,
             MAX_WAGERING_PERIOD_DURATION + 1n,
             MAX_DECISION_PERIOD_DURATION,
-            useChipERC20,
+            chip,
           ),
           'InvalidWageringPeriodDuration',
         )
@@ -376,7 +385,7 @@ describe('BetManager', () => {
             BetDetails,
             MIN_WAGERING_PERIOD_DURATION,
             MIN_DECISION_PERIOD_DURATION - 1n,
-            useChipERC20,
+            chip,
           ),
           'InvalidDecidingPeriodDuration',
         )
@@ -388,9 +397,21 @@ describe('BetManager', () => {
             BetDetails,
             MAX_WAGERING_PERIOD_DURATION,
             MAX_DECISION_PERIOD_DURATION + 1n,
-            useChipERC20,
+            chip,
           ),
           'InvalidDecidingPeriodDuration',
+        )
+
+        await assert.isRejected(
+          createBet(
+            user,
+            BetManager,
+            BetDetails,
+            MAX_WAGERING_PERIOD_DURATION,
+            MAX_DECISION_PERIOD_DURATION,
+            USDC.address,
+          ),
+          'InvalidChip',
         )
       }
 
@@ -401,7 +422,6 @@ describe('BetManager', () => {
       await BetConfigurator.write.setOriginAllowlist([originAllowlist], { account: owner.account })
 
       for (const chip of chips) {
-        const useChipERC20 = isAddressEqual(chip, BetChip.address)
         const Bet = await createBet(
           user,
           BetManager,
@@ -414,7 +434,7 @@ describe('BetManager', () => {
           ),
           WEEK,
           DAY3,
-          useChipERC20,
+          chip,
         )
         assert.equal((await Bet.read.details()).forumURL, forumURL)
       }
@@ -431,7 +451,6 @@ describe('BetManager', () => {
         BetDetails,
         WEEK,
         DAY3,
-        true,
       )
 
       assert.equal(await BetManager.read.isBet([BetManager.address]), false)
@@ -455,7 +474,6 @@ describe('BetManager', () => {
           BetDetails,
           WEEK,
           DAY3,
-          true,
         ),
         'Underpayment',
       )
@@ -467,7 +485,6 @@ describe('BetManager', () => {
         BetDetails,
         WEEK,
         DAY3,
-        true,
       )
 
       assert.equal(await BetManager.read.isBet([BetManager.address]), false)

@@ -3,19 +3,20 @@ pragma solidity ^0.8.20;
 
 import {Receivable} from "./base/Receivable.sol";
 import {Upgradeable} from "./base/Upgradeable.sol";
-import {UseChipToken} from "./base/UseChipToken.sol";
 import {UseGovToken} from "./base/UseGovToken.sol";
-import {UseVoteToken} from "./base/UseVoteToken.sol";
+import {UseVotingEscrow} from "./base/UseVotingEscrow.sol";
 import {Withdrawable} from "./base/Withdrawable.sol";
 import {IBet} from "./interface/IBet.sol";
 import {IBetConfigurator} from "./interface/IBetConfigurator.sol";
+import {IBetChipManager} from "./interface/IBetChipManager.sol";
 import {IBetFactory} from "./interface/IBetFactory.sol";
 import {IBetManager} from "./interface/IBetManager.sol";
+import {IErrors} from "./interface/IErrors.sol";
 import {IMetadata} from "./interface/IMetadata.sol";
 import {StringLib} from "./lib/String.sol";
 import {TransferLib} from "./lib/Transfer.sol";
 
-contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, UseChipToken, UseVoteToken, UseGovToken {
+contract BetManager is IBetManager, IErrors, Upgradeable, Receivable, Withdrawable, UseVotingEscrow, UseGovToken {
   function name()
   public pure override
   returns (string memory) {
@@ -33,6 +34,7 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, UseCh
 
   error ServiceHasNotStartedYet();
 
+  address private _betChipManager;
   address private _betConfigurator;
   address private _betFactory;
   address private _betOptionFactory;
@@ -41,35 +43,50 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, UseCh
   mapping(address bet => bool) private _betMap;
 
   function initialize(
+    address initialBetChipManager,
     address initialBetConfigurator,
     address initialBetFactory,
     address initialBetOptionFactory,
-    address initialGovToken,
-    address initialChipToken,
-    address initialVoteToken
+    address initialVotingEscrow,
+    address initialGovToken
   )
   public
   initializer {
     initialize();
+    _setBetChipManager(initialBetChipManager);
     _setBetConfigurator(initialBetConfigurator);
     _setBetFactory(initialBetFactory);
     _setBetOptionFactory(initialBetOptionFactory);
+    _setVotingEscrow(initialVotingEscrow);
     _setGovToken(initialGovToken);
-    _setChipToken(initialChipToken);
-    _setVoteToken(initialVoteToken);
   }
 
   function _authorizeWithdraw(address sender)
   internal view override(Withdrawable) onlyOwner {}
 
-  function _authorizeUpdateChipToken(address sender)
-  internal view override(UseChipToken) onlyOwner {}
-
-  function _authorizeUpdateVoteToken(address sender)
-  internal view override(UseVoteToken) onlyOwner {}
+  function _authorizeUpdateVotingEscrow(address sender)
+  internal view override(UseVotingEscrow) onlyOwner {}
 
   function _authorizeUpdateGovToken(address sender)
   internal view override(UseGovToken) onlyOwner {}
+
+  function betChipManager()
+  external view
+  returns (address) {
+    return _betChipManager;
+  }
+
+  function setBetChipManager(address newBetChipManager)
+  external
+  onlyOwner {
+    _setBetChipManager(newBetChipManager);
+  }
+
+  function _setBetChipManager(address newBetChipManager)
+  private {
+    _betChipManager = newBetChipManager;
+    emit BetChipManagerSet(newBetChipManager);
+  }
 
   function betConfigurator()
   external view
@@ -149,28 +166,28 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, UseCh
     uint256 decidingPeriodDuration
   ) external
   returns (address) {
-    return _createBet(details, wageringPeriodDuration, decidingPeriodDuration, false);
+    return _createBet(details, wageringPeriodDuration, decidingPeriodDuration, address(0));
   }
 
   function createBet(
     IBet.BetDetails calldata details,
     uint256 wageringPeriodDuration,
     uint256 decidingPeriodDuration,
-    bool useChipERC20
+    address chip
   ) external
   returns (address) {
-    return _createBet(details, wageringPeriodDuration, decidingPeriodDuration, useChipERC20);
+    return _createBet(details, wageringPeriodDuration, decidingPeriodDuration, chip);
   }
 
   function _createBet(
     IBet.BetDetails calldata details,
     uint256 wageringPeriodDuration,
     uint256 decidingPeriodDuration,
-    bool useChipERC20
+    address chip
   ) private
   returns (address) {
-    if (chipToken() == address(0) && useChipERC20) revert ServiceHasNotStartedYet();
-    if (voteToken() == address(0)) revert ServiceHasNotStartedYet();
+    if (chip != address(0) && !IBetChipManager(_betChipManager).isBetChip(chip)) revert InvalidChip();
+    if (votingEscrow() == address(0)) revert ServiceHasNotStartedYet();
 
     IBetConfigurator configurator = IBetConfigurator(_betConfigurator);
     configurator.validateTitle(details.title);
@@ -192,8 +209,8 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, UseCh
       wageringPeriodDuration,
       decidingPeriodDuration,
       msg.sender,
-      useChipERC20 ? chipToken() : address(0),
-      voteToken(),
+      chip,
+      votingEscrow(),
       govToken(),
       address(this),
       _betOptionFactory

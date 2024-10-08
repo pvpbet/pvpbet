@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import {IBet} from "./IBet.sol";
 
 interface IBetManager {
+  event BetChipManagerSet(address betChipManager);
   event BetConfiguratorSet(address betConfigurator);
   event BetFactorySet(address betFactory);
   event BetOptionFactorySet(address betOptionFactory);
@@ -11,12 +12,22 @@ interface IBetManager {
   event BetCreated(address indexed bet, address indexed creator, uint256 timestamp);
 
   /**
+   * @dev Returns the contract address of the bet chip manager.
+   */
+  function betChipManager() external view returns (address);
+
+  /**
+  * @dev Sets the contract address of the bet chip manager.
+   */
+  function setBetChipManager(address newBetChipManager) external;
+
+  /**
    * @dev Returns the contract address of the bet configurator.
    */
   function betConfigurator() external view returns (address);
 
   /**
-  * @dev Set the contract address of the bet configurator.
+  * @dev Sets the contract address of the bet configurator.
    */
   function setBetConfigurator(address newBetConfigurator) external;
 
@@ -26,7 +37,7 @@ interface IBetManager {
   function betFactory() external view returns (address);
 
   /**
-  * @dev Set the contract address of the bet factory.
+  * @dev Sets the contract address of the bet factory.
    */
   function setBetFactory(address newBetFactory) external;
 
@@ -36,7 +47,7 @@ interface IBetManager {
   function betOptionFactory() external view returns (address);
 
   /**
-  * @dev Set the contract address of the bet option factory.
+  * @dev Sets the contract address of the bet option factory.
    */
   function setBetOptionFactory(address newBetOptionFactory) external;
 
@@ -46,12 +57,12 @@ interface IBetManager {
   function creationFee() external view returns (uint256);
 
   /**
-   * @dev Set the fee charged for creating a bet.
+   * @dev Sets the fee charged for creating a bet.
    */
   function setCreationFee(uint256 fee) external;
 
   /**
-	 * @dev Create a bet using ETH as chips.
+	 * @dev Creates a bet using ETH as chips.
 	 */
   function createBet(
     IBet.BetDetails calldata details,
@@ -60,13 +71,13 @@ interface IBetManager {
   ) external returns (address);
 
   /**
-	 * @dev Create a bet using ERC20 tokens as chips.
+	 * @dev Creates a bet using ERC20 tokens as chips.
 	 */
   function createBet(
     IBet.BetDetails calldata details,
     uint256 wageringPeriodDuration,
     uint256 decidingPeriodDuration,
-    bool useChipERC20
+    address chip
   ) external returns (address);
 
   /**

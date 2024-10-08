@@ -3,15 +3,14 @@ node_modules
 .env
 .idea
 .openzeppelin
-/contracts.json
 /keys.json
 /networks.json
-/ignition/parameters*.json
 
 # Hardhat files
 /cache
 /artifacts
 /ignition/deployments/
+/ignition/parameters/
 
 # TypeChain files
 /typechain
