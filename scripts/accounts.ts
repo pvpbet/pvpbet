@@ -8,11 +8,12 @@ exec(async () => {
   const networks = await readJson('./networks.json')
   const chainId = networks[network].id
   const contracts = await readJson(`./ignition/deployments/chain-${chainId}/deployed_addresses.json`)
+  const parameters = await readJson(`./ignition/parameters/chain-${chainId}.json`)
 
-  const USDC = await viem.getContractAt('USDC', contracts['TestUSDC#USDC'])
-  const BetChip = await viem.getContractAt('BetChip', contracts['BetChip#BetChip'])
   const GovToken = await viem.getContractAt('GovToken', contracts['GovToken#GovToken'])
   const GovTokenStaking = await viem.getContractAt('GovTokenStaking', contracts['GovTokenStaking#GovTokenStaking'])
+  const USDC = await viem.getContractAt('USDC', parameters.BetChip.token)
+  const BetChip = await viem.getContractAt('BetChip', parameters.BetChip.chip)
 
   const wallets = await viem.getWalletClients()
 

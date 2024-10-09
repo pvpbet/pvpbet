@@ -2,15 +2,12 @@ import { ignition, viem } from 'hardhat'
 import { parseUnits, zeroAddress } from 'viem'
 import { exec } from '../utils'
 import { createBetChip } from '../test/common/chip'
-import BetChipModule from '../ignition/modules/BetChip'
 import BetChipManagerModule from '../ignition/modules/BetChipManager'
 import BetManagerModule from '../ignition/modules/BetManager'
-import ContractSetupModule from '../ignition/modules/ContractSetup'
 import GovTokenModule from '../ignition/modules/GovToken'
 import GovTokenStakingModule from '../ignition/modules/GovTokenStaking'
 import TestUSDCModule from '../ignition/modules/TestUSDC'
 import VotingEscrowModule from '../ignition/modules/VotingEscrow'
-import parameters from '../ignition/parameters/chain-31337.json'
 
 exec(async () => {
   const [owner] = await viem.getWalletClients()
@@ -24,13 +21,6 @@ exec(async () => {
 
   const BetChip = await createBetChip(owner, BetChipManager, USDC.address)
   console.log(`BetChip deployed to: ${BetChip.address}`)
-  await ignition.deploy(BetChipModule, {
-    parameters: {
-      BetChip: {
-        chip: BetChip.address,
-      },
-    },
-  })
 
   const { VotingEscrow } = await ignition.deploy(VotingEscrowModule)
   console.log(`VotingEscrow deployed to: ${VotingEscrow.address}`)
@@ -63,18 +53,4 @@ exec(async () => {
   })
   console.log(`BetManager deployed to: ${BetManager.address}`)
   console.log(`BetConfigurator deployed to: ${BetConfigurator.address}`)
-
-  await ignition.deploy(ContractSetupModule, {
-    parameters: {
-      ContractSetup: {
-        BetConfigurator: BetConfigurator.address,
-        BetManager: BetManager.address,
-        VotingEscrow: VotingEscrow.address,
-        GovTokenStaking: GovTokenStaking.address,
-        creationFee: parameters.ContractSetup.creationFee,
-        originAllowlist: parameters.ContractSetup.originAllowlist,
-      },
-    },
-  })
-  console.log('The contract setup has been completed.')
 })

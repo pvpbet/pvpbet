@@ -1,6 +1,6 @@
 import { buildModule } from '@nomicfoundation/hardhat-ignition/modules'
 
-export default buildModule('BetManager', m => {
+export default buildModule('BetManagerUpgrade', m => {
   const implementation = m.contract(
     'BetManager',
     [],
