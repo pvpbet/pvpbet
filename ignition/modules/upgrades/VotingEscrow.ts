@@ -1,14 +1,9 @@
 import { buildModule } from '@nomicfoundation/hardhat-ignition/modules'
+import { VotingEscrowImplModule } from '../VotingEscrow'
 
 export default buildModule('VotingEscrowUpgrade', m => {
-  const implementation = m.contract(
-    'VotingEscrow',
-    [],
-    {
-      id: 'VotingEscrowImpl',
-    },
-  )
+  const { VotingEscrowImpl } = m.useModule(VotingEscrowImplModule)
   const VotingEscrow = m.contractAt('VotingEscrow', m.getParameter('proxy'))
-  m.call(VotingEscrow, 'upgradeToAndCall', [implementation, '0x'])
+  m.call(VotingEscrow, 'upgradeToAndCall', [VotingEscrowImpl, '0x'])
   return { VotingEscrow }
 })

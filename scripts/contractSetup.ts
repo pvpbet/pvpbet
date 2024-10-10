@@ -11,11 +11,8 @@ exec(async () => {
 
   const BetConfigurator = await viem.getContractAt('BetConfigurator', contracts['BetConfigurator#BetConfigurator'])
   const BetManager = await viem.getContractAt('BetManager', contracts['BetManager#BetManager'])
-  const VotingEscrow = await viem.getContractAt('VotingEscrow', contracts['VotingEscrow#VotingEscrow'])
-
   await BetConfigurator.write.setOriginAllowlist([parameters.ContractSetup.originAllowlist])
   await BetManager.write.setCreationFee([parameters.ContractSetup.creationFee])
-  await VotingEscrow.write.setGovTokenStaking([contracts['GovTokenStaking#GovTokenStaking']])
 
   console.log('The contract setup has been completed.')
 })

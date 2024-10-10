@@ -1,14 +1,9 @@
 import { buildModule } from '@nomicfoundation/hardhat-ignition/modules'
+import { BetChipManagerImplModule } from '../BetChipManager'
 
 export default buildModule('BetChipManagerUpgrade', m => {
-  const implementation = m.contract(
-    'BetChipManager',
-    [],
-    {
-      id: 'GovTokenStakingImpl',
-    },
-  )
+  const { BetChipManagerImpl } = m.useModule(BetChipManagerImplModule)
   const BetChipManager = m.contractAt('BetChipManager', m.getParameter('proxy'))
-  m.call(BetChipManager, 'upgradeToAndCall', [implementation, '0x'])
+  m.call(BetChipManager, 'upgradeToAndCall', [BetChipManagerImpl, '0x'])
   return { BetChipManager }
 })

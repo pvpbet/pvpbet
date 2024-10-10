@@ -6,13 +6,12 @@ import BetChipManagerModule from '../ignition/modules/BetChipManager'
 import BetManagerModule from '../ignition/modules/BetManager'
 import GovTokenModule from '../ignition/modules/GovToken'
 import GovTokenStakingModule from '../ignition/modules/GovTokenStaking'
-import TestUSDCModule from '../ignition/modules/TestUSDC'
 import VotingEscrowModule from '../ignition/modules/VotingEscrow'
 
 exec(async () => {
   const [owner] = await viem.getWalletClients()
 
-  const { USDC } = await ignition.deploy(TestUSDCModule)
+  const USDC = await viem.deployContract('USDC')
   await USDC.write.mint([parseUnits('10000000000', 6)])
   console.log(`USDC deployed to: ${USDC.address}`)
 
