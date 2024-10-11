@@ -6,14 +6,16 @@ import '@nomicfoundation/hardhat-verify'
 import '@openzeppelin/hardhat-upgrades'
 import 'hardhat-gas-reporter'
 import 'dotenv/config'
-import { arbitrum } from 'viem/chains'
-import arbitrumSepolia from './chains/arbitrumSepolia'
+import {
+  base,
+  baseSepolia,
+} from 'viem/chains'
 import type { Chain } from 'viem'
 import fs from 'node:fs'
 
 const chains: Record<string, Chain> = {
-  arbitrum,
-  arbitrumSepolia,
+  base,
+  baseSepolia,
 }
 
 let networks: Record<string, Record<string, string>> = {}
