@@ -28,16 +28,22 @@ exec(async () => {
   for (let i = 0; i < count; i++) {
     const address = keys[i].adr
     const privateKey = keys[i].key
-    await owner.sendTransaction({ to: address, value: parseEther('0.001') })
-    await GovToken.write.transfer([address, amountPerTransaction], { account: owner.account })
     const walletClient = await getLocalWalletClient(privateKey)
-    await GovToken.write.approve([GovTokenStaking.address, amountPerTransaction], { account: walletClient.account })
-    await GovTokenStaking.write.stake([1, amountPerTransaction], { account: walletClient.account })
+
+    let hash
+    hash = await owner.sendTransaction({ to: address, value: parseEther('0.001') })
+    await publicClient.waitForTransactionReceipt({ hash })
+    hash = await GovToken.write.transfer([address, amountPerTransaction], { account: owner.account })
+    await publicClient.waitForTransactionReceipt({ hash })
+    hash = await GovToken.write.approve([GovTokenStaking.address, amountPerTransaction], { account: walletClient.account })
+    await publicClient.waitForTransactionReceipt({ hash })
+    hash = await GovTokenStaking.write.stake([1, amountPerTransaction], { account: walletClient.account })
+    await publicClient.waitForTransactionReceipt({ hash })
     const index = Math.floor(Math.random() * optionLength)
-    const hash = await VotingEscrow.write.transfer([options[index], amountPerTransaction], { account: walletClient.account })
-    console.log(`${i + 1} Transactions have been sent.`)
+    hash = await VotingEscrow.write.transfer([options[index], amountPerTransaction], { account: walletClient.account })
     const transaction = await publicClient.getTransactionReceipt({ hash })
     console.log(`Gas: ${transaction.gasUsed}`)
+    console.log(`${i + 1} Transactions have been sent.`)
   }
 
   console.log('The test has been completed.')

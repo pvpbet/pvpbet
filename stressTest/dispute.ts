@@ -17,12 +17,15 @@ exec(async () => {
   for (let i = 0; i < count; i++) {
     const address = keys[i].adr
     const privateKey = keys[i].key
-    await owner.sendTransaction({ to: address, value: amountPerTransaction * 11n / 10n })
     const walletClient = await getLocalWalletClient(privateKey)
-    const hash = await walletClient.sendTransaction({ to: Bet.address, value: amountPerTransaction })
-    console.log(`${i + 1} Transactions have been sent.`)
+
+    let hash
+    hash = await owner.sendTransaction({ to: address, value: amountPerTransaction * 11n / 10n })
+    await publicClient.waitForTransactionReceipt({ hash })
+    hash = await walletClient.sendTransaction({ to: Bet.address, value: amountPerTransaction })
     const transaction = await publicClient.getTransactionReceipt({ hash })
     console.log(`Gas: ${transaction.gasUsed}`)
+    console.log(`${i + 1} Transactions have been sent.`)
   }
 
   console.log('The test has been completed.')
