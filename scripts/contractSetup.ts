@@ -11,8 +11,14 @@ exec(async () => {
 
   const BetConfigurator = await viem.getContractAt('BetConfigurator', contracts['BetConfigurator#BetConfigurator'])
   const BetManager = await viem.getContractAt('BetManager', contracts['BetManager#BetManager'])
-  await BetConfigurator.write.setOriginAllowlist([parameters.ContractSetup.originAllowlist])
-  await BetManager.write.setCreationFee([parameters.ContractSetup.creationFee])
+
+  const publicClient = await viem.getPublicClient()
+
+  let hash
+  hash = await BetConfigurator.write.setOriginAllowlist([parameters.ContractSetup.originAllowlist])
+  await publicClient.waitForTransactionReceipt({ hash })
+  hash = await BetManager.write.setCreationFee([parameters.ContractSetup.creationFee])
+  await publicClient.waitForTransactionReceipt({ hash })
 
   console.log('The contract setup has been completed.')
 })

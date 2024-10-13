@@ -1,5 +1,5 @@
 import { viem } from 'hardhat'
-import { parseUnits } from 'viem'
+import { parseUnits, zeroAddress } from 'viem'
 import { exec, readJson } from '../utils'
 import { BetDetails } from '../test/common/bet'
 
@@ -24,7 +24,7 @@ exec(async () => {
         Object.assign({}, BetDetails, { title: `[${i + 1}] ${BetDetails.title}` }),
         DAY * 2n + BigInt(i) * (DAY * 88n / BigInt(count - 1)),
         DAY * 2n,
-        chip,
+        i % 2 ? chip : zeroAddress,
       ],
     )
     console.log(`${i + 1} have been created.`)
