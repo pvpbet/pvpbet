@@ -21,13 +21,15 @@ const chains: Record<string, Chain> = {
 let networks: Record<string, Record<string, string>> = {}
 try {
   networks = JSON.parse(fs.readFileSync('./networks.json', 'utf8'))
-} catch (err) {}
+} catch {
+  // ignore
+}
 
 const accounts = [
-  process.env.WALLET_PRIVATE_KEY as string
+  process.env.WALLET_PRIVATE_KEY as string,
 ].filter(Boolean)
 const ledgerAccounts = [
-  process.env.WALLET_LEDGER_ACCOUNT as string
+  process.env.WALLET_LEDGER_ACCOUNT as string,
 ].filter(Boolean)
 
 const config: HardhatUserConfig = {
@@ -37,8 +39,8 @@ const config: HardhatUserConfig = {
       optimizer: {
         enabled: true,
         runs: 200,
-      }
-    }
+      },
+    },
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS === 'true',
@@ -66,17 +68,17 @@ const config: HardhatUserConfig = {
             chainId: chain.id,
             urls: {
               apiURL: chain.blockExplorers?.default?.apiUrl,
-              browserURL: chain.blockExplorers?.default?.url
-            }
+              browserURL: chain.blockExplorers?.default?.url,
+            },
           }
         } else {
           return null
         }
       })
-      .filter(Boolean) as []
+      .filter(Boolean) as [],
   },
   sourcify: {
-    enabled: true
+    enabled: true,
   },
   networks: Object.fromEntries(
     Object.keys(networks)
@@ -90,13 +92,13 @@ const config: HardhatUserConfig = {
               url: networks[key].rpc || chain.rpcUrls.default.http[0],
               accounts,
               ledgerAccounts,
-            }
+            },
           ]
         } else {
           return null
         }
       })
-      .filter(Boolean) as []
+      .filter(Boolean) as [],
   ),
 }
 
