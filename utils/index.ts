@@ -1,4 +1,5 @@
-import { readFile, writeFile } from 'fs/promises'
+import path from 'node:path'
+import { readFile, writeFile } from 'node:fs/promises'
 import { viem, ethers, upgrades } from 'hardhat'
 import {
   createWalletClient,
@@ -49,7 +50,7 @@ export async function deployContract(
   bytecode: string,
   args?: unknown[],
 ) {
-  const publicClient = (await viem.getPublicClient()) as PublicClient
+  const publicClient = await viem.getPublicClient()
   const hash = await owner.deployContract({
     abi,
     bytecode: bytecode as `0x${string}`,
@@ -68,7 +69,7 @@ export async function erc20Read(
   functionName: Erc20FunctionName,
   args?: Erc20Args,
 ) {
-  const publicClient = (await viem.getPublicClient()) as PublicClient
+  const publicClient = await viem.getPublicClient()
   return publicClient.readContract({
     address: token,
     abi: erc20Abi,
@@ -122,7 +123,7 @@ export async function getBalance(
   token: Address,
   owner: Address,
 ) {
-  const publicClient = (await viem.getPublicClient()) as PublicClient
+  const publicClient = await viem.getPublicClient()
   if (isAddressEqual(zeroAddress, token)) {
     return publicClient.getBalance({ address: owner })
   } else {
@@ -139,8 +140,30 @@ export async function getLocalWalletClient(privateKey: Hash) {
   })
 }
 
-export function exec(callback: () => Promise<void>) {
-  callback()
+export async function getWalletClient(privateKey: Hash, publicClient?: PublicClient) {
+  const account = privateKeyToAccount(privateKey)
+  if (!publicClient) {
+    publicClient = await viem.getPublicClient()
+  }
+  return createWalletClient({
+    account,
+    chain: publicClient.chain,
+    transport: http(publicClient.chain.rpcUrls.default.http[0]),
+  })
+}
+
+export async function exec(callback: (chainId: number | undefined) => Promise<void>) {
+  let chainId: number | undefined
+  const network = process.env.HARDHAT_NETWORK as string
+
+  if (network) {
+    try {
+      const networks = await readJson(path.resolve(__dirname, '../networks.json'))
+      chainId = networks[network]?.id
+    } catch { /* empty */ }
+  }
+
+  callback(chainId)
     .then(() => process.exit(0))
     .catch(error => {
       console.error(error)

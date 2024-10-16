@@ -23,6 +23,7 @@ exec(async () => {
     hash = await owner.sendTransaction({ to: address, value: amountPerTransaction * 11n / 10n })
     await publicClient.waitForTransactionReceipt({ hash })
     hash = await walletClient.sendTransaction({ to: Bet.address, value: amountPerTransaction })
+    await publicClient.waitForTransactionReceipt({ hash })
     const transaction = await publicClient.getTransactionReceipt({ hash })
     console.log(`Gas: ${transaction.gasUsed}`)
     console.log(`${i + 1} Transactions have been sent.`)

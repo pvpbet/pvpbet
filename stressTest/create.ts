@@ -3,13 +3,10 @@ import { parseUnits, zeroAddress } from 'viem'
 import { exec, readJson } from '../utils'
 import { BetDetails } from '../test/common/bet'
 
-const network = process.env.HARDHAT_NETWORK as string
 const DAY = 24n * 3600n
 const count = 5
 
-exec(async () => {
-  const networks = await readJson('./networks.json')
-  const chainId = networks[network].id
+exec(async chainId => {
   const contracts = await readJson(`./ignition/deployments/chain-${chainId}/deployed_addresses.json`)
   const parameters = await readJson(`./ignition/parameters/chain-${chainId}.json`)
 

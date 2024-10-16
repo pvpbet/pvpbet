@@ -1,11 +1,7 @@
 import { viem } from 'hardhat'
 import { exec, readJson } from '../utils'
 
-const network = process.env.HARDHAT_NETWORK as string
-
-exec(async () => {
-  const networks = await readJson('./networks.json')
-  const chainId = networks[network].id
+exec(async chainId => {
   const contracts = await readJson(`./ignition/deployments/chain-${chainId}/deployed_addresses.json`)
   const parameters = await readJson(`./ignition/parameters/chain-${chainId}.json`)
 

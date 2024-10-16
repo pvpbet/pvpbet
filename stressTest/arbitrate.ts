@@ -3,13 +3,10 @@ import { parseEther, parseUnits } from 'viem'
 import { exec, getLocalWalletClient, readJson } from '../utils'
 import type { Address, Hash } from 'viem'
 
-const network = process.env.HARDHAT_NETWORK as string
 const betAddress = process.env.LOAD_TEST_BET_ADDRESS as Address
 const count = 2000
 
-exec(async () => {
-  const networks = await readJson('./networks.json')
-  const chainId = networks[network].id
+exec(async chainId => {
   const contracts = await readJson(`./ignition/deployments/chain-${chainId}/deployed_addresses.json`)
 
   const GovToken = await viem.getContractAt('GovToken', contracts['GovToken#GovToken'])
@@ -42,6 +39,7 @@ exec(async () => {
     await publicClient.waitForTransactionReceipt({ hash })
     const index = Math.floor(Math.random() * optionLength)
     hash = await VotingEscrow.write.transfer([options[index], 1n], { account: walletClient.account })
+    await publicClient.waitForTransactionReceipt({ hash })
     const transaction = await publicClient.getTransactionReceipt({ hash })
     console.log(`Gas: ${transaction.gasUsed}`)
     console.log(`${i + 1} Transactions have been sent.`)
