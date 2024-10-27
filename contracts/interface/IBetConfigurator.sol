@@ -7,8 +7,9 @@ interface IBetConfigurator {
   function validateTitle(string calldata title) external view;
   function validateDescription(string calldata description) external view;
   function validateOptions(string[] calldata options) external view;
-  function validateUrl(string calldata url) external view;
   function validateDuration(uint256 wageringPeriodDuration, uint256 decidingPeriodDuration) external view;
+  function validateChipToken(address token) external view;
+  function validateUrl(string calldata url) external view;
 
   function betConfig() external view returns (IBet.BetConfig memory);
 
@@ -28,6 +29,9 @@ interface IBetConfigurator {
 
   function originAllowlist() external view returns (string[] memory);
   function setOriginAllowlist(string[] memory newOriginAllowlist) external;
+
+  function chipTokenAllowlist() external view returns (address[] memory);
+  function setChipTokenAllowlist(address[] memory newChipTokenAllowlist) external;
 
   function minWageredTotalAmountETH() external view returns (uint256);
   function setMinWageredTotalAmountETH(uint256 newMinWageredTotalAmountETH) external;

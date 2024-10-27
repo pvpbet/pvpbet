@@ -933,7 +933,7 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
       }
     }
 
-    if (_chip != address(0)) revert InvalidChip();
+    if (_chip != address(0)) revert InvalidChip(_chip);
     if (AddressLib.isContractSender()) revert CannotReceive();
     dispute(msg.value);
   }

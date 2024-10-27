@@ -5,7 +5,7 @@ import {IBet} from "../interface/IBet.sol";
 import {IBetActionDispute} from "../interface/IBetActionDispute.sol";
 import {IBetChip} from "../interface/IBetChip.sol";
 import {IErrors} from "../interface/IErrors.sol";
-import {AddressArrayLib} from "../lib/Address.sol";
+import {AddressLib, AddressArrayLib} from "../lib/Address.sol";
 import {MathLib} from "../lib/Math.sol";
 import {Record} from "../lib/Record.sol";
 import {TransferLib} from "../lib/Transfer.sol";
@@ -13,6 +13,7 @@ import {TransferLib} from "../lib/Transfer.sol";
 abstract contract BetActionDispute is IBetActionDispute, IErrors {
   using MathLib for uint256;
   using TransferLib for address;
+  using AddressLib for address;
   using AddressArrayLib for address[];
 
   address[] private _accounts;
@@ -158,14 +159,14 @@ abstract contract BetActionDispute is IBetActionDispute, IErrors {
 
     address chip_ = chip();
     (uint256 start, uint256 end) = _getReleasedRangeOfDisputedRecords(limit);
-    if (chip_ == address(0)) {
+    if (chip_.isBetChip()) {
+      (address[] memory accounts, uint256[] memory amounts) = _getDisputedAccountsAndAmounts(start, end);
+      IBetChip(chip_).transferBatch(accounts, amounts);
+    } else {
       for (uint256 i = start; i < end; i = i.unsafeInc()) {
         address account = _accounts[i];
         account.transferFromContract(chip_, _amounts[account], true);
       }
-    } else {
-      (address[] memory accounts, uint256[] memory amounts) = _getDisputedAccountsAndAmounts(start, end);
-      IBetChip(chip_).transferBatch(accounts, amounts);
     }
   }
 

@@ -127,7 +127,7 @@ contract BetOption is IBetOption, IErrors, IMetadata, BetActionArbitrate, BetAct
       return;
     }
 
-    if (_chip != address(0)) revert InvalidChip();
+    if (_chip != address(0)) revert InvalidChip(_chip);
     if (AddressLib.isContractSender()) revert CannotReceive();
     wager(msg.value);
   }

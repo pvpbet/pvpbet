@@ -119,7 +119,8 @@ contract BetChip is IBetChip, IErrors, ERC20 {
         }
       }
 
-      if (bet.chip() != address(this)) revert InvalidChip();
+      address chip = bet.chip();
+      if (chip != address(this)) revert InvalidChip(chip);
 
       uint256 balance = balanceOf(owner);
       if (balance < value) revert ChipInsufficientBalance(owner, balance, value);
@@ -135,6 +136,12 @@ contract BetChip is IBetChip, IErrors, ERC20 {
       _transfer(owner, to, value);
     }
 
+    return true;
+  }
+
+  function isBetChip()
+  external pure
+  returns (bool) {
     return true;
   }
 

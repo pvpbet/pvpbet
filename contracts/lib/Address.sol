@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {IBet} from "../interface/IBet.sol";
+import {IBetChip} from "../interface/IBetChip.sol";
 import {IBetOption} from "../interface/IBetOption.sol";
 import {MathLib} from "./Math.sol";
 
@@ -28,6 +29,17 @@ library AddressLib {
   returns (bool) {
     if (target.code.length > 0) {
       try IBetOption(target).isBetOption() returns (bool yes) {
+        return yes;
+      } catch {}
+    }
+    return false;
+  }
+
+  function isBetChip(address target)
+  internal view
+  returns (bool) {
+    if (target.code.length > 0) {
+      try IBetChip(target).isBetChip() returns (bool yes) {
         return yes;
       } catch {}
     }

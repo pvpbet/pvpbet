@@ -16,7 +16,7 @@ contract BetOptionFactory is IBetOptionFactory, IMetadata {
   function version()
   public pure
   returns (string memory) {
-    return "1.0.0";
+    return "1.0.1";
   }
 
   address private _implementation;

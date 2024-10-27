@@ -11,12 +11,11 @@ import {IBetConfigurator} from "./interface/IBetConfigurator.sol";
 import {IBetChipManager} from "./interface/IBetChipManager.sol";
 import {IBetFactory} from "./interface/IBetFactory.sol";
 import {IBetManager} from "./interface/IBetManager.sol";
-import {IErrors} from "./interface/IErrors.sol";
 import {IMetadata} from "./interface/IMetadata.sol";
 import {StringLib} from "./lib/String.sol";
 import {TransferLib} from "./lib/Transfer.sol";
 
-contract BetManager is IBetManager, IErrors, Upgradeable, Receivable, Withdrawable, UseVotingEscrow, UseGovToken {
+contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, UseVotingEscrow, UseGovToken {
   function name()
   public pure override
   returns (string memory) {
@@ -26,7 +25,7 @@ contract BetManager is IBetManager, IErrors, Upgradeable, Receivable, Withdrawab
   function version()
   public pure override
   returns (string memory) {
-    return "1.0.0";
+    return "1.0.1";
   }
 
   using StringLib for string;
@@ -186,17 +185,21 @@ contract BetManager is IBetManager, IErrors, Upgradeable, Receivable, Withdrawab
     address chip
   ) private
   returns (address) {
-    if (chip != address(0) && !IBetChipManager(_betChipManager).isBetChip(chip)) revert InvalidChip();
     if (votingEscrow() == address(0)) revert ServiceHasNotStartedYet();
 
     IBetConfigurator configurator = IBetConfigurator(_betConfigurator);
     configurator.validateTitle(details.title);
     configurator.validateDescription(details.description);
     configurator.validateOptions(details.options);
+    configurator.validateDuration(wageringPeriodDuration, decidingPeriodDuration);
+
+    if (chip != address(0) && !IBetChipManager(_betChipManager).isBetChip(chip)) {
+      configurator.validateChipToken(chip);
+    }
+
     if (!details.forumURL.isEmpty()) {
       configurator.validateUrl(details.forumURL);
     }
-    configurator.validateDuration(wageringPeriodDuration, decidingPeriodDuration);
 
     uint256 creationFee_ = _creationFee;
     if (creationFee_ > 0) {

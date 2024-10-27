@@ -4,19 +4,20 @@ pragma solidity ^0.8.20;
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IBet} from "./interface/IBet.sol";
 import {IBetConfigurator} from "./interface/IBetConfigurator.sol";
+import {IErrors} from "./interface/IErrors.sol";
 import {MathLib} from "./lib/Math.sol";
 import {StringLib} from "./lib/String.sol";
 
-contract BetConfigurator is IBetConfigurator, Ownable {
+contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
   using MathLib for uint256;
   using StringLib for string;
 
   error InvalidTitle(string title);
   error InvalidDescription(string description);
-  error InvalidUrl(string url);
   error InvalidOptionCount(uint256 count);
   error InvalidWageringPeriodDuration(uint256 duration);
   error InvalidDecidingPeriodDuration(uint256 duration);
+  error InvalidUrl(string url);
 
   // Bet creation restrictions
   uint256 private _minOptionsCount;
@@ -26,6 +27,7 @@ contract BetConfigurator is IBetConfigurator, Ownable {
   uint256 private _minDecidingPeriodDuration;
   uint256 private _maxDecidingPeriodDuration;
   string[] private _originAllowlist;
+  address[] private _chipTokenAllowlist;
 
   // Bet configuration
   uint256 private _minWageredTotalAmountETH;
@@ -46,17 +48,17 @@ contract BetConfigurator is IBetConfigurator, Ownable {
     _minOptionsCount = 2;
     _maxOptionsCount = 10;
 
-    _minWageringPeriodDuration = 2 days;
+    _minWageringPeriodDuration = 1 days;
     _maxWageringPeriodDuration = 90 days;
-    _minDecidingPeriodDuration = 2 days;
+    _minDecidingPeriodDuration = 1 days;
     _maxDecidingPeriodDuration = 90 days;
 
-    _minWageredTotalAmountETH = 5 ether;
-    _minWageredTotalQuantityERC20 = 10000;
-    _minDecidedTotalQuantity = 10000;
-    _minArbitratedTotalQuantity = 10000;
+    _minWageredTotalAmountETH = 0.2 ether;
+    _minWageredTotalQuantityERC20 = 200;
+    _minDecidedTotalQuantity = 1000;
+    _minArbitratedTotalQuantity = 1000;
 
-    _announcementPeriodDuration = 2 days;
+    _announcementPeriodDuration = 1 days;
     _arbitratingPeriodDuration = 3 days;
 
     _singleOptionMaxAmountRatio = 85;
@@ -85,6 +87,31 @@ contract BetConfigurator is IBetConfigurator, Ownable {
     if (optionCount < _minOptionsCount || optionCount > _maxOptionsCount) revert InvalidOptionCount(optionCount);
   }
 
+  function validateDuration(uint256 wageringPeriodDuration, uint256 decidingPeriodDuration)
+  external view {
+    if (
+      wageringPeriodDuration < _minWageringPeriodDuration ||
+      wageringPeriodDuration > _maxWageringPeriodDuration
+    ) revert InvalidWageringPeriodDuration(wageringPeriodDuration);
+    if (
+      decidingPeriodDuration < _minDecidingPeriodDuration ||
+      decidingPeriodDuration > _maxDecidingPeriodDuration
+    ) revert InvalidDecidingPeriodDuration(decidingPeriodDuration);
+  }
+
+  function validateChipToken(address token)
+  external view {
+    bool isAllowedChipToken = false;
+    uint256 length = _chipTokenAllowlist.length;
+    for (uint256 i = 0; i < length; i = i.unsafeInc()) {
+      if (token == _chipTokenAllowlist[i]) {
+        isAllowedChipToken = true;
+        break;
+      }
+    }
+    if (!isAllowedChipToken) revert InvalidChip(token);
+  }
+
   function validateUrl(string calldata url)
   external view {
     bool isAllowedOrigin = false;
@@ -96,18 +123,6 @@ contract BetConfigurator is IBetConfigurator, Ownable {
       }
     }
     if (!isAllowedOrigin) revert InvalidUrl(url);
-  }
-
-  function validateDuration(uint256 wageringPeriodDuration, uint256 decidingPeriodDuration)
-  external view {
-    if (
-      wageringPeriodDuration < _minWageringPeriodDuration ||
-      wageringPeriodDuration > _maxWageringPeriodDuration
-    ) revert InvalidWageringPeriodDuration(wageringPeriodDuration);
-    if (
-      decidingPeriodDuration < _minDecidingPeriodDuration ||
-      decidingPeriodDuration > _maxDecidingPeriodDuration
-    ) revert InvalidDecidingPeriodDuration(decidingPeriodDuration);
   }
 
   function betConfig()
@@ -205,6 +220,17 @@ contract BetConfigurator is IBetConfigurator, Ownable {
   function setOriginAllowlist(string[] memory newOriginAllowlist)
   external onlyOwner {
     _originAllowlist = newOriginAllowlist;
+  }
+
+  function chipTokenAllowlist()
+  external view
+  returns (address[] memory) {
+    return _chipTokenAllowlist;
+  }
+
+  function setChipTokenAllowlist(address[] memory newChipTokenAllowlist)
+  external onlyOwner {
+    _chipTokenAllowlist = newChipTokenAllowlist;
   }
 
   function minWageredTotalAmountETH()

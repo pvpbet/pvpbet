@@ -6,6 +6,11 @@ interface IBetChip {
   event Withdrawn(address indexed sender, uint256 value);
 
   /**
+   * @dev Returns true if the contract is a bet chip.
+   */
+  function isBetChip() external view returns (bool);
+
+  /**
    * @dev Batch transfer.
    */
   function transferBatch(address[] memory tos, uint256[] memory values) external returns (bool);
