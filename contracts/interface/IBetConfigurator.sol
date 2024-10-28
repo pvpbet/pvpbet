@@ -11,7 +11,7 @@ interface IBetConfigurator {
   function validateChipToken(address token) external view;
   function validateUrl(string calldata url) external view;
 
-  function betConfig() external view returns (IBet.BetConfig memory);
+  function betConfig(address chip) external view returns (IBet.BetConfig memory);
 
   function minOptionsCount() external view returns (uint256);
   function setMinOptionsCount(uint256 newMinOptionsCount) external;
@@ -33,15 +33,17 @@ interface IBetConfigurator {
   function chipTokenAllowlist() external view returns (address[] memory);
   function setChipTokenAllowlist(address[] memory newChipTokenAllowlist) external;
 
-  function minWageredTotalAmountETH() external view returns (uint256);
-  function setMinWageredTotalAmountETH(uint256 newMinWageredTotalAmountETH) external;
-  function minWageredTotalQuantityERC20() external view returns (uint256);
-  function setMinWageredTotalQuantityERC20(uint256 newMinWageredTotalQuantityERC20) external;
+  function chipMinValue(address chip) external view returns (uint256);
+  function setChipMinValue(address chip, uint256 newChipMinValue) external;
+  function voteMinValue() external view returns (uint256);
+  function setVoteMinValue(uint256 newVoteMinValue) external;
 
-  function minDecidedTotalQuantity() external view returns (uint256);
-  function setMinDecidedTotalQuantity(uint256 newMinDecidedTotalQuantity) external;
-  function minArbitratedTotalQuantity() external view returns (uint256);
-  function setMinArbitratedTotalQuantity(uint256 newMinArbitratedTotalQuantity) external;
+  function minWageredTotalAmount(address chip) external view returns (uint256);
+  function setMinWageredTotalAmount(address chip, uint256 newMinWageredTotalAmount) external;
+  function minDecidedTotalAmount() external view returns (uint256);
+  function setMinDecidedTotalAmount(uint256 newMinDecidedTotalAmount) external;
+  function minArbitratedTotalAmount() external view returns (uint256);
+  function setMinArbitratedTotalAmount(uint256 newMinArbitratedTotalAmount) external;
 
   function announcementPeriodDuration() external view returns (uint256);
   function setAnnouncementPeriodDuration(uint256 newAnnouncementPeriodDuration) external;

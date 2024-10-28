@@ -30,10 +30,11 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
   address[] private _chipTokenAllowlist;
 
   // Bet configuration
-  uint256 private _minWageredTotalAmountETH;
-  uint256 private _minWageredTotalQuantityERC20;
-  uint256 private _minDecidedTotalQuantity;
-  uint256 private _minArbitratedTotalQuantity;
+  mapping(address => uint256) private _chipMinValues;
+  mapping(address => uint256) private _chipMinWageredTotalAmounts;
+  uint256 private _voteMinValue;
+  uint256 private _minDecidedTotalAmount;
+  uint256 private _minArbitratedTotalAmount;
   uint256 private _announcementPeriodDuration;
   uint256 private _arbitratingPeriodDuration;
   uint256 private _singleOptionMaxAmountRatio;
@@ -53,10 +54,11 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
     _minDecidingPeriodDuration = 1 days;
     _maxDecidingPeriodDuration = 90 days;
 
-    _minWageredTotalAmountETH = 0.2 ether;
-    _minWageredTotalQuantityERC20 = 200;
-    _minDecidedTotalQuantity = 1000;
-    _minArbitratedTotalQuantity = 1000;
+    _chipMinValues[address(0)] = 0.001 ether;
+    _chipMinWageredTotalAmounts[address(0)] = 0.2 ether;
+    _voteMinValue = 1 ether;
+    _minDecidedTotalAmount = 1000 ether;
+    _minArbitratedTotalAmount = 1000 ether;
 
     _announcementPeriodDuration = 1 days;
     _arbitratingPeriodDuration = 3 days;
@@ -82,13 +84,13 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
   }
 
   function validateOptions(string[] calldata options)
-  external view {
+  public view {
     uint256 optionCount = options.length;
     if (optionCount < _minOptionsCount || optionCount > _maxOptionsCount) revert InvalidOptionCount(optionCount);
   }
 
   function validateDuration(uint256 wageringPeriodDuration, uint256 decidingPeriodDuration)
-  external view {
+  public view {
     if (
       wageringPeriodDuration < _minWageringPeriodDuration ||
       wageringPeriodDuration > _maxWageringPeriodDuration
@@ -100,7 +102,7 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
   }
 
   function validateChipToken(address token)
-  external view {
+  public view {
     bool isAllowedChipToken = false;
     uint256 length = _chipTokenAllowlist.length;
     for (uint256 i = 0; i < length; i = i.unsafeInc()) {
@@ -113,7 +115,7 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
   }
 
   function validateUrl(string calldata url)
-  external view {
+  public view {
     bool isAllowedOrigin = false;
     uint256 length = _originAllowlist.length;
     for (uint256 i = 0; i < length; i = i.unsafeInc()) {
@@ -125,14 +127,15 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
     if (!isAllowedOrigin) revert InvalidUrl(url);
   }
 
-  function betConfig()
-  external view
+  function betConfig(address chip)
+  public view
   returns (IBet.BetConfig memory) {
     return IBet.BetConfig({
-      minWageredTotalAmountETH: _minWageredTotalAmountETH,
-      minWageredTotalQuantityERC20: _minWageredTotalQuantityERC20,
-      minDecidedTotalQuantity: _minDecidedTotalQuantity,
-      minArbitratedTotalQuantity: _minArbitratedTotalQuantity,
+      chipMinValue: chipMinValue(chip),
+      voteMinValue: _voteMinValue,
+      minWageredTotalAmount: minWageredTotalAmount(chip),
+      minDecidedTotalAmount: _minDecidedTotalAmount,
+      minArbitratedTotalAmount: _minArbitratedTotalAmount,
       announcementPeriodDuration: _announcementPeriodDuration,
       arbitratingPeriodDuration: _arbitratingPeriodDuration,
       singleOptionMaxAmountRatio: _singleOptionMaxAmountRatio,
@@ -146,7 +149,7 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
   }
 
   function minOptionsCount()
-  external view
+  public view
   returns (uint256) {
     return _minOptionsCount;
   }
@@ -157,7 +160,7 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
   }
 
   function maxOptionsCount()
-  external view
+  public view
   returns (uint256) {
     return _maxOptionsCount;
   }
@@ -168,7 +171,7 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
   }
 
   function minWageringPeriodDuration()
-  external view
+  public view
   returns (uint256) {
     return _minWageringPeriodDuration;
   }
@@ -179,7 +182,7 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
   }
 
   function maxWageringPeriodDuration()
-  external view
+  public view
   returns (uint256) {
     return _maxWageringPeriodDuration;
   }
@@ -190,7 +193,7 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
   }
 
   function minDecidingPeriodDuration()
-  external view
+  public view
   returns (uint256) {
     return _minDecidingPeriodDuration;
   }
@@ -201,7 +204,7 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
   }
 
   function maxDecidingPeriodDuration()
-  external view
+  public view
   returns (uint256) {
     return _maxDecidingPeriodDuration;
   }
@@ -212,7 +215,7 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
   }
 
   function originAllowlist()
-  external view
+  public view
   returns (string[] memory) {
     return _originAllowlist;
   }
@@ -223,7 +226,7 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
   }
 
   function chipTokenAllowlist()
-  external view
+  public view
   returns (address[] memory) {
     return _chipTokenAllowlist;
   }
@@ -233,52 +236,63 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
     _chipTokenAllowlist = newChipTokenAllowlist;
   }
 
-  function minWageredTotalAmountETH()
-  external view
+  function chipMinValue(address chip)
+  public view
   returns (uint256) {
-    return _minWageredTotalAmountETH;
+    return _chipMinValues[chip] > 0 ? _chipMinValues[chip] : 1 ether;
   }
 
-  function setMinWageredTotalAmountETH(uint256 newMinWageredTotalAmountETH)
+  function setChipMinValue(address chip, uint256 newChipMinValue)
   external onlyOwner {
-    _minWageredTotalAmountETH = newMinWageredTotalAmountETH;
+    _chipMinValues[chip] = newChipMinValue;
   }
 
-  function minWageredTotalQuantityERC20()
-  external view
+  function voteMinValue()
+  public view
   returns (uint256) {
-    return _minWageredTotalQuantityERC20;
+    return _voteMinValue;
   }
 
-  function setMinWageredTotalQuantityERC20(uint256 newMinWageredTotalQuantityERC20)
+  function setVoteMinValue(uint256 newVoteMinValue)
   external onlyOwner {
-    _minWageredTotalQuantityERC20 = newMinWageredTotalQuantityERC20;
+    _voteMinValue = newVoteMinValue;
   }
 
-  function minDecidedTotalQuantity()
-  external view
+  function minWageredTotalAmount(address chip)
+  public view
   returns (uint256) {
-    return _minDecidedTotalQuantity;
+    return _chipMinWageredTotalAmounts[chip] > 0 ? _chipMinWageredTotalAmounts[chip] : chipMinValue(chip) * 200;
   }
 
-  function setMinDecidedTotalQuantity(uint256 newMinDecidedTotalQuantity)
+  function setMinWageredTotalAmount(address chip, uint256 newMinWageredTotalAmount)
   external onlyOwner {
-    _minDecidedTotalQuantity = newMinDecidedTotalQuantity;
+    _chipMinWageredTotalAmounts[chip] = newMinWageredTotalAmount;
   }
 
-  function minArbitratedTotalQuantity()
-  external view
+  function minDecidedTotalAmount()
+  public view
   returns (uint256) {
-    return _minArbitratedTotalQuantity;
+    return _minDecidedTotalAmount;
   }
 
-  function setMinArbitratedTotalQuantity(uint256 newMinArbitratedTotalQuantity)
+  function setMinDecidedTotalAmount(uint256 newMinDecidedTotalAmount)
   external onlyOwner {
-    _minArbitratedTotalQuantity = newMinArbitratedTotalQuantity;
+    _minDecidedTotalAmount = newMinDecidedTotalAmount;
+  }
+
+  function minArbitratedTotalAmount()
+  public view
+  returns (uint256) {
+    return _minArbitratedTotalAmount;
+  }
+
+  function setMinArbitratedTotalAmount(uint256 newMinArbitratedTotalAmount)
+  external onlyOwner {
+    _minArbitratedTotalAmount = newMinArbitratedTotalAmount;
   }
 
   function announcementPeriodDuration()
-  external view
+  public view
   returns (uint256) {
     return _announcementPeriodDuration;
   }
@@ -289,7 +303,7 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
   }
 
   function arbitratingPeriodDuration()
-  external view
+  public view
   returns (uint256) {
     return _arbitratingPeriodDuration;
   }
@@ -300,7 +314,7 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
   }
 
   function singleOptionMaxAmountRatio()
-  external view
+  public view
   returns (uint256) {
     return _singleOptionMaxAmountRatio;
   }
@@ -311,7 +325,7 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
   }
 
   function confirmDisputeAmountRatio()
-  external view
+  public view
   returns (uint256) {
     return _confirmDisputeAmountRatio;
   }
@@ -322,7 +336,7 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
   }
 
   function protocolRewardRatio()
-  external view
+  public view
   returns (uint256) {
     return _protocolRewardRatio;
   }
@@ -333,7 +347,7 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
   }
 
   function creatorRewardRatio()
-  external view
+  public view
   returns (uint256) {
     return _creatorRewardRatio;
   }
@@ -344,7 +358,7 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
   }
 
   function deciderRewardRatio()
-  external view
+  public view
   returns (uint256) {
     return _deciderRewardRatio;
   }
@@ -355,7 +369,7 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
   }
 
   function countPerRelease()
-  external view
+  public view
   returns (uint256) {
     return _countPerRelease;
   }
@@ -366,7 +380,7 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
   }
 
   function countPerPenalize()
-  external view
+  public view
   returns (uint256) {
     return _countPerPenalize;
   }

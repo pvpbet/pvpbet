@@ -29,32 +29,29 @@ contract BetOption is IBetOption, IErrors, IMetadata, BetActionArbitrate, BetAct
 
   string private _version;
   string private _description;
+  IBet.BetConfig private _config;
   address private _bet;
   address private _chip;
   address private _vote;
-  uint256 private _chipPerQuantity;
-  uint256 private _votePerQuantity;
   bool private _initialized;
 
   function initialize(
     string memory version_,
     string memory description_,
+    IBet.BetConfig memory config_,
     address bet_,
     address chip_,
-    address vote_,
-    uint256 chipPerQuantity,
-    uint256 votePerQuantity
+    address vote_
   )
   public {
     if (_initialized) revert InvalidInitialization();
     _initialized = true;
     _version = version_;
     _description = description_;
+    _config = config_;
     _bet = bet_;
     _chip = chip_;
     _vote = vote_;
-    _chipPerQuantity = chipPerQuantity;
-    _votePerQuantity = votePerQuantity;
   }
 
   modifier onlyBet() override(BetActionDecide, BetActionWager) {
@@ -104,17 +101,13 @@ contract BetOption is IBetOption, IErrors, IMetadata, BetActionArbitrate, BetAct
   function chipMinValue()
   public view override(IBetOption, BetActionWager)
   returns (uint256) {
-    if (_chip == address(0)) {
-      return 0.001 ether;
-    } else {
-      return _chipPerQuantity;
-    }
+    return _config.chipMinValue;
   }
 
   function voteMinValue()
   public view override(IBetOption, BetActionArbitrate, BetActionDecide)
   returns (uint256) {
-    return _votePerQuantity;
+    return _config.voteMinValue;
   }
 
   receive() external payable {

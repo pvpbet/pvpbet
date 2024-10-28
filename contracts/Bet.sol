@@ -58,12 +58,6 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
   uint256 private _decidingPeriodDeadline;
   uint256 private _arbitratingPeriodStartTime;
 
-  uint256 private _chipPerQuantity;
-  uint256 private _votePerQuantity;
-  uint256 private _minWageredTotalAmount;
-  uint256 private _minDecidedTotalAmount;
-  uint256 private _minArbitratedTotalAmount;
-
   uint256 private _releasedOffset;
   uint256 private _penalizedOffset;
   bool private _released;
@@ -98,25 +92,15 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
     _govTokenStaking = IUseGovTokenStaking(vote_).govTokenStaking();
     _betManager = betManager;
 
-    uint256 chipPerQuantity_ = _chipPerQuantity = MathLib.unsafePow(10, _chip.decimals());
-    uint256 votePerQuantity_ = _votePerQuantity = MathLib.unsafePow(10, _vote.decimals());
-
-    _minWageredTotalAmount = _chip == address(0)
-      ? config_.minWageredTotalAmountETH
-      : config_.minWageredTotalQuantityERC20.unsafeMul(chipPerQuantity_);
-    _minDecidedTotalAmount = config_.minDecidedTotalQuantity.unsafeMul(votePerQuantity_);
-    _minArbitratedTotalAmount = config_.minArbitratedTotalQuantity.unsafeMul(votePerQuantity_);
-
-    _createBetOptions(betOptionFactory, details_, chip_, vote_, chipPerQuantity_, votePerQuantity_);
+    _createBetOptions(betOptionFactory, config_, details_, chip_, vote_);
   }
 
   function _createBetOptions(
     address betOptionFactory,
+    BetConfig memory config_,
     BetDetails memory details_,
     address chip_,
-    address vote_,
-    uint256 chipPerQuantity_,
-    uint256 votePerQuantity_
+    address vote_
   )
   private {
     IBetOptionFactory factory = IBetOptionFactory(betOptionFactory);
@@ -125,11 +109,10 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
       _options.push(
         factory.createBetOption(
           details_.options[i],
+          config_,
           address(this),
           chip_,
-          vote_,
-          chipPerQuantity_,
-          votePerQuantity_
+          vote_
         )
       );
     }
@@ -218,29 +201,25 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
   function chipMinValue()
   public view override(IBet, BetActionDispute)
   returns (uint256) {
-    if (_chip == address(0)) {
-      return 0.001 ether;
-    } else {
-      return _chipPerQuantity;
-    }
+    return _config.chipMinValue;
   }
 
   function voteMinValue()
   public view override(IBet, BetActionArbitrate)
   returns (uint256) {
-    return _votePerQuantity;
+    return _config.voteMinValue;
   }
 
   function minWageredTotalAmount()
   public view
   returns (uint256) {
-    return _minWageredTotalAmount;
+    return _config.minWageredTotalAmount;
   }
 
   function minDecidedTotalAmount()
   public view
   returns (uint256) {
-    return _minDecidedTotalAmount;
+    return _config.minDecidedTotalAmount;
   }
 
   function minDisputedTotalAmount()
@@ -252,7 +231,7 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
   function minArbitratedTotalAmount()
   public view
   returns (uint256) {
-    return _minArbitratedTotalAmount;
+    return _config.minArbitratedTotalAmount;
   }
 
   function wageredTotalAmount()
@@ -510,7 +489,7 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
       total = total.unsafeAdd(wageredAmount);
     }
 
-    if (total < _minWageredTotalAmount) return false;
+    if (total < _config.minWageredTotalAmount) return false;
 
     uint256 singleOptionMaxAmount = total.mulDiv(_config.singleOptionMaxAmountRatio, 100);
     if (max > singleOptionMaxAmount) return false;
@@ -542,7 +521,7 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
         winningOption = address(0);
       }
     }
-    if (total < _minDecidedTotalAmount) return address(0);
+    if (total < _config.minDecidedTotalAmount) return address(0);
     return winningOption;
   }
 
@@ -565,7 +544,7 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
         winningOption = address(0);
       }
     }
-    if (total < _minArbitratedTotalAmount) return address(0);
+    if (total < _config.minArbitratedTotalAmount) return address(0);
     return winningOption;
   }
 

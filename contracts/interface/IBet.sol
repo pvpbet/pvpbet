@@ -3,10 +3,11 @@ pragma solidity ^0.8.20;
 
 interface IBet {
   struct BetConfig {
-    uint256 minWageredTotalAmountETH;
-    uint256 minWageredTotalQuantityERC20;
-    uint256 minDecidedTotalQuantity;
-    uint256 minArbitratedTotalQuantity;
+    uint256 chipMinValue;
+    uint256 voteMinValue;
+    uint256 minWageredTotalAmount;
+    uint256 minDecidedTotalAmount;
+    uint256 minArbitratedTotalAmount;
     uint256 announcementPeriodDuration;
     uint256 arbitratingPeriodDuration;
     uint256 singleOptionMaxAmountRatio;

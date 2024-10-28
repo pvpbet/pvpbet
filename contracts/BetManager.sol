@@ -25,7 +25,7 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, UseVo
   function version()
   public pure override
   returns (string memory) {
-    return "1.0.1";
+    return "1.0.2";
   }
 
   using StringLib for string;
@@ -207,7 +207,7 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, UseVo
     }
 
     address bet = IBetFactory(_betFactory).createBet(
-      configurator.betConfig(),
+      configurator.betConfig(chip),
       details,
       wageringPeriodDuration,
       decidingPeriodDuration,

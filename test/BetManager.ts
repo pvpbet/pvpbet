@@ -204,7 +204,6 @@ describe('BetManager', () => {
     it('Bet configuration', async () => {
       const {
         BetChip,
-        VotingEscrow,
         BetManager,
         BetConfigurator,
         user,
@@ -213,10 +212,6 @@ describe('BetManager', () => {
         zeroAddress,
         BetChip.address,
       ]
-
-      const betConfig = await BetConfigurator.read.betConfig()
-      const chipDecimals = await BetChip.read.decimals()
-      const voteDecimals = await VotingEscrow.read.decimals()
 
       for (const chip of chips) {
         const Bet = await createBet(
@@ -227,13 +222,11 @@ describe('BetManager', () => {
           DAY3,
           chip,
         )
+        const betConfig = await BetConfigurator.read.betConfig([chip])
         assert.deepEqual(await Bet.read.config(), betConfig)
-        assert.equal(
-          await Bet.read.minWageredTotalAmount(),
-          isAddressEqual(chip, BetChip.address) ? parseUnits(String(betConfig.minWageredTotalQuantityERC20), chipDecimals) : betConfig.minWageredTotalAmountETH,
-        )
-        assert.equal(await Bet.read.minDecidedTotalAmount(), parseUnits(String(betConfig.minDecidedTotalQuantity), voteDecimals))
-        assert.equal(await Bet.read.minArbitratedTotalAmount(), parseUnits(String(betConfig.minArbitratedTotalQuantity), voteDecimals))
+        assert.equal(await Bet.read.minWageredTotalAmount(), betConfig.minWageredTotalAmount)
+        assert.equal(await Bet.read.minDecidedTotalAmount(), betConfig.minDecidedTotalAmount)
+        assert.equal(await Bet.read.minArbitratedTotalAmount(), betConfig.minArbitratedTotalAmount)
       }
     })
 

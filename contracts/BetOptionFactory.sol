@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
+import {IBet} from "./interface/IBet.sol";
 import {IBetOptionFactory} from "./interface/IBetOptionFactory.sol";
 import {IMetadata} from "./interface/IMetadata.sol";
 import {BetOption} from "./BetOption.sol";
@@ -16,18 +17,17 @@ contract BetOptionFactory is IBetOptionFactory, IMetadata {
   function version()
   public pure
   returns (string memory) {
-    return "1.0.1";
+    return "1.0.2";
   }
 
   address private _implementation;
 
   function createBetOption(
     string calldata description,
+    IBet.BetConfig calldata config,
     address bet,
     address chip,
-    address vote,
-    uint256 chipPerQuantity,
-    uint256 votePerQuantity
+    address vote
   ) external returns (address) {
     BetOption betOption;
     if (_implementation == address(0)) {
@@ -39,11 +39,10 @@ contract BetOptionFactory is IBetOptionFactory, IMetadata {
     betOption.initialize(
       version(),
       description,
+      config,
       bet,
       chip,
-      vote,
-      chipPerQuantity,
-      votePerQuantity
+      vote
     );
     return address(betOption);
   }

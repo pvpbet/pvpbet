@@ -75,8 +75,11 @@ describe('Bet', () => {
     const GovToken = await deployGovToken()
     const GovTokenStaking = await deployGovTokenStaking(VotingEscrow.address, GovToken.address, BetChip.address)
     const BetManager = await deployBetManager(BetChipManager.address, VotingEscrow.address, GovToken.address)
+    const BetConfigurator = await viem.getContractAt('BetConfigurator', await BetManager.read.betConfigurator())
 
     await VotingEscrow.write.setGovTokenStaking([GovTokenStaking.address])
+    await BetConfigurator.write.setChipMinValue([BetChip.address, parseUnits('1', 6)])
+    await BetConfigurator.write.setMinWageredTotalAmount([BetChip.address, parseUnits('1000', 6)])
     await GovToken.write.transfer([user.account.address, parseUnits('1000000', 18)])
     await GovToken.write.transfer([hacker.account.address, parseUnits('1000000', 18)])
 
@@ -151,10 +154,11 @@ describe('Bet', () => {
           Bet.write.initialize([
             '2.0.0',
             {
-              minWageredTotalAmountETH: 0n,
-              minWageredTotalQuantityERC20: 0n,
-              minDecidedTotalQuantity: 0n,
-              minArbitratedTotalQuantity: 0n,
+              chipMinValue: 0n,
+              voteMinValue: 0n,
+              minWageredTotalAmount: 0n,
+              minDecidedTotalAmount: 0n,
+              minArbitratedTotalAmount: 0n,
               announcementPeriodDuration: 0n,
               arbitratingPeriodDuration: 0n,
               singleOptionMaxAmountRatio: 0n,
