@@ -15,12 +15,12 @@ contract BetChipFactory is IBetChipFactory, IMetadata {
   function version()
   public pure
   returns (string memory) {
-    return "1.0.1";
+    return "1.0.2";
   }
 
   function createBetChip(address token) external returns (address) {
     return address(
-      new BetChip(token)
+      new BetChip(version(), token)
     );
   }
 }

@@ -239,7 +239,7 @@ describe('Bet', () => {
         const wageredAmount = await Bet.read.chipMinValue()
         await assert.isRejected(
           transfer(user, chip, Bet.address, wageredAmount - 1n),
-          'AnnouncementPeriodHasNotStartedYet',
+          'InvalidAmount',
         )
         await assert.isRejected(
           transfer(user, chip, options[0], wageredAmount - 1n),
@@ -392,11 +392,11 @@ describe('Bet', () => {
           assert.equal(await Bet.read.status(), BetStatus.DECIDING)
           await assert.isRejected(
             transfer(user, chip, Bet.address, 1n),
-            'AnnouncementPeriodHasNotStartedYet',
+            'InvalidAmount',
           )
           await assert.isRejected(
             transfer(user, chip, options[0], 1n),
-            'WageringPeriodHasAlreadyEnded',
+            'InvalidAmount',
           )
         }
 
@@ -1008,7 +1008,7 @@ describe('Bet', () => {
         )
         await assert.isRejected(
           transfer(user, chip, options[1], disputedAmount - 1n),
-          'WageringPeriodHasAlreadyEnded',
+          'InvalidAmount',
         )
       }
     })

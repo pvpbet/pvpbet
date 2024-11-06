@@ -58,36 +58,59 @@ abstract contract BetActionDispute is IBetActionDispute, IErrors {
 
   function dispute(uint256 amount)
   public virtual {
-    _dispute(msg.sender, amount);
+    address disputer = msg.sender;
+    (uint256 payment, uint256 refund) = _dispute(disputer, amount);
+    if (payment > refund) {
+      disputer.transferToContract(chip(), payment - refund);
+    } else if (payment < refund) {
+      disputer.transferFromContract(chip(), refund - payment);
+    }
+  }
+
+  function dispute(uint256 amount, uint256 nonce, uint256 deadline, bytes calldata signature)
+  public virtual {
+    address disputer = msg.sender;
+    (uint256 payment, uint256 refund) = _dispute(disputer, amount);
+    if (payment > refund) {
+      disputer.transferToContract(chip(), payment - refund, nonce, deadline, signature);
+    } else if (payment < refund) {
+      disputer.transferFromContract(chip(), refund - payment);
+    }
   }
 
   function dispute(address disputer, uint256 amount)
   public virtual
   onlyChip {
-    _dispute(disputer, amount);
+    (uint256 payment, uint256 refund) = _dispute(disputer, amount);
+    if (payment > refund) {
+      disputer.transferToContract(chip(), payment - refund);
+    } else if (payment < refund) {
+      disputer.transferFromContract(chip(), refund - payment);
+    }
   }
 
   function _dispute(address disputer, uint256 amount)
-  internal {
+  internal
+  returns (uint256 payment, uint256 refund) {
+    if (amount > 0 && amount < chipMinValue()) revert InvalidAmount();
     IBet.Status status = IBet(bet()).statusUpdate();
     if (status < IBet.Status.ANNOUNCEMENT) revert AnnouncementPeriodHasNotStartedYet();
     if (status > IBet.Status.ANNOUNCEMENT) revert AnnouncementPeriodHasAlreadyEnded();
 
-    address chip_ = chip();
-    uint256 disputedAmount_ = _amounts[disputer];
-    if (disputedAmount_ > 0) {
-      _amounts[disputer] = 0;
-      _totalAmount = _totalAmount.unsafeSub(disputedAmount_);
+    payment = amount;
+    refund = _amounts[disputer];
+    _amounts[disputer] = payment;
+
+    if (payment > 0 && refund == 0) {
+      _accounts.push(disputer);
+    } else if (payment == 0 && refund > 0) {
       _accounts.remove(disputer);
-      disputer.transferFromContract(chip_, disputedAmount_);
     }
 
-    if (amount > 0) {
-      if (amount < chipMinValue()) revert InvalidAmount();
-      disputer.transferToContract(chip_, amount);
-      _amounts[disputer] = amount;
-      _totalAmount = _totalAmount.unsafeAdd(amount);
-      _accounts.push(disputer);
+    if (payment > refund) {
+      _totalAmount = _totalAmount.unsafeAdd(payment - refund);
+    } else if (payment < refund) {
+      _totalAmount = _totalAmount.unsafeSub(refund - payment);
     }
 
     emit Disputed(disputer, amount);

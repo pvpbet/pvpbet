@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import {IBet} from "../interface/IBet.sol";
 import {IBetActionArbitrate} from "../interface/IBetActionArbitrate.sol";
 import {IErrors} from "../interface/IErrors.sol";
+import {IVotingEscrow} from "../interface/IVotingEscrow.sol";
 import {AddressArrayLib} from "../lib/Address.sol";
 import {MathLib} from "../lib/Math.sol";
 import {Record} from "../lib/Record.sol";
@@ -41,33 +42,40 @@ abstract contract BetActionArbitrate is IBetActionArbitrate, IErrors {
 
   function arbitrate(uint256 amount)
   public virtual {
-    _arbitrate(msg.sender, amount);
+    address arbitrator = msg.sender;
+    _arbitrate(arbitrator, amount);
+    if (amount > IVotingEscrow(vote()).arbitrationBalanceOf(arbitrator)) revert InvalidAmount();
   }
 
   function arbitrate(address arbitrator, uint256 amount)
   public virtual
   onlyVote {
     _arbitrate(arbitrator, amount);
+    if (amount > IVotingEscrow(vote()).arbitrationBalanceOf(arbitrator)) revert InvalidAmount();
   }
 
   function _arbitrate(address arbitrator, uint256 amount)
-  internal {
+  internal
+  returns (uint256 payment, uint256 refund) {
+    if (amount > 0 && amount < voteMinValue()) revert InvalidAmount();
     IBet.Status status = IBet(bet()).statusUpdate();
     if (status < IBet.Status.ARBITRATING) revert CurrentStatusIsNotArbitrable();
     if (status > IBet.Status.ARBITRATING) revert CurrentStatusIsNotArbitrable();
 
-    uint256 arbitratedAmount_ = _amounts[arbitrator];
-    if (arbitratedAmount_ > 0) {
-      _amounts[arbitrator] = 0;
-      _totalAmount = _totalAmount.unsafeSub(arbitratedAmount_);
+    payment = amount;
+    refund = _amounts[arbitrator];
+    _amounts[arbitrator] = payment;
+
+    if (payment > 0 && refund == 0) {
+      _accounts.push(arbitrator);
+    } else if (payment == 0 && refund > 0) {
       _accounts.remove(arbitrator);
     }
 
-    if (amount > 0) {
-      if (amount < voteMinValue()) revert InvalidAmount();
-      _amounts[arbitrator] = amount;
-      _totalAmount = _totalAmount.unsafeAdd(amount);
-      _accounts.push(arbitrator);
+    if (payment > refund) {
+      _totalAmount = _totalAmount.unsafeAdd(payment - refund);
+    } else if (payment < refund) {
+      _totalAmount = _totalAmount.unsafeSub(refund - payment);
     }
 
     emit Arbitrated(arbitrator, amount);

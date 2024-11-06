@@ -65,9 +65,9 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
   bool private _initialized;
 
   function initialize(
-    string memory version_,
-    BetConfig memory config_,
-    BetDetails memory details_,
+    string calldata version_,
+    BetConfig calldata config_,
+    BetDetails calldata details_,
     uint256 wageringPeriodDuration,
     uint256 decidingPeriodDuration,
     address creator_,
@@ -97,8 +97,8 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
 
   function _createBetOptions(
     address betOptionFactory,
-    BetConfig memory config_,
-    BetDetails memory details_,
+    BetConfig calldata config_,
+    BetDetails calldata details_,
     address chip_,
     address vote_
   )
@@ -464,6 +464,14 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
   function dispute(uint256 amount)
   public override(BetActionDispute) {
     super.dispute(amount);
+    if (_isValidDispute()) {
+      _arbitratingPeriodStartTime = block.timestamp;
+    }
+  }
+
+  function dispute(uint256 amount, uint256 nonce, uint256 deadline, bytes calldata signature)
+  public override(BetActionDispute) {
+    super.dispute(amount, nonce, deadline, signature);
     if (_isValidDispute()) {
       _arbitratingPeriodStartTime = block.timestamp;
     }

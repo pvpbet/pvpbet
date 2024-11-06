@@ -55,36 +55,48 @@ abstract contract BetActionDecide is IBetActionDecide, IErrors {
 
   function decide(uint256 amount)
   public virtual {
-    _decide(msg.sender, amount);
+    address decider = msg.sender;
+    (uint256 payment, uint256 refund) = _decide(msg.sender, amount);
+    if (payment > refund) {
+      IVotingEscrow(vote()).fix(decider, payment - refund);
+    } else if (payment < refund) {
+      IVotingEscrow(vote()).unfix(decider, refund - payment);
+    }
   }
 
   function decide(address decider, uint256 amount)
   public virtual
   onlyVote {
-    _decide(decider, amount);
+    (uint256 payment, uint256 refund) = _decide(decider, amount);
+    if (payment > refund) {
+      IVotingEscrow(vote()).fix(decider, payment - refund);
+    } else if (payment < refund) {
+      IVotingEscrow(vote()).unfix(decider, refund - payment);
+    }
   }
 
   function _decide(address decider, uint256 amount)
-  internal {
+  internal
+  returns (uint256 payment, uint256 refund) {
+    if (amount > 0 && amount < voteMinValue()) revert InvalidAmount();
     IBet.Status status = IBet(bet()).statusUpdate();
     if (status < IBet.Status.DECIDING) revert DecidingPeriodHasNotStartedYet();
     if (status > IBet.Status.DECIDING) revert DecidingPeriodHasAlreadyEnded();
 
-    address vote_ = vote();
-    uint256 decidedAmount_ = _amounts[decider];
-    if (decidedAmount_ > 0) {
-      _amounts[decider] = 0;
-      _totalAmount = _totalAmount.unsafeSub(decidedAmount_);
+    payment = amount;
+    refund = _amounts[decider];
+    _amounts[decider] = payment;
+
+    if (payment > 0 && refund == 0) {
+      _accounts.push(decider);
+    } else if (payment == 0 && refund > 0) {
       _accounts.remove(decider);
-      IVotingEscrow(vote_).unfix(decider, decidedAmount_);
     }
 
-    if (amount > 0) {
-      if (amount < voteMinValue()) revert InvalidAmount();
-      IVotingEscrow(vote_).fix(decider, amount);
-      _amounts[decider] = amount;
-      _totalAmount = _totalAmount.unsafeAdd(amount);
-      _accounts.push(decider);
+    if (payment > refund) {
+      _totalAmount = _totalAmount.unsafeAdd(payment - refund);
+    } else if (payment < refund) {
+      _totalAmount = _totalAmount.unsafeSub(refund - payment);
     }
 
     emit Decided(decider, amount);

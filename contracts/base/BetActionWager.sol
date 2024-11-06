@@ -57,35 +57,58 @@ abstract contract BetActionWager is IBetActionWager, IErrors {
 
   function wager(uint256 amount)
   public virtual {
-    _wager(msg.sender, amount);
+    address player = msg.sender;
+    (uint256 payment, uint256 refund) = _wager(player, amount);
+    if (payment > refund) {
+      player.transferToContract(chip(), payment - refund);
+    } else if (payment < refund) {
+      player.transferFromContract(chip(), refund - payment);
+    }
+  }
+
+  function wager(uint256 amount, uint256 nonce, uint256 deadline, bytes calldata signature)
+  public virtual {
+    address player = msg.sender;
+    (uint256 payment, uint256 refund) = _wager(player, amount);
+    if (payment > refund) {
+      player.transferToContract(chip(), payment - refund, nonce, deadline, signature);
+    } else if (payment < refund) {
+      player.transferFromContract(chip(), refund - payment);
+    }
   }
 
   function wager(address player, uint256 amount)
   public virtual
   onlyChip {
-    _wager(player, amount);
+    (uint256 payment, uint256 refund) = _wager(player, amount);
+    if (payment > refund) {
+      player.transferToContract(chip(), payment - refund);
+    } else if (payment < refund) {
+      player.transferFromContract(chip(), refund - payment);
+    }
   }
 
   function _wager(address player, uint256 amount)
-  internal {
+  internal
+  returns (uint256 payment, uint256 refund) {
+    if (amount > 0 && amount < chipMinValue()) revert InvalidAmount();
     IBet.Status status = IBet(bet()).statusUpdate();
     if (status > IBet.Status.WAGERING) revert WageringPeriodHasAlreadyEnded();
 
-    address chip_ = chip();
-    uint256 wageredAmount_ = _amounts[player];
-    if (wageredAmount_ > 0) {
-      _amounts[player] = 0;
-      _totalAmount = _totalAmount.unsafeSub(wageredAmount_);
+    payment = amount;
+    refund = _amounts[player];
+    _amounts[player] = payment;
+
+    if (payment > 0 && refund == 0) {
+      _accounts.push(player);
+    } else if (payment == 0 && refund > 0) {
       _accounts.remove(player);
-      player.transferFromContract(chip_, wageredAmount_);
     }
 
-    if (amount > 0) {
-      if (amount < chipMinValue()) revert InvalidAmount();
-      player.transferToContract(chip_, amount);
-      _amounts[player] = amount;
-      _totalAmount = _totalAmount.unsafeAdd(amount);
-      _accounts.push(player);
+    if (payment > refund) {
+      _totalAmount = _totalAmount.unsafeAdd(payment - refund);
+    } else if (payment < refund) {
+      _totalAmount = _totalAmount.unsafeSub(refund - payment);
     }
 
     emit Wagered(player, amount);

@@ -27,24 +27,17 @@ interface IVotingEscrow {
   function burn(address account, uint256 value) external;
 
   /**
-   * @dev Returns the vote balance of the specified account.
-   * @param account The address of the account whose vote balance is being queried.
+   * @dev Returns the value of votes owned by specified account.
+   * @param account The address of the account to query votes balance.
    * @param hasFixed If true, includes fixed votes in the balance.
    * @return The total vote balance of the account.
    */
   function balanceOf(address account, bool hasFixed) external view returns (uint256);
 
   /**
-   * @dev Returns whether the specified account is able to participate in decision.
-   * @param account The address of the account being checked.
+   * @dev Returns the value of arbitration votes owned by specified account.
    */
-  function isAbleToDecide(address account) external view returns (bool);
-
-  /**
-   * @dev Returns whether the specified account is able to participate in arbitration.
-   * @param account The address of the account being checked.
-   */
-  function isAbleToArbitrate(address account) external view returns (bool);
+  function arbitrationBalanceOf(address account) external view returns (uint256);
 
   /**
    * @dev Fixes the votes of the specified account.

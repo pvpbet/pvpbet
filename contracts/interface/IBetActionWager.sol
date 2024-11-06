@@ -8,8 +8,18 @@ interface IBetActionWager {
 
   /**
    * @dev Players to wager.
+   * @param amount The amount of bet chips to wager.
    */
   function wager(uint256 amount) external;
+
+  /**
+   * @dev Players to wager.
+   * @param amount The amount of bet chips to wager.
+   * @param nonce The nonce of the permit2.
+   * @param deadline The deadline of the permit2.
+   * @param signature The signature of the permit2.
+   */
+  function wager(uint256 amount, uint256 nonce, uint256 deadline, bytes calldata signature) external;
 
   /**
    * @dev Players to wager through the chip contract.

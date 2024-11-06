@@ -8,8 +8,18 @@ interface IBetActionDispute {
 
   /**
    * @dev Disputers to dispute.
+   * @param amount The amount of bet chips to dispute.
    */
   function dispute(uint256 amount) external;
+
+  /**
+   * @dev Disputers to dispute.
+   * @param amount The amount of bet chips to dispute.
+   * @param nonce The nonce of the permit2.
+   * @param deadline The deadline of the permit2.
+   * @param signature The signature of the permit2.
+   */
+  function dispute(uint256 amount, uint256 nonce, uint256 deadline, bytes calldata signature) external;
 
   /**
    * @dev Disputers to dispute through the chip contract.

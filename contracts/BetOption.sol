@@ -36,9 +36,9 @@ contract BetOption is IBetOption, IErrors, IMetadata, BetActionArbitrate, BetAct
   bool private _initialized;
 
   function initialize(
-    string memory version_,
-    string memory description_,
-    IBet.BetConfig memory config_,
+    string calldata version_,
+    string calldata description_,
+    IBet.BetConfig calldata config_,
     address bet_,
     address chip_,
     address vote_

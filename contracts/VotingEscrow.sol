@@ -79,6 +79,12 @@ contract VotingEscrow is IVotingEscrow, IErrors, ERC20Upgradeable, Upgradeable, 
     return balance > fixedBalance ? balance.unsafeSub(fixedBalance) : 0;
   }
 
+  function arbitrationBalanceOf(address account)
+  public view
+  returns (uint256) {
+    return IGovTokenStaking(govTokenStaking()).stakedAmount(account, IGovTokenStaking.UnlockWaitingPeriod.WEEK12);
+  }
+
   function transfer(address to, uint256 value)
   public override
   returns (bool) {
@@ -141,26 +147,12 @@ contract VotingEscrow is IVotingEscrow, IErrors, ERC20Upgradeable, Upgradeable, 
 
   function _arbitrate(address account, address target, uint256 value)
   private {
-    uint256 stakedAmount = IGovTokenStaking(govTokenStaking()).stakedAmount(account, IGovTokenStaking.UnlockWaitingPeriod.WEEK12);
-    if (stakedAmount > 0) {
-      IBetActionArbitrate(target).arbitrate(account, value > 0 ? stakedAmount : 0);
+    uint256 balance = arbitrationBalanceOf(account);
+    if (balance > 0) {
+      IBetActionArbitrate(target).arbitrate(account, value > 0 ? balance : 0);
     } else {
       revert VotingConditionsNotMet(account);
     }
-  }
-
-  function isAbleToDecide(address account)
-  public view
-  returns (bool) {
-    uint256 stakedAmount = IGovTokenStaking(govTokenStaking()).stakedAmount(account);
-    return stakedAmount > 0;
-  }
-
-  function isAbleToArbitrate(address account)
-  public view
-  returns (bool) {
-    uint256 stakedAmount = IGovTokenStaking(govTokenStaking()).stakedAmount(account, IGovTokenStaking.UnlockWaitingPeriod.WEEK12);
-    return stakedAmount > 0;
   }
 
   function fix(address account, uint256 value)

@@ -30,7 +30,7 @@ const config: HardhatUserConfig = {
     settings: {
       optimizer: {
         enabled: true,
-        runs: 200,
+        runs: 10,
       },
     },
   },
@@ -59,8 +59,8 @@ const config: HardhatUserConfig = {
             network: key,
             chainId: chain.id,
             urls: {
-              apiURL: chain.blockExplorers?.default?.apiUrl,
-              browserURL: chain.blockExplorers?.default?.url,
+              apiURL: networks[key].apiURL || chain.blockExplorers?.default?.apiUrl,
+              browserURL: networks[key].browserURL || chain.blockExplorers?.default?.url,
             },
           }
         } else {
@@ -82,7 +82,7 @@ const config: HardhatUserConfig = {
             {
               chainId: chain.id,
               url: networks[key].rpc || chain.rpcUrls.default.http[0],
-              accounts,
+              // accounts,
               ledgerAccounts,
             },
           ]

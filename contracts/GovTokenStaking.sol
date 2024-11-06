@@ -22,7 +22,7 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseVotingEsc
   function version()
   public pure override
   returns (string memory) {
-    return "1.0.0";
+    return "1.0.3";
   }
 
   using AddressLib for address;
@@ -150,6 +150,21 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseVotingEsc
     if (amount == 0) revert InvalidAmount();
     address account = msg.sender;
     account.transferToContract(govToken(), amount);
+    _mintStakingCertificate(account, amount);
+    _stake(account, unlockWaitingPeriod, amount);
+  }
+
+  function stake(
+    UnlockWaitingPeriod unlockWaitingPeriod,
+    uint256 amount,
+    uint256 nonce,
+    uint256 deadline,
+    bytes calldata signature
+  ) external {
+    if (unlockWaitingPeriod == UnlockWaitingPeriod.NONE) revert InvalidUnlockWaitingPeriod();
+    if (amount == 0) revert InvalidAmount();
+    address account = msg.sender;
+    account.transferToContract(govToken(), amount, nonce, deadline, signature);
     _mintStakingCertificate(account, amount);
     _stake(account, unlockWaitingPeriod, amount);
   }

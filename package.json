@@ -10,7 +10,8 @@
     "release": "npm run build && npm run test && npm publish --access public",
     "deploy": "npx hardhat ignition deploy ignition/modules/TestUSDC.ts --parameters ignition/parameters.json --network mainnet",
     "deploy:test": "npx hardhat run scripts/deploy.ts --network hardhat",
-    "deploy:localhost": "npx hardhat run scripts/deploy.ts --network localhost"
+    "deploy:localhost": "npx hardhat run scripts/deploy.ts --network localhost",
+    "verify": "npx hardhat ignition verify chain-11155111"
   },
   "keywords": [
     "eth",

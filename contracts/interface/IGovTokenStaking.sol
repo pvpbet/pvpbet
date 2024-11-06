@@ -28,6 +28,25 @@ interface IGovTokenStaking {
   function stake(UnlockWaitingPeriod unlockWaitingPeriod, uint256 amount) external;
 
   /**
+   * @dev Stakes a specified amount of governance tokens and mints a staking certificate.
+   * @param unlockWaitingPeriod The time period to wait for unlocking after unstaking.
+   * @param amount The amount of governance tokens to stake.
+   * @param nonce The nonce of the permit2.
+   * @param deadline The deadline of the permit2.
+   * @param signature The signature of the permit2.
+   *
+   * You must specify an unlock waiting period, which indicates the time required from unstaking to unlocking.
+   * The unlock waiting period varies, offering different staking benefits or rights.
+   */
+  function stake(
+    UnlockWaitingPeriod unlockWaitingPeriod,
+    uint256 amount,
+    uint256 nonce,
+    uint256 deadline,
+    bytes calldata signature
+  ) external;
+
+  /**
    * @dev Unstakes all governance tokens and burns the staking certificate.
    * @param unlockWaitingPeriod The waiting period for unlocking after unstaking.
    *

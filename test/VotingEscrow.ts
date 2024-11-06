@@ -110,7 +110,7 @@ describe('VotingEscrow', () => {
   })
 
   describe('Mint or Burn through staking', async () => {
-    it('#balanceOf()', async () => {
+    it('#balanceOf() #arbitrationBalanceOf()', async () => {
       const {
         VotingEscrow,
         GovToken,
@@ -121,6 +121,10 @@ describe('VotingEscrow', () => {
         await VotingEscrow.read.balanceOf([user.account.address]),
         0n,
       )
+      assert.equal(
+        await VotingEscrow.read.arbitrationBalanceOf([user.account.address]),
+        0n,
+      )
 
       const stakeAmount = parseUnits('80000', 18)
       await stake(user, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK, stakeAmount)
@@ -128,16 +132,28 @@ describe('VotingEscrow', () => {
         await VotingEscrow.read.balanceOf([user.account.address]),
         stakeAmount,
       )
+      assert.equal(
+        await VotingEscrow.read.arbitrationBalanceOf([user.account.address]),
+        0n,
+      )
 
       await stake(user, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK12, stakeAmount)
       assert.equal(
         await VotingEscrow.read.balanceOf([user.account.address]),
         stakeAmount * 2n,
       )
+      assert.equal(
+        await VotingEscrow.read.arbitrationBalanceOf([user.account.address]),
+        stakeAmount,
+      )
 
       await unstake(user, GovTokenStaking, UnlockWaitingPeriod.WEEK)
       assert.equal(
         await VotingEscrow.read.balanceOf([user.account.address]),
+        stakeAmount,
+      )
+      assert.equal(
+        await VotingEscrow.read.arbitrationBalanceOf([user.account.address]),
         stakeAmount,
       )
 
@@ -146,43 +162,9 @@ describe('VotingEscrow', () => {
         await VotingEscrow.read.balanceOf([user.account.address]),
         0n,
       )
-    })
-
-    it('#isAbleToDecide() #isAbleToArbitrate()', async () => {
-      const {
-        VotingEscrow,
-        GovToken,
-        GovTokenStaking,
-        user,
-      } = await loadFixture(deployFixture)
       assert.equal(
-        await VotingEscrow.read.isAbleToDecide([user.account.address]),
-        false,
-      )
-      assert.equal(
-        await VotingEscrow.read.isAbleToArbitrate([user.account.address]),
-        false,
-      )
-
-      const stakeAmount = parseUnits('80000', 18)
-      await stake(user, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK, stakeAmount)
-      assert.equal(
-        await VotingEscrow.read.isAbleToDecide([user.account.address]),
-        true,
-      )
-      assert.equal(
-        await VotingEscrow.read.isAbleToArbitrate([user.account.address]),
-        false,
-      )
-
-      await stake(user, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK12, stakeAmount)
-      assert.equal(
-        await VotingEscrow.read.isAbleToDecide([user.account.address]),
-        true,
-      )
-      assert.equal(
-        await VotingEscrow.read.isAbleToArbitrate([user.account.address]),
-        true,
+        await VotingEscrow.read.arbitrationBalanceOf([user.account.address]),
+        0n,
       )
     })
   })

@@ -8,12 +8,25 @@ import {IBetActionWager} from "./interface/IBetActionWager.sol";
 import {IBetChip} from "./interface/IBetChip.sol";
 import {IBetOption} from "./interface/IBetOption.sol";
 import {IErrors} from "./interface/IErrors.sol";
+import {IMetadata} from "./interface/IMetadata.sol";
 import {AddressLib} from "./lib/Address.sol";
 import {MathLib} from "./lib/Math.sol";
 import {TransferLib} from "./lib/Transfer.sol";
 import "hardhat/console.sol";
 
-contract BetChip is IBetChip, IErrors, ERC20 {
+contract BetChip is IBetChip, IErrors, IMetadata, ERC20 {
+  function name()
+  public view override(IMetadata, ERC20)
+  returns (string memory) {
+    return ERC20.name();
+  }
+
+  function version()
+  public view
+  returns (string memory) {
+    return _version;
+  }
+
   using MathLib for uint256;
   using AddressLib for address;
   using TransferLib for address;
@@ -22,15 +35,17 @@ contract BetChip is IBetChip, IErrors, ERC20 {
   error ChipNotExchangeable();
   error InvalidERC20Token();
 
+  string private _version;
   address private immutable _token;
   uint8 private immutable _decimals;
 
-  constructor(address token_)
+  constructor(string memory version_, address token_)
   ERC20(
     _getTokenName(token_),
     _getTokenSymbol(token_)
   ) {
     _checkERC20Token(token_);
+    _version = version_;
     _token = token_;
     _decimals = ERC20(token_).decimals();
   }
@@ -39,8 +54,8 @@ contract BetChip is IBetChip, IErrors, ERC20 {
   private view
   returns (string memory) {
     if (token_.code.length == 0) revert InvalidERC20Token();
-    try ERC20(token_).name() returns (string memory name) {
-      return string.concat("PVPBetChipWrapped", name);
+    try ERC20(token_).name() returns (string memory name_) {
+      return string.concat("PVPBetChipWrapped", name_);
     } catch {
       revert InvalidERC20Token();
     }
@@ -145,7 +160,7 @@ contract BetChip is IBetChip, IErrors, ERC20 {
     return true;
   }
 
-  function transferBatch(address[] memory tos, uint256[] memory values)
+  function transferBatch(address[] calldata tos, uint256[] calldata values)
   public
   returns (bool) {
     address owner = _msgSender();
@@ -170,6 +185,14 @@ contract BetChip is IBetChip, IErrors, ERC20 {
     emit Deposited(owner, value);
   }
 
+  function deposit(uint256 value, uint256 nonce, uint256 deadline, bytes calldata signature)
+  external {
+    address owner = _msgSender();
+    _ensureValidAmount(value);
+    _mintToAccount(owner, value, nonce, deadline, signature);
+    emit Deposited(owner, value);
+  }
+
   function withdraw(uint256 value)
   external {
     address owner = _msgSender();
@@ -186,6 +209,12 @@ contract BetChip is IBetChip, IErrors, ERC20 {
   function _mintToAccount(address account, uint256 value)
   private {
     account.transferToContract(_token, value);
+    _mint(account, value);
+  }
+
+  function _mintToAccount(address account, uint256 value, uint256 nonce, uint256 deadline, bytes calldata signature)
+  private {
+    account.transferToContract(_token, value, nonce, deadline, signature);
     _mint(account, value);
   }
 

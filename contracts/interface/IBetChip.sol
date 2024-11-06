@@ -13,7 +13,7 @@ interface IBetChip {
   /**
    * @dev Batch transfer.
    */
-  function transferBatch(address[] memory tos, uint256[] memory values) external returns (bool);
+  function transferBatch(address[] calldata tos, uint256[] calldata values) external returns (bool);
 
   /**
    * @dev Returns the address of the wrapped token.
@@ -25,6 +25,15 @@ interface IBetChip {
    * @param value Must be greater than `0`.
    */
   function deposit(uint256 value) external;
+
+  /**
+   * @dev Deposits a specified `value` amount of tokens and receive an equivalent amount of chip-wrapped tokens.
+   * @param value Must be greater than `0`.
+   * @param nonce The nonce of the permit2.
+   * @param deadline The deadline of the permit2.
+   * @param signature The signature of the permit2.
+   */
+  function deposit(uint256 value, uint256 nonce, uint256 deadline, bytes calldata signature) external;
 
   /**
    * @dev Withdraws a specified `value` amount of tokens and reclaim an equivalent amount of chip-wrapped tokens.
