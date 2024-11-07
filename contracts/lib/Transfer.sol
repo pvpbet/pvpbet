@@ -78,9 +78,9 @@ library TransferLib {
       IPermit2(PERMIT2).permitTransferFrom(
         IPermit2.PermitTransferFrom({
           permitted: IPermit2.TokenPermissions({
-          token: token,
-          amount: amount
-        }),
+            token: token,
+            amount: amount
+          }),
           nonce: nonce,
           deadline: deadline
         }),
