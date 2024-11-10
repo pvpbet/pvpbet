@@ -59,33 +59,21 @@ abstract contract BetActionWager is IBetActionWager, IErrors {
   public virtual {
     address player = msg.sender;
     (uint256 payment, uint256 refund) = _wager(player, amount);
-    if (payment > refund) {
-      player.transferToContract(chip(), payment - refund);
-    } else if (payment < refund) {
-      player.transferFromContract(chip(), refund - payment);
-    }
+    player.transfer(chip(), payment, refund);
   }
 
   function wager(uint256 amount, uint256 nonce, uint256 deadline, bytes calldata signature)
   public virtual {
     address player = msg.sender;
     (uint256 payment, uint256 refund) = _wager(player, amount);
-    if (payment > refund) {
-      player.transferToContract(chip(), payment - refund, nonce, deadline, signature);
-    } else if (payment < refund) {
-      player.transferFromContract(chip(), refund - payment);
-    }
+    player.transfer(chip(), payment, refund, nonce, deadline, signature);
   }
 
   function wager(address player, uint256 amount)
   public virtual
   onlyChip {
     (uint256 payment, uint256 refund) = _wager(player, amount);
-    if (payment > refund) {
-      player.transferToContract(chip(), payment - refund);
-    } else if (payment < refund) {
-      player.transferFromContract(chip(), refund - payment);
-    }
+    player.transfer(chip(), payment, refund);
   }
 
   function _wager(address player, uint256 amount)

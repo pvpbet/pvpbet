@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IPermit2} from "./interface/IPermit2.sol";
 import {IUniversalRouter} from "./interface/IUniversalRouter.sol";
 import {TransferLib} from "./lib/Transfer.sol";
 
 contract UniswapRouter {
+  using TransferLib for address;
+
   address public immutable swapRouter;
 
   constructor(address swapRouter_) {
@@ -21,7 +21,7 @@ contract UniswapRouter {
   )
   external payable {
     if (amount > 0) {
-      IERC20(token).transferFrom(msg.sender, swapRouter, amount);
+      token.transferFrom(msg.sender, swapRouter, amount);
     }
     IUniversalRouter(swapRouter).execute(commands, inputs);
   }
@@ -37,22 +37,7 @@ contract UniswapRouter {
   )
   external payable {
     if (amount > 0) {
-      IPermit2(TransferLib.PERMIT2).permitTransferFrom(
-        IPermit2.PermitTransferFrom({
-          permitted: IPermit2.TokenPermissions({
-            token: token,
-            amount: amount
-          }),
-          nonce: nonce,
-          deadline: deadline
-        }),
-        IPermit2.SignatureTransferDetails({
-          to: swapRouter,
-          requestedAmount: amount
-        }),
-        msg.sender,
-        signature
-      );
+      token.transferFrom(msg.sender, swapRouter, amount, nonce, deadline, signature);
     }
     IUniversalRouter(swapRouter).execute(commands, inputs);
   }

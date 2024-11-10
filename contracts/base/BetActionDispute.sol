@@ -60,33 +60,21 @@ abstract contract BetActionDispute is IBetActionDispute, IErrors {
   public virtual {
     address disputer = msg.sender;
     (uint256 payment, uint256 refund) = _dispute(disputer, amount);
-    if (payment > refund) {
-      disputer.transferToContract(chip(), payment - refund);
-    } else if (payment < refund) {
-      disputer.transferFromContract(chip(), refund - payment);
-    }
+    disputer.transfer(chip(), payment, refund);
   }
 
   function dispute(uint256 amount, uint256 nonce, uint256 deadline, bytes calldata signature)
   public virtual {
     address disputer = msg.sender;
     (uint256 payment, uint256 refund) = _dispute(disputer, amount);
-    if (payment > refund) {
-      disputer.transferToContract(chip(), payment - refund, nonce, deadline, signature);
-    } else if (payment < refund) {
-      disputer.transferFromContract(chip(), refund - payment);
-    }
+    disputer.transfer(chip(), payment, refund, nonce, deadline, signature);
   }
 
   function dispute(address disputer, uint256 amount)
   public virtual
   onlyChip {
     (uint256 payment, uint256 refund) = _dispute(disputer, amount);
-    if (payment > refund) {
-      disputer.transferToContract(chip(), payment - refund);
-    } else if (payment < refund) {
-      disputer.transferFromContract(chip(), refund - payment);
-    }
+    disputer.transfer(chip(), payment, refund);
   }
 
   function _dispute(address disputer, uint256 amount)

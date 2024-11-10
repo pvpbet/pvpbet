@@ -57,22 +57,14 @@ abstract contract BetActionDecide is IBetActionDecide, IErrors {
   public virtual {
     address decider = msg.sender;
     (uint256 payment, uint256 refund) = _decide(msg.sender, amount);
-    if (payment > refund) {
-      IVotingEscrow(vote()).fix(decider, payment - refund);
-    } else if (payment < refund) {
-      IVotingEscrow(vote()).unfix(decider, refund - payment);
-    }
+    _transfer(decider, payment, refund);
   }
 
   function decide(address decider, uint256 amount)
   public virtual
   onlyVote {
     (uint256 payment, uint256 refund) = _decide(decider, amount);
-    if (payment > refund) {
-      IVotingEscrow(vote()).fix(decider, payment - refund);
-    } else if (payment < refund) {
-      IVotingEscrow(vote()).unfix(decider, refund - payment);
-    }
+    _transfer(decider, payment, refund);
   }
 
   function _decide(address decider, uint256 amount)
@@ -100,6 +92,15 @@ abstract contract BetActionDecide is IBetActionDecide, IErrors {
     }
 
     emit Decided(decider, amount);
+  }
+
+  function _transfer(address owner, uint256 payment, uint256 refund)
+  internal {
+    if (payment > refund) {
+      IVotingEscrow(vote()).fix(owner, payment - refund);
+    } else if (payment < refund) {
+      IVotingEscrow(vote()).unfix(owner, refund - payment);
+    }
   }
 
   function decidedAmount()

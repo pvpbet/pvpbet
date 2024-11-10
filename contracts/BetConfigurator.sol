@@ -57,8 +57,8 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
     _chipMinValues[address(0)] = 0.001 ether;
     _chipMinWageredTotalAmounts[address(0)] = 0.2 ether;
     _voteMinValue = 1 ether;
-    _minDecidedTotalAmount = 1000 ether;
-    _minArbitratedTotalAmount = 1000 ether;
+    _minDecidedTotalAmount = 10000 ether;
+    _minArbitratedTotalAmount = 10000 ether;
 
     _announcementPeriodDuration = 1 days;
     _arbitratingPeriodDuration = 3 days;
