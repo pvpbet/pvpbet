@@ -1,5 +1,5 @@
 import { viem } from 'hardhat'
-import { formatEther, parseEther } from 'viem'
+import { formatEther, parseEther, zeroAddress } from 'viem'
 import { exec, readJson } from '../utils'
 
 exec(async chainId => {
@@ -27,7 +27,12 @@ exec(async chainId => {
     await publicClient.waitForTransactionReceipt({ hash })
   }
 
-  // hash = await BetConfigurator.write.setMinWageredTotalAmountETH([parseEther('0.1')])
+  // hash = await BetConfigurator.write.setMinWageredTotalAmount([zeroAddress, parseEther('0.1')])
+  // await publicClient.waitForTransactionReceipt({ hash })
+
+  // hash = await BetConfigurator.write.setMinDecidedTotalAmount([parseEther('10000')])
+  // await publicClient.waitForTransactionReceipt({ hash })
+  // hash = await BetConfigurator.write.setMinArbitratedTotalAmount([parseEther('10000')])
   // await publicClient.waitForTransactionReceipt({ hash })
 
   // hash = await GovTokenStaking.write.setRewardTokens([parameters.GovTokenStaking.rewardTokens])
