@@ -2,6 +2,9 @@
 pragma solidity ^0.8.20;
 
 interface IBet {
+  event Released(address indexed sender, uint256 count);
+  event Penalized(address indexed sender, uint256 count);
+
   struct BetConfig {
     uint256 chipMinValue;
     uint256 voteMinValue;

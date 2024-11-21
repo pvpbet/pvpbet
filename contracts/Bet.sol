@@ -592,6 +592,8 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
     uint256 offset = _releasedOffset;
     uint256 targetOffset = _releasedOffset = offset.add(limit).min(maxReleaseCount_);
 
+    emit Released(msg.sender, targetOffset - offset);
+
     if (targetOffset == maxReleaseCount_) {
       _released = true;
       _status = (!isPenaltyRequired || _penalized) ? Status.CLOSED : status_;
@@ -808,6 +810,8 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
 
     uint256 offset = _penalizedOffset;
     uint256 targetOffset = _penalizedOffset = offset.add(limit).min(maxPenalizeCount_);
+
+    emit Penalized(msg.sender, targetOffset - offset);
 
     if (targetOffset == maxPenalizeCount_) {
       _penalized = true;
