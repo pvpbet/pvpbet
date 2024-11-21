@@ -3,7 +3,6 @@ import { assert } from 'chai'
 import { viem } from 'hardhat'
 import {
   getAddress,
-  isAddressEqual,
   parseUnits,
   zeroAddress,
 } from 'viem'
@@ -225,7 +224,7 @@ describe('BetManager', () => {
         const betConfig = await BetConfigurator.read.betConfig([chip])
         assert.deepEqual(await Bet.read.config(), betConfig)
         assert.equal(await Bet.read.minWageredTotalAmount(), betConfig.minWageredTotalAmount)
-        assert.equal(await Bet.read.minDecidedTotalAmount(), betConfig.minDecidedTotalAmount)
+        assert.equal(await Bet.read.minVerifiedTotalAmount(), betConfig.minVerifiedTotalAmount)
         assert.equal(await Bet.read.minArbitratedTotalAmount(), betConfig.minArbitratedTotalAmount)
       }
     })
@@ -248,8 +247,8 @@ describe('BetManager', () => {
       const MAX_OPTIONS_COUNT = await BetConfigurator.read.maxOptionsCount()
       const MIN_WAGERING_PERIOD_DURATION = await BetConfigurator.read.minWageringPeriodDuration()
       const MAX_WAGERING_PERIOD_DURATION = await BetConfigurator.read.maxWageringPeriodDuration()
-      const MIN_DECISION_PERIOD_DURATION = await BetConfigurator.read.minDecidingPeriodDuration()
-      const MAX_DECISION_PERIOD_DURATION = await BetConfigurator.read.maxDecidingPeriodDuration()
+      const MIN_VERIFYING_PERIOD_DURATION = await BetConfigurator.read.minVerifyingPeriodDuration()
+      const MAX_VERIFYING_PERIOD_DURATION = await BetConfigurator.read.maxVerifyingPeriodDuration()
 
       const originAllowlist = [
         'https://example.com',
@@ -269,7 +268,7 @@ describe('BetManager', () => {
               },
             ),
             MIN_WAGERING_PERIOD_DURATION,
-            MIN_DECISION_PERIOD_DURATION,
+            MIN_VERIFYING_PERIOD_DURATION,
             chip,
           ),
           'InvalidTitle',
@@ -287,7 +286,7 @@ describe('BetManager', () => {
               },
             ),
             MIN_WAGERING_PERIOD_DURATION,
-            MIN_DECISION_PERIOD_DURATION,
+            MIN_VERIFYING_PERIOD_DURATION,
             chip,
           ),
           'InvalidDescription',
@@ -353,7 +352,7 @@ describe('BetManager', () => {
             BetManager,
             BetDetails,
             MIN_WAGERING_PERIOD_DURATION - 1n,
-            MIN_DECISION_PERIOD_DURATION,
+            MIN_VERIFYING_PERIOD_DURATION,
             chip,
           ),
           'InvalidWageringPeriodDuration',
@@ -365,7 +364,7 @@ describe('BetManager', () => {
             BetManager,
             BetDetails,
             MAX_WAGERING_PERIOD_DURATION + 1n,
-            MAX_DECISION_PERIOD_DURATION,
+            MAX_VERIFYING_PERIOD_DURATION,
             chip,
           ),
           'InvalidWageringPeriodDuration',
@@ -377,10 +376,10 @@ describe('BetManager', () => {
             BetManager,
             BetDetails,
             MIN_WAGERING_PERIOD_DURATION,
-            MIN_DECISION_PERIOD_DURATION - 1n,
+            MIN_VERIFYING_PERIOD_DURATION - 1n,
             chip,
           ),
-          'InvalidDecidingPeriodDuration',
+          'InvalidVerifyingPeriodDuration',
         )
 
         await assert.isRejected(
@@ -389,10 +388,10 @@ describe('BetManager', () => {
             BetManager,
             BetDetails,
             MAX_WAGERING_PERIOD_DURATION,
-            MAX_DECISION_PERIOD_DURATION + 1n,
+            MAX_VERIFYING_PERIOD_DURATION + 1n,
             chip,
           ),
-          'InvalidDecidingPeriodDuration',
+          'InvalidVerifyingPeriodDuration',
         )
 
         await assert.isRejected(
@@ -401,7 +400,7 @@ describe('BetManager', () => {
             BetManager,
             BetDetails,
             MAX_WAGERING_PERIOD_DURATION,
-            MAX_DECISION_PERIOD_DURATION,
+            MAX_VERIFYING_PERIOD_DURATION,
             USDC.address,
           ),
           'InvalidChip',

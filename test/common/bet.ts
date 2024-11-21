@@ -12,7 +12,7 @@ import type { ContractTypes } from '../../types'
 
 export enum BetStatus {
   WAGERING,
-  DECIDING,
+  VERIFYING,
   ANNOUNCEMENT,
   ARBITRATING,
   CONFIRMED,
@@ -54,14 +54,14 @@ export async function createBet(
   BetManager: ContractTypes['BetManager'],
   details: typeof BetDetails,
   wageringPeriodDuration: bigint,
-  decidingPeriodDuration: bigint,
+  verifyingPeriodDuration: bigint,
   chip?: Address,
 ) {
   const hash = await BetManager.write.createBet(
     [
       details,
       wageringPeriodDuration,
-      decidingPeriodDuration,
+      verifyingPeriodDuration,
       chip || zeroAddress,
     ],
     { account: owner.account },
@@ -130,7 +130,7 @@ export async function decide(
   accounts: [wallet: WalletClient, option: Address, ratio: bigint][],
   Bet: ContractTypes['Bet'],
 ) {
-  const total = await Bet.read.minDecidedTotalAmount()
+  const total = await Bet.read.minVerifiedTotalAmount()
   const amounts = []
   for (const [wallet, option, ratio] of accounts) {
     const amount = total * ratio / 10n
@@ -178,18 +178,18 @@ export async function getCreatorReward(
   return wageredTotalAmount * betConfig.creatorRewardRatio / 100n
 }
 
-export async function getDeciderReward(
+export async function getVerifierReward(
   Bet: ContractTypes['Bet'],
   owner: Address,
 ) {
   const Option = await getConfirmedWinningOption(Bet)
-  const winningOptionDecidedAmount = (await Option.read.decidedAmount()) as bigint
-  const ownerDecidedAmount = (await Option.read.decidedAmount([owner])) as bigint
+  const winningOptionVerifiedAmount = (await Option.read.verifiedAmount()) as bigint
+  const ownerVerifiedAmount = (await Option.read.verifiedAmount([owner])) as bigint
 
   const betConfig = await Bet.read.config()
   const wageredTotalAmount = await Bet.read.wageredTotalAmount()
-  const deciderReward = wageredTotalAmount * betConfig.deciderRewardRatio / 100n
-  return deciderReward * ownerDecidedAmount / winningOptionDecidedAmount
+  const verifierReward = wageredTotalAmount * betConfig.verifierRewardRatio / 100n
+  return verifierReward * ownerVerifiedAmount / winningOptionVerifiedAmount
 }
 
 export async function getWinnerReward(
@@ -204,8 +204,8 @@ export async function getWinnerReward(
   const wageredTotalAmount = await Bet.read.wageredTotalAmount()
   const protocolReward = wageredTotalAmount * betConfig.creatorRewardRatio / 100n
   const creatorReward = wageredTotalAmount * betConfig.creatorRewardRatio / 100n
-  const deciderReward = wageredTotalAmount * betConfig.deciderRewardRatio / 100n
-  const winnerReward = wageredTotalAmount - protocolReward - creatorReward - deciderReward
+  const verifierReward = wageredTotalAmount * betConfig.verifierRewardRatio / 100n
+  const winnerReward = wageredTotalAmount - protocolReward - creatorReward - verifierReward
   return winnerReward * ownerWageredAmount / winningOptionWageredAmount
 }
 
@@ -229,7 +229,7 @@ export async function getConfiscatedVoteReward(
   const winningOptionArbitratedAmount = (await Option.read.arbitratedAmount()) as bigint
   const ownerArbitratedAmount = (await Option.read.arbitratedAmount([owner])) as bigint
 
-  const DecidedOption = await getUnconfirmedWinningOption(Bet)
-  const decidedAmount = (await DecidedOption.read.decidedAmount()) as bigint
-  return decidedAmount * ownerArbitratedAmount / winningOptionArbitratedAmount
+  const VerifiedOption = await getUnconfirmedWinningOption(Bet)
+  const verifiedAmount = (await VerifiedOption.read.verifiedAmount()) as bigint
+  return verifiedAmount * ownerArbitratedAmount / winningOptionArbitratedAmount
 }

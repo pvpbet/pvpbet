@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {BetActionArbitrate} from "./base/BetActionArbitrate.sol";
-import {BetActionDecide} from "./base/BetActionDecide.sol";
+import {BetActionVerify} from "./base/BetActionVerify.sol";
 import {BetActionWager} from "./base/BetActionWager.sol";
 import {IBet} from "./interface/IBet.sol";
 import {IBetOption} from "./interface/IBetOption.sol";
@@ -10,7 +10,7 @@ import {IErrors} from "./interface/IErrors.sol";
 import {IMetadata} from "./interface/IMetadata.sol";
 import {AddressLib} from "./lib/Address.sol";
 
-contract BetOption is IBetOption, IErrors, IMetadata, BetActionArbitrate, BetActionDecide, BetActionWager {
+contract BetOption is IBetOption, IErrors, IMetadata, BetActionArbitrate, BetActionVerify, BetActionWager {
   function name()
   public pure
   returns (string memory) {
@@ -54,14 +54,14 @@ contract BetOption is IBetOption, IErrors, IMetadata, BetActionArbitrate, BetAct
     _vote = vote_;
   }
 
-  modifier onlyBet() override(BetActionDecide, BetActionWager) {
+  modifier onlyBet() override(BetActionVerify, BetActionWager) {
     if (msg.sender != bet()) {
       revert UnauthorizedAccess(msg.sender);
     }
     _;
   }
 
-  modifier onlyVote() override(BetActionArbitrate, BetActionDecide) {
+  modifier onlyVote() override(BetActionArbitrate, BetActionVerify) {
     if (msg.sender != vote()) {
       revert UnauthorizedAccess(msg.sender);
     }
@@ -81,7 +81,7 @@ contract BetOption is IBetOption, IErrors, IMetadata, BetActionArbitrate, BetAct
   }
 
   function bet()
-  public view override(IBetOption, BetActionArbitrate, BetActionDecide, BetActionWager)
+  public view override(IBetOption, BetActionArbitrate, BetActionVerify, BetActionWager)
   returns (address) {
     return _bet;
   }
@@ -93,7 +93,7 @@ contract BetOption is IBetOption, IErrors, IMetadata, BetActionArbitrate, BetAct
   }
 
   function vote()
-  public view override(IBetOption, BetActionArbitrate, BetActionDecide)
+  public view override(IBetOption, BetActionArbitrate, BetActionVerify)
   returns (address) {
     return _vote;
   }
@@ -105,7 +105,7 @@ contract BetOption is IBetOption, IErrors, IMetadata, BetActionArbitrate, BetAct
   }
 
   function voteMinValue()
-  public view override(IBetOption, BetActionArbitrate, BetActionDecide)
+  public view override(IBetOption, BetActionArbitrate, BetActionVerify)
   returns (uint256) {
     return _config.voteMinValue;
   }

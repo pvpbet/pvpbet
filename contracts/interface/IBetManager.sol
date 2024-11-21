@@ -67,7 +67,7 @@ interface IBetManager {
   function createBet(
     IBet.BetDetails calldata details,
     uint256 wageringPeriodDuration,
-    uint256 decidingPeriodDuration
+    uint256 verifyingPeriodDuration
   ) external returns (address);
 
   /**
@@ -76,7 +76,7 @@ interface IBetManager {
   function createBet(
     IBet.BetDetails calldata details,
     uint256 wageringPeriodDuration,
-    uint256 decidingPeriodDuration,
+    uint256 verifyingPeriodDuration,
     address chip
   ) external returns (address);
 

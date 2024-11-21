@@ -11,7 +11,7 @@ contract TestBetOption {
 
   address public bet;
   bool public wagered;
-  bool public decided;
+  bool public verified;
   bool public arbitrated;
 
   constructor(address bet_) {
@@ -42,10 +42,10 @@ contract TestBetOption {
     wagered = true;
   }
 
-  function decide(address decider, uint256 amount)
+  function verify(address verifier, uint256 amount)
   external {
-    IVotingEscrow(vote()).fix(decider, amount);
-    decided = true;
+    IVotingEscrow(vote()).fix(verifier, amount);
+    verified = true;
   }
 
   function arbitrate(address, uint256)

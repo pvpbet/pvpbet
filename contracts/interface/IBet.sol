@@ -6,7 +6,7 @@ interface IBet {
     uint256 chipMinValue;
     uint256 voteMinValue;
     uint256 minWageredTotalAmount;
-    uint256 minDecidedTotalAmount;
+    uint256 minVerifiedTotalAmount;
     uint256 minArbitratedTotalAmount;
     uint256 announcementPeriodDuration;
     uint256 arbitratingPeriodDuration;
@@ -14,7 +14,7 @@ interface IBet {
     uint256 confirmDisputeAmountRatio;
     uint256 protocolRewardRatio;
     uint256 creatorRewardRatio;
-    uint256 deciderRewardRatio;
+    uint256 verifierRewardRatio;
     uint256 countPerRelease;
     uint256 countPerPenalize;
   }
@@ -29,8 +29,8 @@ interface IBet {
 
   enum Status {
     WAGERING,     // 0 During the wagering period, waiting for the players to wager.
-    DECIDING,     // 1 During the deciding period, waiting for the deciders to decide.
-    ANNOUNCEMENT, // 2 During the announcement period, the winning option has been decided, and waiting for the disputers to dispute.
+    VERIFYING,    // 1 During the verifying period, waiting for the verifiers to verify.
+    ANNOUNCEMENT, // 2 During the announcement period, the winning option has been verified, and waiting for the disputers to dispute.
     ARBITRATING,  // 3 During the arbitrating period, waiting for the arbitrators to arbitrate.
     CONFIRMED,    // 4 The winning option has been confirmed, and preparations are being made to distribute the rewards.
     CANCELLED,    // 5 The bet has been canceled, and preparations are being made to refund the full amount.
@@ -63,9 +63,9 @@ interface IBet {
   function wageringPeriodDeadline() external view returns (uint256);
 
   /**
-   * @dev Returns the deadline of the deciding period.
+   * @dev Returns the deadline of the verifying period.
    */
-  function decidingPeriodDeadline() external view returns (uint256);
+  function verifyingPeriodDeadline() external view returns (uint256);
 
   /**
    * @dev Returns the start time of the arbitration period.
@@ -117,9 +117,9 @@ interface IBet {
   function minWageredTotalAmount() external view returns (uint256);
 
   /**
-   * @dev Returns the minimum decided total amount.
+   * @dev Returns the minimum verified total amount.
    */
-  function minDecidedTotalAmount() external view returns (uint256);
+  function minVerifiedTotalAmount() external view returns (uint256);
 
   /**
    * @dev Returns the minimum disputed total amount.
@@ -137,9 +137,9 @@ interface IBet {
   function wageredTotalAmount() external view returns (uint256);
 
   /**
-   * @dev Returns the decided total amount.
+   * @dev Returns the verified total amount.
    */
-  function decidedTotalAmount() external view returns (uint256);
+  function verifiedTotalAmount() external view returns (uint256);
 
   /**
    * @dev Returns the disputed total amount.

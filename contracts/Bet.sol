@@ -5,7 +5,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {BetActionArbitrate} from "./base/BetActionArbitrate.sol";
 import {BetActionDispute} from "./base/BetActionDispute.sol";
 import {IBet} from "./interface/IBet.sol";
-import {IBetActionDecide} from "./interface/IBetActionDecide.sol";
+import {IBetActionVerify} from "./interface/IBetActionVerify.sol";
 import {IBetActionWager} from "./interface/IBetActionWager.sol";
 import {IBetOptionFactory} from "./interface/IBetOptionFactory.sol";
 import {IErrors} from "./interface/IErrors.sol";
@@ -55,7 +55,7 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
   address private _unconfirmedWinningOption;
   address private _confirmedWinningOption;
   uint256 private _wageringPeriodDeadline;
-  uint256 private _decidingPeriodDeadline;
+  uint256 private _verifyingPeriodDeadline;
   uint256 private _arbitratingPeriodStartTime;
 
   uint256 private _releasedOffset;
@@ -69,7 +69,7 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
     BetConfig calldata config_,
     BetDetails calldata details_,
     uint256 wageringPeriodDuration,
-    uint256 decidingPeriodDuration,
+    uint256 verifyingPeriodDuration,
     address creator_,
     address chip_,
     address vote_,
@@ -84,7 +84,7 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
     _config = config_;
     _details = details_;
     _wageringPeriodDeadline = block.timestamp.unsafeAdd(wageringPeriodDuration);
-    _decidingPeriodDeadline = _wageringPeriodDeadline.unsafeAdd(decidingPeriodDuration);
+    _verifyingPeriodDeadline = _wageringPeriodDeadline.unsafeAdd(verifyingPeriodDuration);
     _creator = creator_;
     _chip = chip_;
     _vote = vote_;
@@ -148,10 +148,10 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
     return _wageringPeriodDeadline;
   }
 
-  function decidingPeriodDeadline()
+  function verifyingPeriodDeadline()
   external view
   returns (uint256) {
-    return _decidingPeriodDeadline;
+    return _verifyingPeriodDeadline;
   }
 
   function arbitratingPeriodStartTime()
@@ -216,10 +216,10 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
     return _config.minWageredTotalAmount;
   }
 
-  function minDecidedTotalAmount()
+  function minVerifiedTotalAmount()
   public view
   returns (uint256) {
-    return _config.minDecidedTotalAmount;
+    return _config.minVerifiedTotalAmount;
   }
 
   function minDisputedTotalAmount()
@@ -245,13 +245,13 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
     return total;
   }
 
-  function decidedTotalAmount()
+  function verifiedTotalAmount()
   public view
   returns (uint256) {
     uint256 total = 0;
     uint256 length = _options.length;
     for (uint256 i = 0; i < length; i = i.unsafeInc()) {
-      total = total.unsafeAdd(IBetActionDecide(_options[i]).decidedAmount());
+      total = total.unsafeAdd(IBetActionVerify(_options[i]).verifiedAmount());
     }
     return total;
   }
@@ -296,7 +296,7 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
     address unconfirmedWinningOption_,
     address confirmedWinningOption_,
     bool isPenaltyDisputer_,
-    bool isPenaltyDecider_,
+    bool isPenaltyVerifier_,
     uint256 maxReleaseCount_,
     uint256 maxPenalizeCount_
   ) {
@@ -304,13 +304,13 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
     unconfirmedWinningOption_ = _unconfirmedWinningOption;
     confirmedWinningOption_ = _confirmedWinningOption;
     isPenaltyDisputer_ = false;
-    isPenaltyDecider_ = false;
+    isPenaltyVerifier_ = false;
     maxReleaseCount_ = 0;
     maxPenalizeCount_ = 0;
 
     if (status_ == Status.WAGERING && block.timestamp > _wageringPeriodDeadline) {
       if (_isValidWager()) {
-        status_ = Status.DECIDING;
+        status_ = Status.VERIFYING;
       } else if (wageredTotalAmount() == 0) {
         status_ = Status.CLOSED;
       } else {
@@ -318,8 +318,8 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
       }
     }
 
-    if (status_ == Status.DECIDING && block.timestamp > _decidingPeriodDeadline) {
-      unconfirmedWinningOption_ = _getDecidedWinningOption();
+    if (status_ == Status.VERIFYING && block.timestamp > _verifyingPeriodDeadline) {
+      unconfirmedWinningOption_ = _getVerifiedWinningOption();
       if (unconfirmedWinningOption_ != address(0)) {
         status_ = Status.ANNOUNCEMENT;
       } else {
@@ -330,7 +330,7 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
     if (status_ == Status.ANNOUNCEMENT) {
       if (_arbitratingPeriodStartTime > 0) {
         status_ = Status.ARBITRATING;
-      } else if (block.timestamp > _decidingPeriodDeadline.unsafeAdd(_config.announcementPeriodDuration)) {
+      } else if (block.timestamp > _verifyingPeriodDeadline.unsafeAdd(_config.announcementPeriodDuration)) {
         confirmedWinningOption_ = unconfirmedWinningOption_;
         status_ = Status.CONFIRMED;
       }
@@ -349,7 +349,7 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
       if (confirmedWinningOption_ == unconfirmedWinningOption_) {
         isPenaltyDisputer_ = true;
       } else {
-        isPenaltyDecider_ = true;
+        isPenaltyVerifier_ = true;
       }
     }
 
@@ -358,14 +358,14 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
         unconfirmedWinningOption_,
         confirmedWinningOption_,
         isPenaltyDisputer_,
-        isPenaltyDecider_
+        isPenaltyVerifier_
       );
 
       maxPenalizeCount_ = _calculateMaxPenalizeCount(
         unconfirmedWinningOption_,
         confirmedWinningOption_,
         isPenaltyDisputer_,
-        isPenaltyDecider_
+        isPenaltyVerifier_
       );
     }
   }
@@ -374,9 +374,9 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
     address unconfirmedWinningOption_,
     address confirmedWinningOption_,
     bool isPenaltyDisputer_,
-    bool isPenaltyDecider_
+    bool isPenaltyVerifier_
   )
-  public view
+  internal view
   returns (uint256) {
     if (_released) return _releasedOffset;
 
@@ -391,7 +391,7 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
 
     if (isConfirmed) {
       maxReleaseCount_ = maxReleaseCount_.unsafeAdd(
-        IBetActionDecide(confirmedWinningOption_).decidedRecordCount()
+        IBetActionVerify(confirmedWinningOption_).verifiedRecordCount()
       ).unsafeAdd(
         IBetActionWager(confirmedWinningOption_).wageredRecordCount()
       );
@@ -400,9 +400,9 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
     uint256 length = _options.length;
     for (uint256 i = 0; i < length; i = i.unsafeInc()) {
       address option = _options[i];
-      if (!isPenaltyDecider_ || option != unconfirmedWinningOption_) {
+      if (!isPenaltyVerifier_ || option != unconfirmedWinningOption_) {
         maxReleaseCount_ = maxReleaseCount_.unsafeAdd(
-          IBetActionDecide(option).decidedRecordCount()
+          IBetActionVerify(option).verifiedRecordCount()
         );
       }
 
@@ -421,9 +421,9 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
     address unconfirmedWinningOption_,
     address confirmedWinningOption_,
     bool isPenaltyDisputer_,
-    bool isPenaltyDecider_
+    bool isPenaltyVerifier_
   )
-  public view
+  internal view
   returns (uint256) {
     if (_penalized) return _penalizedOffset;
 
@@ -433,9 +433,9 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
       maxPenalizeCount_ = maxPenalizeCount_.unsafeAdd(
         BetActionArbitrate(confirmedWinningOption_).arbitratedRecordCount()
       );
-    } else if (isPenaltyDecider_) {
+    } else if (isPenaltyVerifier_) {
       maxPenalizeCount_ = maxPenalizeCount_.unsafeAdd(
-        IBetActionDecide(unconfirmedWinningOption_).decidedRecordCount()
+        IBetActionVerify(unconfirmedWinningOption_).verifiedRecordCount()
       ).unsafeAdd(
         BetActionArbitrate(confirmedWinningOption_).arbitratedRecordCount()
       );
@@ -450,10 +450,10 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
     Status status_ = status();
     if (status_ == Status.WAGERING) {
       return _wageringPeriodDeadline;
-    } else if (status_ == Status.DECIDING) {
-      return _decidingPeriodDeadline;
+    } else if (status_ == Status.VERIFYING) {
+      return _verifyingPeriodDeadline;
     } else if (status_ == Status.ANNOUNCEMENT) {
-      return _decidingPeriodDeadline.unsafeAdd(_config.announcementPeriodDuration);
+      return _verifyingPeriodDeadline.unsafeAdd(_config.announcementPeriodDuration);
     } else if (status_ == Status.ARBITRATING) {
       return _arbitratingPeriodStartTime.unsafeAdd(_config.arbitratingPeriodDuration);
     } else {
@@ -511,7 +511,7 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
     return disputedAmount() >= minDisputedTotalAmount();
   }
 
-  function _getDecidedWinningOption()
+  function _getVerifiedWinningOption()
   private view
   returns (address) {
     address winningOption = address(0);
@@ -520,16 +520,16 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
     uint256 length = _options.length;
     for (uint256 i = 0; i < length; i = i.unsafeInc()) {
       address option = _options[i];
-      uint256 decidedAmount_ = IBetActionDecide(option).decidedAmount();
-      total = total.unsafeAdd(decidedAmount_);
-      if (decidedAmount_ > max) {
-        max = decidedAmount_;
+      uint256 verifiedAmount_ = IBetActionVerify(option).verifiedAmount();
+      total = total.unsafeAdd(verifiedAmount_);
+      if (verifiedAmount_ > max) {
+        max = verifiedAmount_;
         winningOption = option;
-      } else if (decidedAmount_ == max && winningOption != address(0)) {
+      } else if (verifiedAmount_ == max && winningOption != address(0)) {
         winningOption = address(0);
       }
     }
-    if (total < _config.minDecidedTotalAmount) return address(0);
+    if (total < _config.minVerifiedTotalAmount) return address(0);
     return winningOption;
   }
 
@@ -579,11 +579,11 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
       address unconfirmedWinningOption_,
       address confirmedWinningOption_,
       bool isPenaltyDisputer_,
-      bool isPenaltyDecider_,
+      bool isPenaltyVerifier_,
       uint256 maxReleaseCount_,
     ) = _getState();
 
-    bool isPenaltyRequired = isPenaltyDisputer_ || isPenaltyDecider_;
+    bool isPenaltyRequired = isPenaltyDisputer_ || isPenaltyVerifier_;
     if (status_ < Status.CONFIRMED) revert BetHasNotEndedYet();
 
     _unconfirmedWinningOption = unconfirmedWinningOption_;
@@ -613,8 +613,8 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
     uint256 length = _options.length;
     for (uint256 i = 0; i < length; i = i.unsafeInc()) {
       address option = _options[i];
-      if (!isPenaltyDecider_ || option != unconfirmedWinningOption_) {
-        start = _unfixDecidedVotes(option, start, offset, targetOffset);
+      if (!isPenaltyVerifier_ || option != unconfirmedWinningOption_) {
+        start = _unfixVerifiedVotes(option, start, offset, targetOffset);
         if (targetOffset <= start) return;
       }
 
@@ -651,16 +651,16 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
 
     uint256 protocolReward = total.mulDiv(_config.protocolRewardRatio, 100);
     uint256 creatorReward = total.mulDiv(_config.creatorRewardRatio, 100);
-    uint256 deciderReward = total.mulDiv(_config.deciderRewardRatio, 100);
-    uint256 winnerReward = total.unsafeSub(protocolReward).unsafeSub(creatorReward).unsafeSub(deciderReward);
+    uint256 verifierReward = total.mulDiv(_config.verifierRewardRatio, 100);
+    uint256 winnerReward = total.unsafeSub(protocolReward).unsafeSub(creatorReward).unsafeSub(verifierReward);
 
     if (targetOffset > start && offset <= start) {
       _creator.transferFromContract(_chip, creatorReward, true);
     }
 
-    uint256 end = _distributeDeciderReward(deciderReward, start, offset, targetOffset);
+    uint256 end = _distributeVerifierReward(verifierReward, start, offset, targetOffset);
     if (start == end) {
-      protocolReward = protocolReward.unsafeAdd(deciderReward);
+      protocolReward = protocolReward.unsafeAdd(verifierReward);
     }
     start = end;
     if (targetOffset <= start) return end;
@@ -679,17 +679,17 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
     return end;
   }
 
-  function _distributeDeciderReward(uint256 amount, uint256 start, uint256 offset, uint256 targetOffset)
+  function _distributeVerifierReward(uint256 amount, uint256 start, uint256 offset, uint256 targetOffset)
   private
   returns (uint256) {
-    IBetActionDecide actionDecide = IBetActionDecide(_confirmedWinningOption);
-    uint256 count = actionDecide.decidedRecordCount();
+    IBetActionVerify actionVerify = IBetActionVerify(_confirmedWinningOption);
+    uint256 count = actionVerify.verifiedRecordCount();
     uint256 end = start.unsafeAdd(count);
 
     if (targetOffset > start && offset < end) {
       (uint256 relativeOffset, uint256 relativeLimit) = _getRelativeOffsetAndLimit(start, end, offset, targetOffset);
-      actionDecide.decidedRecords(relativeOffset, relativeLimit)
-        .distribute(_chip, amount, actionDecide.decidedAmount());
+      actionVerify.verifiedRecords(relativeOffset, relativeLimit)
+        .distribute(_chip, amount, actionVerify.verifiedAmount());
     }
 
     return end;
@@ -739,16 +739,16 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
     return end;
   }
 
-  function _unfixDecidedVotes(address option, uint256 start, uint256 offset, uint256 targetOffset)
+  function _unfixVerifiedVotes(address option, uint256 start, uint256 offset, uint256 targetOffset)
   private
   returns (uint256) {
-    IBetActionDecide actionDecide = IBetActionDecide(option);
-    uint256 count = actionDecide.decidedRecordCount();
+    IBetActionVerify actionVerify = IBetActionVerify(option);
+    uint256 count = actionVerify.verifiedRecordCount();
     uint256 end = start.unsafeAdd(count);
 
     if (targetOffset > start && offset < end) {
       (,uint256 relativeLimit) = _getRelativeOffsetAndLimit(start, end, offset, targetOffset);
-      actionDecide.unfixDecidedVotes(relativeLimit);
+      actionVerify.unfixVerifiedVotes(relativeLimit);
     }
 
     return end;
@@ -796,11 +796,11 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
       address unconfirmedWinningOption_,
       address confirmedWinningOption_,
       bool isPenaltyDisputer_,
-      bool isPenaltyDecider_,,
+      bool isPenaltyVerifier_,,
       uint256 maxPenalizeCount_
     ) = _getState();
 
-    if (!isPenaltyDisputer_ && !isPenaltyDecider_) revert NoTargetForPenalty();
+    if (!isPenaltyDisputer_ && !isPenaltyVerifier_) revert NoTargetForPenalty();
     if (status_ < Status.CONFIRMED) revert BetHasNotEndedYet();
 
     _unconfirmedWinningOption = unconfirmedWinningOption_;
@@ -820,8 +820,8 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
     if (isPenaltyDisputer_) {
       start = _penalizeDisputer(start, offset, targetOffset);
       if (targetOffset <= start) return;
-    } else if (isPenaltyDecider_) {
-      start = _penalizeDecider(start, offset, targetOffset);
+    } else if (isPenaltyVerifier_) {
+      start = _penalizeVerifier(start, offset, targetOffset);
       if (targetOffset <= start) return;
     }
 
@@ -860,22 +860,22 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
     return end;
   }
 
-  function _penalizeDecider(uint256 start, uint256 offset, uint256 targetOffset)
+  function _penalizeVerifier(uint256 start, uint256 offset, uint256 targetOffset)
   private
   returns (uint256) {
-    IBetActionDecide actionDecide = IBetActionDecide(_unconfirmedWinningOption);
-    uint256 count = actionDecide.decidedRecordCount();
+    IBetActionVerify actionVerify = IBetActionVerify(_unconfirmedWinningOption);
+    uint256 count = actionVerify.verifiedRecordCount();
     uint256 end = start.unsafeAdd(count);
 
     if (targetOffset > start && offset < end) {
       (,uint256 relativeLimit) = _getRelativeOffsetAndLimit(start, end, offset, targetOffset);
-      actionDecide.confiscateDecidedVotes(relativeLimit);
+      actionVerify.confiscateVerifiedVotes(relativeLimit);
     }
 
     start = end;
     if (targetOffset <= start) return end;
 
-    return _distributeConfiscatedAmount(actionDecide.decidedAmount(), start, offset, targetOffset);
+    return _distributeConfiscatedAmount(actionVerify.verifiedAmount(), start, offset, targetOffset);
   }
 
   function _distributeConfiscatedAmount(uint256 confiscatedAmount, uint256 start, uint256 offset, uint256 targetOffset)

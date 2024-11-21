@@ -11,7 +11,7 @@ interface IBetFactory {
     IBet.BetConfig calldata config,
     IBet.BetDetails calldata details,
     uint256 wageringPeriodDuration,
-    uint256 decidingPeriodDuration,
+    uint256 verifyingPeriodDuration,
     address creator,
     address chip,
     address vote,

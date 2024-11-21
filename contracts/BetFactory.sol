@@ -16,7 +16,7 @@ contract BetFactory is IBetFactory, IMetadata {
   function version()
   public pure
   returns (string memory) {
-    return "1.0.4";
+    return "1.1.0";
   }
 
   address private _implementation;
@@ -25,7 +25,7 @@ contract BetFactory is IBetFactory, IMetadata {
     Bet.BetConfig calldata config,
     Bet.BetDetails calldata details,
     uint256 wageringPeriodDuration,
-    uint256 decidingPeriodDuration,
+    uint256 verifyingPeriodDuration,
     address creator,
     address chip,
     address vote,
@@ -45,7 +45,7 @@ contract BetFactory is IBetFactory, IMetadata {
       config,
       details,
       wageringPeriodDuration,
-      decidingPeriodDuration,
+      verifyingPeriodDuration,
       creator,
       chip,
       vote,

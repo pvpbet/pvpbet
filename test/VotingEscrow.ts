@@ -463,7 +463,7 @@ describe('VotingEscrow', () => {
       const stakeAmount = parseUnits('80000', 18)
       await stake(user, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK, stakeAmount)
 
-      const decidedAmount = parseUnits('10000', 18)
+      const verifiedAmount = parseUnits('10000', 18)
 
       {
         const TestBet = await viem.deployContract('TestBet', [
@@ -472,12 +472,12 @@ describe('VotingEscrow', () => {
           VotingEscrow.address,
         ])
         await assert.isRejected(
-          erc20Transfer(user, VotingEscrow.address, TestBet.address, decidedAmount),
+          erc20Transfer(user, VotingEscrow.address, TestBet.address, verifiedAmount),
           'InvalidStatus',
         )
         const TestBetOption = await viem.deployContract('TestBetOption', [TestBet.address])
         await assert.isRejected(
-          erc20Transfer(user, VotingEscrow.address, TestBetOption.address, decidedAmount),
+          erc20Transfer(user, VotingEscrow.address, TestBetOption.address, verifiedAmount),
           'InvalidStatus',
         )
       }
@@ -489,7 +489,7 @@ describe('VotingEscrow', () => {
           VotingEscrow.address,
         ])
         await assert.isRejected(
-          erc20Transfer(hacker, VotingEscrow.address, TestBet.address, decidedAmount),
+          erc20Transfer(hacker, VotingEscrow.address, TestBet.address, verifiedAmount),
           'InvalidStatus',
         )
         await assert.isRejected(
@@ -498,7 +498,7 @@ describe('VotingEscrow', () => {
         )
         const TestBetOption = await viem.deployContract('TestBetOption', [TestBet.address])
         await assert.isRejected(
-          erc20Transfer(hacker, VotingEscrow.address, TestBetOption.address, decidedAmount),
+          erc20Transfer(hacker, VotingEscrow.address, TestBetOption.address, verifiedAmount),
           'VotingConditionsNotMet',
         )
         await assert.isRejected(
@@ -506,16 +506,16 @@ describe('VotingEscrow', () => {
           'VoteInsufficientAvailableBalance',
         )
 
-        assert.equal(await TestBetOption.read.decided(), false)
+        assert.equal(await TestBetOption.read.verified(), false)
         await checkBalance(
           async () => {
-            await erc20Transfer(user, VotingEscrow.address, TestBetOption.address, decidedAmount)
+            await erc20Transfer(user, VotingEscrow.address, TestBetOption.address, verifiedAmount)
           },
           [
-            [user.account.address, VotingEscrow.address, -decidedAmount],
+            [user.account.address, VotingEscrow.address, -verifiedAmount],
           ],
         )
-        assert.equal(await TestBetOption.read.decided(), true)
+        assert.equal(await TestBetOption.read.verified(), true)
       }
     })
 

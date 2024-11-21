@@ -25,7 +25,7 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, UseVo
   function version()
   public pure override
   returns (string memory) {
-    return "1.0.2";
+    return "1.1.0";
   }
 
   using StringLib for string;
@@ -162,26 +162,26 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, UseVo
   function createBet(
     IBet.BetDetails calldata details,
     uint256 wageringPeriodDuration,
-    uint256 decidingPeriodDuration
+    uint256 verifyingPeriodDuration
   ) external
   returns (address) {
-    return _createBet(details, wageringPeriodDuration, decidingPeriodDuration, address(0));
+    return _createBet(details, wageringPeriodDuration, verifyingPeriodDuration, address(0));
   }
 
   function createBet(
     IBet.BetDetails calldata details,
     uint256 wageringPeriodDuration,
-    uint256 decidingPeriodDuration,
+    uint256 verifyingPeriodDuration,
     address chip
   ) external
   returns (address) {
-    return _createBet(details, wageringPeriodDuration, decidingPeriodDuration, chip);
+    return _createBet(details, wageringPeriodDuration, verifyingPeriodDuration, chip);
   }
 
   function _createBet(
     IBet.BetDetails calldata details,
     uint256 wageringPeriodDuration,
-    uint256 decidingPeriodDuration,
+    uint256 verifyingPeriodDuration,
     address chip
   ) private
   returns (address) {
@@ -191,7 +191,7 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, UseVo
     configurator.validateTitle(details.title);
     configurator.validateDescription(details.description);
     configurator.validateOptions(details.options);
-    configurator.validateDuration(wageringPeriodDuration, decidingPeriodDuration);
+    configurator.validateDuration(wageringPeriodDuration, verifyingPeriodDuration);
 
     if (chip != address(0) && !IBetChipManager(_betChipManager).isBetChip(chip)) {
       configurator.validateChipToken(chip);
@@ -210,7 +210,7 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, UseVo
       configurator.betConfig(chip),
       details,
       wageringPeriodDuration,
-      decidingPeriodDuration,
+      verifyingPeriodDuration,
       msg.sender,
       chip,
       votingEscrow(),

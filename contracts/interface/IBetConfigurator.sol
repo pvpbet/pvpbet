@@ -7,7 +7,7 @@ interface IBetConfigurator {
   function validateTitle(string calldata title) external view;
   function validateDescription(string calldata description) external view;
   function validateOptions(string[] calldata options) external view;
-  function validateDuration(uint256 wageringPeriodDuration, uint256 decidingPeriodDuration) external view;
+  function validateDuration(uint256 wageringPeriodDuration, uint256 verifyingPeriodDuration) external view;
   function validateChipToken(address token) external view;
   function validateUrl(string calldata url) external view;
 
@@ -22,10 +22,10 @@ interface IBetConfigurator {
   function setMinWageringPeriodDuration(uint256 newMinWageringPeriodDuration) external;
   function maxWageringPeriodDuration() external view returns (uint256);
   function setMaxWageringPeriodDuration(uint256 newMaxWageringPeriodDuration) external;
-  function minDecidingPeriodDuration() external view returns (uint256);
-  function setMinDecidingPeriodDuration(uint256 newMinDecidingPeriodDuration) external;
-  function maxDecidingPeriodDuration() external view returns (uint256);
-  function setMaxDecidingPeriodDuration(uint256 newMaxDecidingPeriodDuration) external;
+  function minVerifyingPeriodDuration() external view returns (uint256);
+  function setMinVerifyingPeriodDuration(uint256 newMinVerifyingPeriodDuration) external;
+  function maxVerifyingPeriodDuration() external view returns (uint256);
+  function setMaxVerifyingPeriodDuration(uint256 newMaxVerifyingPeriodDuration) external;
 
   function originAllowlist() external view returns (string[] memory);
   function setOriginAllowlist(string[] memory newOriginAllowlist) external;
@@ -40,8 +40,8 @@ interface IBetConfigurator {
 
   function minWageredTotalAmount(address chip) external view returns (uint256);
   function setMinWageredTotalAmount(address chip, uint256 newMinWageredTotalAmount) external;
-  function minDecidedTotalAmount() external view returns (uint256);
-  function setMinDecidedTotalAmount(uint256 newMinDecidedTotalAmount) external;
+  function minVerifiedTotalAmount() external view returns (uint256);
+  function setMinVerifiedTotalAmount(uint256 newMinVerifiedTotalAmount) external;
   function minArbitratedTotalAmount() external view returns (uint256);
   function setMinArbitratedTotalAmount(uint256 newMinArbitratedTotalAmount) external;
 
@@ -58,8 +58,8 @@ interface IBetConfigurator {
   function setProtocolRewardRatio(uint256 newProtocolRewardRatio) external;
   function creatorRewardRatio() external view returns (uint256);
   function setCreatorRewardRatio(uint256 newCreatorRewardRatio) external;
-  function deciderRewardRatio() external view returns (uint256);
-  function setDeciderRewardRatio(uint256 newDeciderRewardRatio) external;
+  function verifierRewardRatio() external view returns (uint256);
+  function setVerifierRewardRatio(uint256 newVerifierRewardRatio) external;
 
   function countPerRelease() external view returns (uint256);
   function setCountPerRelease(uint256 newCountPerRelease) external;

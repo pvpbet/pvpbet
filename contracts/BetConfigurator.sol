@@ -15,8 +15,8 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
   error InvalidTitle(string title);
   error InvalidDescription(string description);
   error InvalidOptionCount(uint256 count);
+  error InvalidVerifyingPeriodDuration(uint256 duration);
   error InvalidWageringPeriodDuration(uint256 duration);
-  error InvalidDecidingPeriodDuration(uint256 duration);
   error InvalidUrl(string url);
 
   // Bet creation restrictions
@@ -24,8 +24,8 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
   uint256 private _maxOptionsCount;
   uint256 private _minWageringPeriodDuration;
   uint256 private _maxWageringPeriodDuration;
-  uint256 private _minDecidingPeriodDuration;
-  uint256 private _maxDecidingPeriodDuration;
+  uint256 private _minVerifyingPeriodDuration;
+  uint256 private _maxVerifyingPeriodDuration;
   string[] private _originAllowlist;
   address[] private _chipTokenAllowlist;
 
@@ -33,7 +33,7 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
   mapping(address => uint256) private _chipMinValues;
   mapping(address => uint256) private _chipMinWageredTotalAmounts;
   uint256 private _voteMinValue;
-  uint256 private _minDecidedTotalAmount;
+  uint256 private _minVerifiedTotalAmount;
   uint256 private _minArbitratedTotalAmount;
   uint256 private _announcementPeriodDuration;
   uint256 private _arbitratingPeriodDuration;
@@ -41,7 +41,7 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
   uint256 private _confirmDisputeAmountRatio;
   uint256 private _protocolRewardRatio;
   uint256 private _creatorRewardRatio;
-  uint256 private _deciderRewardRatio;
+  uint256 private _verifierRewardRatio;
   uint256 private _countPerRelease;
   uint256 private _countPerPenalize;
 
@@ -51,13 +51,13 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
 
     _minWageringPeriodDuration = 1 days;
     _maxWageringPeriodDuration = 90 days;
-    _minDecidingPeriodDuration = 1 days;
-    _maxDecidingPeriodDuration = 90 days;
+    _minVerifyingPeriodDuration = 1 days;
+    _maxVerifyingPeriodDuration = 90 days;
 
     _chipMinValues[address(0)] = 0.001 ether;
     _chipMinWageredTotalAmounts[address(0)] = 0.2 ether;
     _voteMinValue = 1 ether;
-    _minDecidedTotalAmount = 10000 ether;
+    _minVerifiedTotalAmount = 10000 ether;
     _minArbitratedTotalAmount = 10000 ether;
 
     _announcementPeriodDuration = 1 days;
@@ -67,7 +67,7 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
     _confirmDisputeAmountRatio = 5;
     _protocolRewardRatio = 1;
     _creatorRewardRatio = 1;
-    _deciderRewardRatio = 5;
+    _verifierRewardRatio = 5;
 
     _countPerRelease = 1600;
     _countPerPenalize = 200;
@@ -89,16 +89,16 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
     if (optionCount < _minOptionsCount || optionCount > _maxOptionsCount) revert InvalidOptionCount(optionCount);
   }
 
-  function validateDuration(uint256 wageringPeriodDuration, uint256 decidingPeriodDuration)
+  function validateDuration(uint256 wageringPeriodDuration, uint256 verifyingPeriodDuration)
   public view {
     if (
       wageringPeriodDuration < _minWageringPeriodDuration ||
       wageringPeriodDuration > _maxWageringPeriodDuration
     ) revert InvalidWageringPeriodDuration(wageringPeriodDuration);
     if (
-      decidingPeriodDuration < _minDecidingPeriodDuration ||
-      decidingPeriodDuration > _maxDecidingPeriodDuration
-    ) revert InvalidDecidingPeriodDuration(decidingPeriodDuration);
+      verifyingPeriodDuration < _minVerifyingPeriodDuration ||
+      verifyingPeriodDuration > _maxVerifyingPeriodDuration
+    ) revert InvalidVerifyingPeriodDuration(verifyingPeriodDuration);
   }
 
   function validateChipToken(address token)
@@ -134,7 +134,7 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
       chipMinValue: chipMinValue(chip),
       voteMinValue: _voteMinValue,
       minWageredTotalAmount: minWageredTotalAmount(chip),
-      minDecidedTotalAmount: _minDecidedTotalAmount,
+      minVerifiedTotalAmount: _minVerifiedTotalAmount,
       minArbitratedTotalAmount: _minArbitratedTotalAmount,
       announcementPeriodDuration: _announcementPeriodDuration,
       arbitratingPeriodDuration: _arbitratingPeriodDuration,
@@ -142,7 +142,7 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
       confirmDisputeAmountRatio: _confirmDisputeAmountRatio,
       protocolRewardRatio: _protocolRewardRatio,
       creatorRewardRatio: _creatorRewardRatio,
-      deciderRewardRatio: _deciderRewardRatio,
+      verifierRewardRatio: _verifierRewardRatio,
       countPerRelease: _countPerRelease,
       countPerPenalize: _countPerPenalize
     });
@@ -192,26 +192,26 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
     _maxWageringPeriodDuration = newMaxWageringPeriodDuration;
   }
 
-  function minDecidingPeriodDuration()
+  function minVerifyingPeriodDuration()
   public view
   returns (uint256) {
-    return _minDecidingPeriodDuration;
+    return _minVerifyingPeriodDuration;
   }
 
-  function setMinDecidingPeriodDuration(uint256 newMinDecidingPeriodDuration)
+  function setMinVerifyingPeriodDuration(uint256 newMinVerifyingPeriodDuration)
   external onlyOwner {
-    _minDecidingPeriodDuration = newMinDecidingPeriodDuration;
+    _minVerifyingPeriodDuration = newMinVerifyingPeriodDuration;
   }
 
-  function maxDecidingPeriodDuration()
+  function maxVerifyingPeriodDuration()
   public view
   returns (uint256) {
-    return _maxDecidingPeriodDuration;
+    return _maxVerifyingPeriodDuration;
   }
 
-  function setMaxDecidingPeriodDuration(uint256 newMaxDecidingPeriodDuration)
+  function setMaxVerifyingPeriodDuration(uint256 newMaxVerifyingPeriodDuration)
   external onlyOwner {
-    _maxDecidingPeriodDuration = newMaxDecidingPeriodDuration;
+    _maxVerifyingPeriodDuration = newMaxVerifyingPeriodDuration;
   }
 
   function originAllowlist()
@@ -269,15 +269,15 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
     _chipMinWageredTotalAmounts[chip] = newMinWageredTotalAmount;
   }
 
-  function minDecidedTotalAmount()
+  function minVerifiedTotalAmount()
   public view
   returns (uint256) {
-    return _minDecidedTotalAmount;
+    return _minVerifiedTotalAmount;
   }
 
-  function setMinDecidedTotalAmount(uint256 newMinDecidedTotalAmount)
+  function setMinVerifiedTotalAmount(uint256 newMinVerifiedTotalAmount)
   external onlyOwner {
-    _minDecidedTotalAmount = newMinDecidedTotalAmount;
+    _minVerifiedTotalAmount = newMinVerifiedTotalAmount;
   }
 
   function minArbitratedTotalAmount()
@@ -357,15 +357,15 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
     _creatorRewardRatio = newCreatorRewardRatio;
   }
 
-  function deciderRewardRatio()
+  function verifierRewardRatio()
   public view
   returns (uint256) {
-    return _deciderRewardRatio;
+    return _verifierRewardRatio;
   }
 
-  function setDeciderRewardRatio(uint256 newDeciderRewardRatio)
+  function setVerifierRewardRatio(uint256 newVerifierRewardRatio)
   external onlyOwner {
-    _deciderRewardRatio = newDeciderRewardRatio;
+    _verifierRewardRatio = newVerifierRewardRatio;
   }
 
   function countPerRelease()

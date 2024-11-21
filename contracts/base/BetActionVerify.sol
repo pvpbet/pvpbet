@@ -2,14 +2,14 @@
 pragma solidity ^0.8.20;
 
 import {IBet} from "../interface/IBet.sol";
-import {IBetActionDecide} from "../interface/IBetActionDecide.sol";
+import {IBetActionVerify} from "../interface/IBetActionVerify.sol";
 import {IErrors} from "../interface/IErrors.sol";
 import {IVotingEscrow} from "../interface/IVotingEscrow.sol";
 import {AddressArrayLib} from "../lib/Address.sol";
 import {MathLib} from "../lib/Math.sol";
 import {Record} from "../lib/Record.sol";
 
-abstract contract BetActionDecide is IBetActionDecide, IErrors {
+abstract contract BetActionVerify is IBetActionVerify, IErrors {
   using MathLib for uint256;
   using AddressArrayLib for address[];
 
@@ -21,9 +21,9 @@ abstract contract BetActionDecide is IBetActionDecide, IErrors {
   bool private _confiscated;
   bool private _unfixed;
 
-  error DecidingPeriodHasNotStartedYet();
-  error DecidingPeriodHasAlreadyEnded();
-  error DecidingPeriodHasNotEndedYet();
+  error VerifyingPeriodHasNotStartedYet();
+  error VerifyingPeriodHasAlreadyEnded();
+  error VerifyingPeriodHasNotEndedYet();
 
   function bet()
   public view virtual
@@ -53,36 +53,36 @@ abstract contract BetActionDecide is IBetActionDecide, IErrors {
     _;
   }
 
-  function decide(uint256 amount)
+  function verify(uint256 amount)
   public virtual {
-    address decider = msg.sender;
-    (uint256 payment, uint256 refund) = _decide(msg.sender, amount);
-    _transfer(decider, payment, refund);
+    address verifier = msg.sender;
+    (uint256 payment, uint256 refund) = _verify(msg.sender, amount);
+    _transfer(verifier, payment, refund);
   }
 
-  function decide(address decider, uint256 amount)
+  function verify(address verifier, uint256 amount)
   public virtual
   onlyVote {
-    (uint256 payment, uint256 refund) = _decide(decider, amount);
-    _transfer(decider, payment, refund);
+    (uint256 payment, uint256 refund) = _verify(verifier, amount);
+    _transfer(verifier, payment, refund);
   }
 
-  function _decide(address decider, uint256 amount)
+  function _verify(address verifier, uint256 amount)
   internal
   returns (uint256 payment, uint256 refund) {
     if (amount > 0 && amount < voteMinValue()) revert InvalidAmount();
     IBet.Status status = IBet(bet()).statusUpdate();
-    if (status < IBet.Status.DECIDING) revert DecidingPeriodHasNotStartedYet();
-    if (status > IBet.Status.DECIDING) revert DecidingPeriodHasAlreadyEnded();
+    if (status < IBet.Status.VERIFYING) revert VerifyingPeriodHasNotStartedYet();
+    if (status > IBet.Status.VERIFYING) revert VerifyingPeriodHasAlreadyEnded();
 
     payment = amount;
-    refund = _amounts[decider];
-    _amounts[decider] = payment;
+    refund = _amounts[verifier];
+    _amounts[verifier] = payment;
 
     if (payment > 0 && refund == 0) {
-      _accounts.push(decider);
+      _accounts.push(verifier);
     } else if (payment == 0 && refund > 0) {
-      _accounts.remove(decider);
+      _accounts.remove(verifier);
     }
 
     if (payment > refund) {
@@ -91,7 +91,7 @@ abstract contract BetActionDecide is IBetActionDecide, IErrors {
       _totalAmount = _totalAmount.unsafeSub(refund - payment);
     }
 
-    emit Decided(decider, amount);
+    emit Verified(verifier, amount);
   }
 
   function _transfer(address owner, uint256 payment, uint256 refund)
@@ -103,25 +103,25 @@ abstract contract BetActionDecide is IBetActionDecide, IErrors {
     }
   }
 
-  function decidedAmount()
+  function verifiedAmount()
   public view
   returns (uint256) {
     return _totalAmount;
   }
 
-  function decidedAmount(address decider)
+  function verifiedAmount(address verifier)
   public view
   returns (uint256) {
-    return _amounts[decider];
+    return _amounts[verifier];
   }
 
-  function decidedRecords()
+  function verifiedRecords()
   public view
   returns (Record[] memory) {
-    return decidedRecords(0, _accounts.length);
+    return verifiedRecords(0, _accounts.length);
   }
 
-  function decidedRecords(uint256 offset, uint256 limit)
+  function verifiedRecords(uint256 offset, uint256 limit)
   public view
   returns (Record[] memory) {
     address[] memory accounts = _accounts.slice(offset, limit);
@@ -134,50 +134,50 @@ abstract contract BetActionDecide is IBetActionDecide, IErrors {
     return arr;
   }
 
-  function decidedRecordCount()
+  function verifiedRecordCount()
   public view
   returns (uint256) {
     return _accounts.length;
   }
 
-  function confiscateDecidedVotes()
+  function confiscateVerifiedVotes()
   public
   onlyBet {
-    confiscateDecidedVotes(0);
+    confiscateVerifiedVotes(0);
   }
 
-  function confiscateDecidedVotes(uint256 limit)
+  function confiscateVerifiedVotes(uint256 limit)
   public
   onlyBet {
     if (_released || _unfixed) return;
     address bet_ = bet();
-    if (IBet(bet_).status() <= IBet.Status.DECIDING) revert DecidingPeriodHasNotEndedYet();
+    if (IBet(bet_).status() <= IBet.Status.VERIFYING) revert VerifyingPeriodHasNotEndedYet();
     _confiscated = true;
 
-    (uint256 start, uint256 end) = _getReleasedRangeOfDecidedRecords(limit);
-    (address[] memory accounts, uint256[] memory amounts) = _getDecidedAccountsAndAmounts(start, end);
+    (uint256 start, uint256 end) = _getReleasedRangeOfVerifiedRecords(limit);
+    (address[] memory accounts, uint256[] memory amounts) = _getVerifiedAccountsAndAmounts(start, end);
     IVotingEscrow(vote()).confiscateBatch(accounts, amounts, bet_);
   }
 
-  function unfixDecidedVotes()
+  function unfixVerifiedVotes()
   public
   onlyBet {
-    unfixDecidedVotes(0);
+    unfixVerifiedVotes(0);
   }
 
-  function unfixDecidedVotes(uint256 limit)
+  function unfixVerifiedVotes(uint256 limit)
   public
   onlyBet {
     if (_released || _confiscated) return;
-    if (IBet(bet()).status() <= IBet.Status.DECIDING) revert DecidingPeriodHasNotEndedYet();
+    if (IBet(bet()).status() <= IBet.Status.VERIFYING) revert VerifyingPeriodHasNotEndedYet();
     _unfixed = true;
 
-    (uint256 start, uint256 end) = _getReleasedRangeOfDecidedRecords(limit);
-    (address[] memory accounts, uint256[] memory amounts) = _getDecidedAccountsAndAmounts(start, end);
+    (uint256 start, uint256 end) = _getReleasedRangeOfVerifiedRecords(limit);
+    (address[] memory accounts, uint256[] memory amounts) = _getVerifiedAccountsAndAmounts(start, end);
     IVotingEscrow(vote()).unfixBatch(accounts, amounts);
   }
 
-  function _getDecidedAccountsAndAmounts(uint256 start, uint256 end)
+  function _getVerifiedAccountsAndAmounts(uint256 start, uint256 end)
   private view
   returns (address[] memory, uint256[] memory) {
     uint256 length = end.unsafeSub(start);
@@ -192,7 +192,7 @@ abstract contract BetActionDecide is IBetActionDecide, IErrors {
     return (accounts, amounts);
   }
 
-  function _getReleasedRangeOfDecidedRecords(uint256 limit)
+  function _getReleasedRangeOfVerifiedRecords(uint256 limit)
   private
   returns (uint256 start, uint256 end) {
     uint256 offset = _releasedOffset;
@@ -214,7 +214,7 @@ abstract contract BetActionDecide is IBetActionDecide, IErrors {
     }
   }
 
-  function decidedVotesReleased()
+  function verifiedVotesReleased()
   public view
   returns (bool) {
     return _released;

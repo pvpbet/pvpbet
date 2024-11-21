@@ -6,7 +6,7 @@ import {Upgradeable} from "./base/Upgradeable.sol";
 import {UseGovTokenStaking} from "./base/UseGovTokenStaking.sol";
 import {IBet} from "./interface/IBet.sol";
 import {IBetActionArbitrate} from "./interface/IBetActionArbitrate.sol";
-import {IBetActionDecide} from "./interface/IBetActionDecide.sol";
+import {IBetActionVerify} from "./interface/IBetActionVerify.sol";
 import {IBetOption} from "./interface/IBetOption.sol";
 import {IErrors} from "./interface/IErrors.sol";
 import {IGovTokenStaking} from "./interface/IGovTokenStaking.sol";
@@ -24,7 +24,7 @@ contract VotingEscrow is IVotingEscrow, IErrors, ERC20Upgradeable, Upgradeable, 
   function version()
   public pure override
   returns (string memory) {
-    return "1.0.0";
+    return "1.1.0";
   }
 
   using MathLib for uint256;
@@ -110,8 +110,8 @@ contract VotingEscrow is IVotingEscrow, IErrors, ERC20Upgradeable, Upgradeable, 
 
       if (bet.vote() != address(this)) revert InvalidTarget(to);
 
-      if (isBetOption && status == IBet.Status.DECIDING) {
-        _decide(owner, to, value);
+      if (isBetOption && status == IBet.Status.VERIFYING) {
+        _verify(owner, to, value);
       } else if (status == IBet.Status.ARBITRATING) {
         _arbitrate(owner, to, value);
       } else {
@@ -130,7 +130,7 @@ contract VotingEscrow is IVotingEscrow, IErrors, ERC20Upgradeable, Upgradeable, 
     revert VoteNotTransferable();
   }
 
-  function _decide(address account, address target, uint256 value)
+  function _verify(address account, address target, uint256 value)
   private {
     uint256 stakedAmount = IGovTokenStaking(govTokenStaking()).stakedAmount(account);
     if (stakedAmount > 0) {
@@ -139,7 +139,7 @@ contract VotingEscrow is IVotingEscrow, IErrors, ERC20Upgradeable, Upgradeable, 
         revert VoteInsufficientAvailableBalance(account, balance, value);
       }
       _approve(account, target, value);
-      IBetActionDecide(target).decide(account, value);
+      IBetActionVerify(target).verify(account, value);
     } else {
       revert VotingConditionsNotMet(account);
     }
