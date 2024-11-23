@@ -125,7 +125,7 @@ export async function wager(
   return amounts
 }
 
-export async function decide(
+export async function verify(
   vote: Address,
   accounts: [wallet: WalletClient, option: Address, ratio: bigint][],
   Bet: ContractTypes['Bet'],

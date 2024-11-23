@@ -452,7 +452,7 @@ describe('VotingEscrow', () => {
       )
     })
 
-    it('#transfer() is able to decide', async () => {
+    it('#transfer() is able to verify', async () => {
       const {
         VotingEscrow,
         GovToken,

@@ -77,6 +77,7 @@ const config: HardhatUserConfig = {
     }, {}),
     customChains: Object.keys(networks)
       .map((key: string) => {
+        if (key === 'localhost') return null
         const chain: Chain = chains[key as keyof typeof chains]
         if (chain) {
           return {
@@ -99,6 +100,7 @@ const config: HardhatUserConfig = {
   networks: Object.fromEntries(
     Object.keys(networks)
       .map((key: string) => {
+        if (key === 'localhost') return null
         const chain: Chain = chains[key as keyof typeof chains]
         if (chain) {
           return [

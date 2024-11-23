@@ -526,6 +526,29 @@ describe('GovTokenStaking', () => {
         ],
       )
     })
+
+    it('Preventing dust attacks', async () => {
+      const {
+        GovToken,
+        GovTokenStaking,
+        hacker,
+      } = await loadFixture(deployFixture)
+
+      const dust = parseUnits('1', 18) - 1n
+      await stake(hacker, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK, dust)
+      assert.equal(await GovTokenStaking.read.stakedWeight([hacker.account.address]), 0)
+      await stake(hacker, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK, dust)
+      assert.equal(await GovTokenStaking.read.stakedWeight([hacker.account.address]), 1)
+      await stake(hacker, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK, dust)
+      assert.equal(await GovTokenStaking.read.stakedWeight([hacker.account.address]), 2)
+
+      await unstake(hacker, GovTokenStaking, UnlockWaitingPeriod.WEEK, dust)
+      assert.equal(await GovTokenStaking.read.stakedWeight([hacker.account.address]), 1)
+      await unstake(hacker, GovTokenStaking, UnlockWaitingPeriod.WEEK, dust)
+      assert.equal(await GovTokenStaking.read.stakedWeight([hacker.account.address]), 0)
+      await unstake(hacker, GovTokenStaking, UnlockWaitingPeriod.WEEK, dust)
+      assert.equal(await GovTokenStaking.read.stakedWeight([hacker.account.address]), 0)
+    })
   })
 
   describe('Distribute rewards', () => {

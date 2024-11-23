@@ -30,7 +30,7 @@ import {
   getCreatorReward,
   getVerifierReward,
   getWinnerReward,
-  decide,
+  verify,
   wager,
 } from './common/bet'
 import {
@@ -633,7 +633,7 @@ describe('Bet', () => {
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.VERIFYING)
 
-        await decide(VotingEscrow.address, [
+        await verify(VotingEscrow.address, [
           [owner, options[0], 6n],
           [user, options[1], 3n],
           [hacker, options[1], 2n],
@@ -676,7 +676,7 @@ describe('Bet', () => {
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.VERIFYING)
 
-        await decide(VotingEscrow.address, [
+        await verify(VotingEscrow.address, [
           [owner, options[0], 5n],
           [user, options[1], 3n],
           [hacker, options[1], 2n],
@@ -704,7 +704,7 @@ describe('Bet', () => {
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.VERIFYING)
 
-        await decide(VotingEscrow.address, [
+        await verify(VotingEscrow.address, [
           [owner, options[0], 5n],
           [user, options[1], 3n],
           [hacker, options[1], 1n],
@@ -754,7 +754,7 @@ describe('Bet', () => {
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.VERIFYING)
 
-        await decide(VotingEscrow.address, [
+        await verify(VotingEscrow.address, [
           [owner, options[0], 6n],
           [user, options[1], 3n],
           [hacker, options[1], 2n],
@@ -841,7 +841,7 @@ describe('Bet', () => {
           ownerVerifiedAmount,
           userVerifiedAmount,
           hackerVerifiedAmount,
-        ] = await decide(VotingEscrow.address, [
+        ] = await verify(VotingEscrow.address, [
           [owner, options[0], 6n],
           [user, options[1], 3n],
           [hacker, options[1], 2n],
@@ -946,7 +946,7 @@ describe('Bet', () => {
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.VERIFYING)
 
-        await decide(VotingEscrow.address, [
+        await verify(VotingEscrow.address, [
           [owner, options[0], 6n],
           [user, options[1], 3n],
           [hacker, options[1], 2n],
@@ -993,7 +993,7 @@ describe('Bet', () => {
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.VERIFYING)
 
-        await decide(VotingEscrow.address, [
+        await verify(VotingEscrow.address, [
           [owner, options[0], 6n],
           [user, options[1], 3n],
           [hacker, options[1], 2n],
@@ -1045,7 +1045,7 @@ describe('Bet', () => {
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.VERIFYING)
 
-        await decide(VotingEscrow.address, [
+        await verify(VotingEscrow.address, [
           [owner, options[0], 6n],
           [user, options[1], 3n],
           [hacker, options[1], 2n],
@@ -1093,7 +1093,7 @@ describe('Bet', () => {
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.VERIFYING)
 
-        await decide(VotingEscrow.address, [
+        await verify(VotingEscrow.address, [
           [owner, options[0], 6n],
           [user, options[1], 3n],
           [hacker, options[1], 2n],
@@ -1146,7 +1146,7 @@ describe('Bet', () => {
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.VERIFYING)
 
-        await decide(VotingEscrow.address, [
+        await verify(VotingEscrow.address, [
           [owner, options[0], 6n],
           [user, options[1], 3n],
           [hacker, options[1], 2n],
@@ -1206,7 +1206,7 @@ describe('Bet', () => {
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.VERIFYING)
 
-        await decide(VotingEscrow.address, [
+        await verify(VotingEscrow.address, [
           [owner, options[0], 6n],
           [user, options[1], 3n],
           [hacker, options[1], 2n],
@@ -1305,7 +1305,7 @@ describe('Bet', () => {
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.VERIFYING)
 
-        await decide(VotingEscrow.address, [
+        await verify(VotingEscrow.address, [
           [owner, options[0], 6n],
           [user, options[1], 3n],
           [hacker, options[1], 2n],
@@ -1361,7 +1361,7 @@ describe('Bet', () => {
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.VERIFYING)
 
-        await decide(VotingEscrow.address, [
+        await verify(VotingEscrow.address, [
           [owner, options[0], 6n],
           [user, options[1], 3n],
           [hacker, options[1], 2n],
@@ -1419,7 +1419,7 @@ describe('Bet', () => {
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.VERIFYING)
 
-        await decide(VotingEscrow.address, [
+        await verify(VotingEscrow.address, [
           [owner, options[0], 6n],
           [user, options[1], 3n],
           [hacker, options[1], 2n],
@@ -1460,7 +1460,7 @@ describe('Bet', () => {
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.VERIFYING)
 
-        await decide(VotingEscrow.address, [
+        await verify(VotingEscrow.address, [
           [owner, options[0], 6n],
           [user, options[1], 3n],
           [hacker, options[1], 2n],
@@ -1520,7 +1520,7 @@ describe('Bet', () => {
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.VERIFYING)
 
-        await decide(VotingEscrow.address, [
+        await verify(VotingEscrow.address, [
           [owner, options[0], 6n],
           [user, options[1], 3n],
           [hacker, options[1], 2n],
@@ -1572,7 +1572,7 @@ describe('Bet', () => {
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.VERIFYING)
 
-        await decide(VotingEscrow.address, [
+        await verify(VotingEscrow.address, [
           [owner, options[0], 6n],
           [user, options[1], 3n],
           [hacker, options[1], 2n],
@@ -1710,7 +1710,7 @@ describe('Bet', () => {
           ownerVerifiedAmount,
           userVerifiedAmount,
           hackerVerifiedAmount,
-        ] = await decide(VotingEscrow.address, [
+        ] = await verify(VotingEscrow.address, [
           [owner, options[0], 5n],
           [user, options[1], 3n],
           [hacker, options[1], 2n],
@@ -1807,7 +1807,7 @@ describe('Bet', () => {
           ownerVerifiedAmount,
           userVerifiedAmount,
           hackerVerifiedAmount,
-        ] = await decide(VotingEscrow.address, [
+        ] = await verify(VotingEscrow.address, [
           [owner, options[0], 6n],
           [user, options[1], 3n],
           [hacker, options[1], 2n],
@@ -1921,7 +1921,7 @@ describe('Bet', () => {
           ownerVerifiedAmount,
           userVerifiedAmount,
           hackerVerifiedAmount,
-        ] = await decide(VotingEscrow.address, [
+        ] = await verify(VotingEscrow.address, [
           [owner, options[0], 6n],
           [user, options[1], 3n],
           [hacker, options[1], 2n],
@@ -2040,7 +2040,7 @@ describe('Bet', () => {
           ownerVerifiedAmount,
           userVerifiedAmount,
           hackerVerifiedAmount,
-        ] = await decide(VotingEscrow.address, [
+        ] = await verify(VotingEscrow.address, [
           [owner, options[2], 6n],
           [user, options[1], 3n],
           [hacker, options[1], 2n],
@@ -2156,7 +2156,7 @@ describe('Bet', () => {
           ownerVerifiedAmount,
           userVerifiedAmount,
           hackerVerifiedAmount,
-        ] = await decide(VotingEscrow.address, [
+        ] = await verify(VotingEscrow.address, [
           [owner, options[0], 6n],
           [user, options[1], 3n],
           [hacker, options[1], 2n],
@@ -2312,7 +2312,7 @@ describe('Bet', () => {
           ownerVerifiedAmount,
           userVerifiedAmount,
           hackerVerifiedAmount,
-        ] = await decide(VotingEscrow.address, [
+        ] = await verify(VotingEscrow.address, [
           [owner, options[0], 5n],
           [user, options[1], 3n],
           [hacker, options[1], 3n],
@@ -2477,7 +2477,7 @@ describe('Bet', () => {
           ownerVerifiedAmount,
           userVerifiedAmount,
           hackerVerifiedAmount,
-        ] = await decide(VotingEscrow.address, [
+        ] = await verify(VotingEscrow.address, [
           [owner, options[0], 6n],
           [user, options[1], 3n],
           [hacker, options[1], 2n],
@@ -2800,7 +2800,7 @@ describe('Bet', () => {
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.VERIFYING)
 
-        await decide(VotingEscrow.address, [
+        await verify(VotingEscrow.address, [
           [owner, options[0], 6n],
           [user, options[1], 3n],
           [hacker, options[1], 2n],
@@ -2868,7 +2868,7 @@ describe('Bet', () => {
       await time.increaseTo(await Bet.read.statusDeadline() + 1n)
       assert.equal(await Bet.read.status(), BetStatus.VERIFYING)
 
-      await decide(VotingEscrow.address, [
+      await verify(VotingEscrow.address, [
         [owner, options[0], 6n],
         [user, options[1], 3n],
         [hacker, options[1], 2n],

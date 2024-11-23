@@ -7,6 +7,12 @@ import {AddressLib} from "../lib/Address.sol";
 import {TransferLib} from "../lib/Transfer.sol";
 
 contract TestBetOption {
+  function version()
+  external pure
+  returns (string memory) {
+    return "1.1.0";
+  }
+
   using TransferLib for address;
 
   address public bet;

@@ -22,7 +22,7 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseVotingEsc
   function version()
   public pure override
   returns (string memory) {
-    return "1.0.4";
+    return "1.0.5";
   }
 
   using AddressLib for address;
@@ -87,16 +87,15 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseVotingEsc
     _stakedTotalAmountOf[unlockWaitingPeriod] = _stakedTotalAmountOf[unlockWaitingPeriod].unsafeSub(amount);
   }
 
-  function _stakedWeightIncrease(address account, uint256 weight)
+  function _stakedWeightUpdate(address account, uint256 newWeight)
   private {
-    _stakedTotalWeight = _stakedTotalWeight.unsafeAdd(weight);
-    _stakedTotalWeightOf[account] = _stakedTotalWeightOf[account].unsafeAdd(weight);
-  }
-
-  function _stakedWeightDecrease(address account, uint256 weight)
-  private {
-    _stakedTotalWeight = _stakedTotalWeight.unsafeSub(weight);
-    _stakedTotalWeightOf[account] = _stakedTotalWeightOf[account].unsafeSub(weight);
+    uint256 oldWeight = _stakedTotalWeightOf[account];
+    _stakedTotalWeightOf[account] = newWeight;
+    if (oldWeight > newWeight) {
+      _stakedTotalWeight = _stakedTotalWeight.unsafeSub(oldWeight.unsafeSub(newWeight));
+    } else if (oldWeight < newWeight) {
+      _stakedTotalWeight = _stakedTotalWeight.unsafeAdd(newWeight.unsafeSub(oldWeight));
+    }
   }
 
   function _rewardDebtIncrease(address account, uint256 weight)
@@ -172,9 +171,13 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseVotingEsc
   function _stake(address account, UnlockWaitingPeriod unlockWaitingPeriod, uint256 amount)
   private {
     _stakedAmountIncrease(account, unlockWaitingPeriod, amount);
-    uint256 weight = _getWeight(unlockWaitingPeriod, amount);
-    _rewardDebtIncrease(account, weight);
-    _stakedWeightIncrease(account, weight);
+    uint256 oldWeight = _stakedTotalWeightOf[account];
+    uint256 newWeight = _calcWeight(account);
+    if (newWeight > oldWeight) {
+      uint256 weight = newWeight.unsafeSub(oldWeight);
+      _rewardDebtIncrease(account, weight);
+    }
+    _stakedWeightUpdate(account, newWeight);
     emit Staked(account, unlockWaitingPeriod, amount);
   }
 
@@ -204,9 +207,13 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseVotingEsc
   function _unstake(address account, UnlockWaitingPeriod unlockWaitingPeriod, uint256 amount)
   private {
     _stakedAmountDecrease(account, unlockWaitingPeriod, amount);
-    uint256 weight = _getWeight(unlockWaitingPeriod, amount);
-    _rewardDebtDecrease(account, weight);
-    _stakedWeightDecrease(account, weight);
+    uint256 oldWeight = _stakedTotalWeightOf[account];
+    uint256 newWeight = _calcWeight(account);
+    if (newWeight < oldWeight) {
+      uint256 weight = oldWeight.unsafeSub(newWeight);
+      _rewardDebtDecrease(account, weight);
+    }
+    _stakedWeightUpdate(account, newWeight);
     emit Unstaked(account, unlockWaitingPeriod, amount);
   }
 
@@ -450,7 +457,22 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseVotingEsc
     uint256 rewardDebt = stakedTotalWeight > 0
       ? _rewardDebtOf[account][token].mulDiv(weight, stakedTotalWeight)
       : 0;
-    return weight.unsafeMul(_accRewardPerWeightOf[token]).unsafeSub(rewardDebt);
+    return weight.unsafeMul(_accRewardPerWeightOf[token]).sub(rewardDebt);
+  }
+
+  function _calcWeight(address account)
+  private view
+  returns (uint256) {
+    uint256 stakedTotalWeight;
+    uint256 length = uint256(type(UnlockWaitingPeriod).max).unsafeInc();
+    for (uint256 i = 0; i < length; i = i.unsafeInc()) {
+      UnlockWaitingPeriod unlockWaitingPeriod = UnlockWaitingPeriod(i);
+      if (unlockWaitingPeriod == UnlockWaitingPeriod.NONE) continue;
+      uint256 amount = _stakedAmountOf[account][unlockWaitingPeriod];
+      uint256 weight = _getWeight(unlockWaitingPeriod, amount);
+      stakedTotalWeight = stakedTotalWeight.unsafeAdd(weight);
+    }
+    return stakedTotalWeight;
   }
 
   function _getWeight(UnlockWaitingPeriod unlockWaitingPeriod, uint256 amount)
