@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {BetActionArbitrate} from "./base/BetActionArbitrate.sol";
 import {BetActionDispute} from "./base/BetActionDispute.sol";
 import {IBet} from "./interface/IBet.sol";
@@ -721,7 +720,10 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
         amount
       );
     } else {
-      IERC20(_chip).approve(_govTokenStaking, amount);
+      _chip.functionCallWithValue(
+        abi.encodeWithSignature("approve(address,uint256)", _govTokenStaking, amount),
+        0
+      );
       _govTokenStaking.functionCallWithValue(
         abi.encodeWithSignature("distribute(address,uint256)", _chip, amount),
         0

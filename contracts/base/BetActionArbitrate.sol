@@ -5,7 +5,7 @@ import {IBet} from "../interface/IBet.sol";
 import {IBetActionArbitrate} from "../interface/IBetActionArbitrate.sol";
 import {IErrors} from "../interface/IErrors.sol";
 import {IVotingEscrow} from "../interface/IVotingEscrow.sol";
-import {AddressArrayLib} from "../lib/Address.sol";
+import {AddressArrayLib} from "../lib/AddressArray.sol";
 import {MathLib} from "../lib/Math.sol";
 import {Record} from "../lib/Record.sol";
 

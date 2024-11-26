@@ -11,6 +11,8 @@ interface IUseGovToken {
 
   /**
    * @dev Sets the contract address of the governance token.
+   *
+   * Can only be called by the authorized.
    */
   function setGovToken(address newGovToken) external;
 }

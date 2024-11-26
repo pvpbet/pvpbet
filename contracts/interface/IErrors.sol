@@ -5,5 +5,6 @@ interface IErrors {
   error CannotReceive();
   error InvalidChip(address token);
   error InvalidAmount();
+  error InvalidToken();
   error UnauthorizedAccess(address sender);
 }

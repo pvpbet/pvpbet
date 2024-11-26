@@ -155,6 +155,8 @@ interface IGovTokenStaking {
 
   /**
    * @dev Sets the reward tokens.
+   *
+   * Can only be called by the authorized.
    */
   function setRewardTokens(address[] calldata tokens) external;
 
@@ -167,6 +169,40 @@ interface IGovTokenStaking {
    * @dev Distribute a specified amount of ERC20 token.
    */
   function distribute(address token, uint256 amount) external;
+
+  /**
+   * @dev Returns the accumulated ETH rewards per weight.
+   */
+  function accRewardPerWeight() external view returns (uint256);
+
+  /**
+   * @dev Returns the accumulated ERC20 token rewards per weight.
+   */
+  function accRewardPerWeight(address token) external view returns (uint256);
+
+  /**
+   * @dev Returns the ETH reward debt of the account.
+   */
+  function rewardDebt(address account) external view returns (uint256);
+
+  /**
+   * @dev Returns the ERC20 token reward debt of the account.
+   */
+  function rewardDebt(address account, address token) external view returns (uint256);
+
+  /**
+   * @dev Corrects the ETH reward debt of the accounts.
+   *
+   * Can only be called by the authorized.
+   */
+  function correctRewardDebt(address[] calldata accounts) external;
+
+  /**
+   * @dev Corrects the ERC20 token reward debt of the accounts.
+   *
+   * Can only be called by the authorized.
+   */
+  function correctRewardDebt(address[] calldata accounts, address token) external;
 
   /**
    * @dev Returns the claimed ETH rewards of the account.

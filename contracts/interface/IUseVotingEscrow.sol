@@ -11,6 +11,8 @@ interface IUseVotingEscrow {
 
   /**
    * @dev Sets the contract address of the voting escrow.
+   *
+   * Can only be called by the authorized.
    */
   function setVotingEscrow(address newVotingEscrow) external;
 }

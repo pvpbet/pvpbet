@@ -1,11 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {IBet} from "../interface/IBet.sol";
-import {IBetChip} from "../interface/IBetChip.sol";
-import {IBetOption} from "../interface/IBetOption.sol";
-import {MathLib} from "./Math.sol";
-
 library AddressLib {
   function isContractSender()
   internal view
@@ -16,48 +11,31 @@ library AddressLib {
   function isBet(address target)
   internal view
   returns (bool) {
-    if (target.code.length > 0) {
-      try IBet(target).isBet() returns (bool yes) {
-        return yes;
-      } catch {}
-    }
-    return false;
+    return functionStaticCallReturnBool(target, abi.encodeWithSignature("isBet()"));
   }
 
   function isBetOption(address target)
   internal view
   returns (bool) {
-    if (target.code.length > 0) {
-      try IBetOption(target).isBetOption() returns (bool yes) {
-        return yes;
-      } catch {}
-    }
-    return false;
+    return functionStaticCallReturnBool(target, abi.encodeWithSignature("isBetOption()"));
   }
 
   function isBetChip(address target)
   internal view
   returns (bool) {
-    if (target.code.length > 0) {
-      try IBetChip(target).isBetChip() returns (bool yes) {
-        return yes;
-      } catch {}
-    }
-    return false;
+    return functionStaticCallReturnBool(target, abi.encodeWithSignature("isBetChip()"));
   }
 
-  function decimals(address target)
+  function functionStaticCallReturnBool(address target, bytes memory data)
   internal view
-  returns (uint8) {
+  returns (bool) {
     if (target.code.length > 0) {
-      (bool success, bytes memory result) = target.staticcall(
-        abi.encodeWithSignature("decimals()")
-      );
+      (bool success, bytes memory result) = target.staticcall(data);
       if (success) {
-        return abi.decode(result, (uint8));
+        return abi.decode(result, (bool));
       }
     }
-    return 18;
+    return false;
   }
 
   /**
@@ -86,38 +64,5 @@ library AddressLib {
       revert AddressEmptyCode(target);
     }
     return result;
-  }
-}
-
-library AddressArrayLib {
-  using MathLib for uint256;
-
-  function remove(address[] storage arr, address account)
-  internal {
-    uint256 length = arr.length;
-    uint256 max = length.unsafeDec();
-    for (uint256 i = 0; i < length; i = i.unsafeInc()) {
-      if (arr[i] == account) {
-        for (uint256 j = i; j < max; j = j.unsafeInc()) {
-          arr[j] = arr[j.unsafeInc()];
-        }
-        arr.pop();
-        break;
-      }
-    }
-  }
-
-  function slice(address[] memory arr, uint256 offset, uint256 limit)
-  internal pure
-  returns (address[] memory) {
-    uint256 length = arr.length;
-    if (offset == 0 && limit == length) return arr;
-    offset = offset.min(length);
-    uint256 end = offset.add(limit).min(length);
-    address[] memory newArr = new address[](end.unsafeSub(offset));
-    for (uint256 i = offset; i < end; i = i.unsafeInc()) {
-      newArr[i.unsafeSub(offset)] = arr[i];
-    }
-    return newArr;
   }
 }

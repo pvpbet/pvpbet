@@ -7,7 +7,7 @@ import {UseVotingEscrow} from "./base/UseVotingEscrow.sol";
 import {IErrors} from "./interface/IErrors.sol";
 import {IGovTokenStaking} from "./interface/IGovTokenStaking.sol";
 import {IVotingEscrow} from "./interface/IVotingEscrow.sol";
-import {AddressLib} from "./lib/Address.sol";
+import {AddressArrayLib} from "./lib/AddressArray.sol";
 import {MathLib} from "./lib/Math.sol";
 import {TransferLib} from "./lib/Transfer.sol";
 import {UnstakedRecord, UnstakedRecordArrayLib} from "./lib/UnstakedRecord.sol";
@@ -22,12 +22,12 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseVotingEsc
   function version()
   public pure override
   returns (string memory) {
-    return "1.0.5";
+    return "1.1.0";
   }
 
-  using AddressLib for address;
   using MathLib for uint256;
   using TransferLib for address;
+  using AddressArrayLib for address[];
   using UnstakedRecordArrayLib for UnstakedRecord[];
 
   error CannotRestake();
@@ -71,7 +71,11 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseVotingEsc
 
   function _setGovToken(address newGovToken)
   internal override(UseGovToken) {
-    _amountPerWeight = MathLib.unsafePow(10, newGovToken.decimals());
+    (bool success, bytes memory result) = newGovToken.staticcall(
+      abi.encodeWithSignature("decimals()")
+    );
+    if (!success) revert InvalidToken();
+    _amountPerWeight = MathLib.unsafePow(10, abi.decode(result, (uint8)));
     super._setGovToken(newGovToken);
   }
 
@@ -368,12 +372,22 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseVotingEsc
   }
 
   function setRewardTokens(address[] memory tokens)
-  external {
+  external
+  onlyOwner {
     _setRewardTokens(tokens);
   }
 
   function _setRewardTokens(address[] memory tokens)
   private {
+    // Reset accumulated reward per weight of removed reward tokens
+    address[] memory rewardTokens_ = _rewardTokens;
+    uint256 length = rewardTokens_.length;
+    for (uint256 i = 0; i < length; i = i.unsafeInc()) {
+      address token = rewardTokens_[i];
+      if (!tokens.includes(token)) {
+        _accRewardPerWeightOf[token] = 0;
+      }
+    }
     _rewardTokens = tokens;
     emit RewardTokenSet(tokens);
   }
@@ -392,13 +406,66 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseVotingEsc
   private {
     address sender = msg.sender;
     sender.transferToContract(token, amount);
+    emit Distributed(sender, token, amount);
+
     uint256 stakedTotalWeight = _stakedTotalWeight;
-    if (stakedTotalWeight > 0) {
+    if (stakedTotalWeight > 0 && _rewardTokens.includes(token)) {
       _accRewardPerWeightOf[token] = _accRewardPerWeightOf[token].unsafeAdd(
         amount.unsafeDiv(stakedTotalWeight)
       );
     }
-    emit Distributed(sender, token, amount);
+  }
+
+  function accRewardPerWeight()
+  external view
+  returns (uint256) {
+    return _accRewardPerWeightOf[address(0)];
+  }
+
+  function accRewardPerWeight(address token)
+  external view
+  returns (uint256) {
+    return _accRewardPerWeightOf[token];
+  }
+
+  function rewardDebt(address account)
+  external view
+  returns (uint256) {
+    return _rewardDebtOf[account][address(0)];
+  }
+
+  function rewardDebt(address account, address token)
+  external view
+  returns (uint256) {
+    return _rewardDebtOf[account][token];
+  }
+
+  function correctRewardDebt(address[] calldata accounts)
+  external
+  onlyOwner {
+    uint256 length = accounts.length;
+    for (uint256 i = 0; i < length; i = i.unsafeInc()) {
+      _correctRewardDebt(accounts[i], address(0));
+    }
+  }
+
+  function correctRewardDebt(address[] calldata accounts, address token)
+  external
+  onlyOwner {
+    uint256 length = accounts.length;
+    for (uint256 i = 0; i < length; i = i.unsafeInc()) {
+      _correctRewardDebt(accounts[i], token);
+    }
+  }
+
+  function _correctRewardDebt(address account, address token)
+  private {
+    uint256 weight = _stakedTotalWeightOf[account];
+    uint256 maxRewardDebt = weight.unsafeMul(_accRewardPerWeightOf[token]);
+    uint256 rewardDebt_ = _rewardDebtOf[account][token];
+    if (rewardDebt_ > maxRewardDebt) {
+      _rewardDebtOf[account][token] = maxRewardDebt;
+    }
   }
 
   function claimedRewards(address account)
@@ -454,10 +521,10 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseVotingEsc
   private view
   returns (uint256) {
     uint256 stakedTotalWeight = _stakedTotalWeightOf[account];
-    uint256 rewardDebt = stakedTotalWeight > 0
+    uint256 rewardDebt_ = stakedTotalWeight > 0
       ? _rewardDebtOf[account][token].mulDiv(weight, stakedTotalWeight)
       : 0;
-    return weight.unsafeMul(_accRewardPerWeightOf[token]).sub(rewardDebt);
+    return weight.unsafeMul(_accRewardPerWeightOf[token]).sub(rewardDebt_);
   }
 
   function _calcWeight(address account)

@@ -11,6 +11,8 @@ interface IUseGovTokenStaking {
 
   /**
    * @dev Sets the contract address of the governance token staking.
+   *
+   * Can only be called by the authorized.
    */
   function setGovTokenStaking(address newGovTokenStaking) external;
 }
