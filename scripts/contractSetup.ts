@@ -30,9 +30,9 @@ exec(async chainId => {
   // hash = await BetConfigurator.write.setMinWageredTotalAmount([zeroAddress, parseEther('0.1')])
   // await publicClient.waitForTransactionReceipt({ hash })
 
-  // hash = await BetConfigurator.write.setMinDecidedTotalAmount([parseEther('10000')])
+  // hash = await BetConfigurator.write.setMinVerifiedTotalAmount([parseEther('30000')])
   // await publicClient.waitForTransactionReceipt({ hash })
-  // hash = await BetConfigurator.write.setMinArbitratedTotalAmount([parseEther('10000')])
+  // hash = await BetConfigurator.write.setMinArbitratedTotalAmount([parseEther('50000')])
   // await publicClient.waitForTransactionReceipt({ hash })
 
   // hash = await GovTokenStaking.write.setRewardTokens([parameters.GovTokenStaking.rewardTokens])
