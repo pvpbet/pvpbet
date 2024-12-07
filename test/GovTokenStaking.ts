@@ -553,27 +553,84 @@ describe('GovTokenStaking', () => {
       )
     })
 
-    it('Preventing dust attacks', async () => {
+    it('Clear dust when unstake', async () => {
+      const {
+        GovToken,
+        GovTokenStaking,
+        VotingEscrow,
+        user,
+      } = await loadFixture(deployFixture)
+      const stakeMinValue = await GovTokenStaking.read.stakeMinValue()
+
+      await assert.isRejected(
+        stake(user, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK, stakeMinValue - 1n),
+        'InvalidAmount',
+      )
+
+      await stake(user, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK, stakeMinValue)
+      assert.equal(
+        await GovTokenStaking.read.stakedAmount(),
+        stakeMinValue,
+      )
+      assert.equal(
+        await GovTokenStaking.read.stakedAmount([user.account.address]),
+        stakeMinValue,
+      )
+
+      await checkBalance(
+        async () => {
+          await unstake(user, GovTokenStaking, UnlockWaitingPeriod.WEEK, 1n)
+        },
+        [
+          [user.account.address, VotingEscrow.address, -stakeMinValue],
+        ],
+      )
+
+      assert.equal(
+        await GovTokenStaking.read.stakedAmount(),
+        0n,
+      )
+      assert.equal(
+        await GovTokenStaking.read.stakedAmount([user.account.address]),
+        0n,
+      )
+    })
+
+    it('Ignore dust in weight calculation', async () => {
       const {
         GovToken,
         GovTokenStaking,
         hacker,
       } = await loadFixture(deployFixture)
+      const stakeMinValue = await GovTokenStaking.read.stakeMinValue()
+      const stakeMinValueHalf = stakeMinValue * 5n / 10n
 
-      const dust = parseUnits('1', 18) - 1n
-      await stake(hacker, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK, dust)
-      assert.equal(await GovTokenStaking.read.stakedWeight([hacker.account.address]), 0)
-      await stake(hacker, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK, dust)
+      await assert.isRejected(
+        stake(hacker, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK, stakeMinValue - 1n),
+        'InvalidAmount',
+      )
+      await stake(hacker, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK, stakeMinValue) // 1
       assert.equal(await GovTokenStaking.read.stakedWeight([hacker.account.address]), 1)
-      await stake(hacker, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK, dust)
+      assert.equal(await GovTokenStaking.read.stakedAmount([hacker.account.address]), stakeMinValue)
+      await stake(hacker, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK, stakeMinValue + stakeMinValueHalf) // 2.5
       assert.equal(await GovTokenStaking.read.stakedWeight([hacker.account.address]), 2)
+      assert.equal(await GovTokenStaking.read.stakedAmount([hacker.account.address]), stakeMinValue * 2n + stakeMinValueHalf)
+      await stake(hacker, GovToken, GovTokenStaking, UnlockWaitingPeriod.WEEK, stakeMinValue + stakeMinValueHalf) // 4
+      assert.equal(await GovTokenStaking.read.stakedWeight([hacker.account.address]), 4)
+      assert.equal(await GovTokenStaking.read.stakedAmount([hacker.account.address]), stakeMinValue * 4n)
 
-      await unstake(hacker, GovTokenStaking, UnlockWaitingPeriod.WEEK, dust)
+      await unstake(hacker, GovTokenStaking, UnlockWaitingPeriod.WEEK, stakeMinValueHalf) // 3.5
+      assert.equal(await GovTokenStaking.read.stakedWeight([hacker.account.address]), 3)
+      assert.equal(await GovTokenStaking.read.stakedAmount([hacker.account.address]), stakeMinValue * 3n + stakeMinValueHalf)
+      await unstake(hacker, GovTokenStaking, UnlockWaitingPeriod.WEEK, stakeMinValueHalf) // 3
+      assert.equal(await GovTokenStaking.read.stakedWeight([hacker.account.address]), 3)
+      assert.equal(await GovTokenStaking.read.stakedAmount([hacker.account.address]), stakeMinValue * 3n)
+      await unstake(hacker, GovTokenStaking, UnlockWaitingPeriod.WEEK, stakeMinValue + stakeMinValueHalf) // 1.5
       assert.equal(await GovTokenStaking.read.stakedWeight([hacker.account.address]), 1)
-      await unstake(hacker, GovTokenStaking, UnlockWaitingPeriod.WEEK, dust)
+      assert.equal(await GovTokenStaking.read.stakedAmount([hacker.account.address]), stakeMinValue * 1n + stakeMinValueHalf)
+      await unstake(hacker, GovTokenStaking, UnlockWaitingPeriod.WEEK, stakeMinValue) // 0.5 => 0
       assert.equal(await GovTokenStaking.read.stakedWeight([hacker.account.address]), 0)
-      await unstake(hacker, GovTokenStaking, UnlockWaitingPeriod.WEEK, dust)
-      assert.equal(await GovTokenStaking.read.stakedWeight([hacker.account.address]), 0)
+      assert.equal(await GovTokenStaking.read.stakedAmount([hacker.account.address]), 0)
     })
   })
 

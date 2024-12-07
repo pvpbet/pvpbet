@@ -18,6 +18,11 @@ interface IGovTokenStaking {
   event Withdrawn(address indexed account, UnlockWaitingPeriod, uint256 amount);
 
   /**
+   * @dev Returns the minimum amount for a single stake.
+   */
+  function stakeMinValue() external view returns (uint256);
+
+  /**
    * @dev Stakes a specified amount of governance tokens and mints a staking certificate.
    * @param unlockWaitingPeriod The time period to wait for unlocking after unstaking.
    * @param amount The amount of governance tokens to stake.

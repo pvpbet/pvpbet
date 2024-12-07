@@ -22,7 +22,7 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseVotingEsc
   function version()
   public pure override
   returns (string memory) {
-    return "1.1.0";
+    return "1.1.1";
   }
 
   using MathLib for uint256;
@@ -75,8 +75,15 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseVotingEsc
       abi.encodeWithSignature("decimals()")
     );
     if (!success) revert InvalidToken();
-    _amountPerWeight = MathLib.unsafePow(10, abi.decode(result, (uint8)));
+    uint256 decimals = abi.decode(result, (uint8));
+    _amountPerWeight = MathLib.unsafePow(10, decimals);
     super._setGovToken(newGovToken);
+  }
+
+  function stakeMinValue()
+  public view
+  returns (uint256) {
+    return _amountPerWeight;
   }
 
   function _stakedAmountIncrease(address account, UnlockWaitingPeriod unlockWaitingPeriod, uint256 amount)
@@ -137,6 +144,15 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseVotingEsc
     if (stakedAmount_ < amount) revert StakedAmountInsufficientBalance(account, unlockWaitingPeriod, stakedAmount_, amount);
   }
 
+  function _clearDustForUnstake(address account, UnlockWaitingPeriod unlockWaitingPeriod, uint256 amount)
+  private view
+  returns (uint256) {
+    uint256 stakedAmount_ = _stakedAmountOf[account][unlockWaitingPeriod];
+    return stakedAmount_ > amount && stakedAmount_.unsafeSub(amount) < stakeMinValue()
+      ? stakedAmount_
+      : amount;
+  }
+
   function _mintStakingCertificate(address account, uint256 amount)
   private {
     IVotingEscrow(votingEscrow()).mint(account, amount);
@@ -150,7 +166,7 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseVotingEsc
   function stake(UnlockWaitingPeriod unlockWaitingPeriod, uint256 amount)
   external {
     if (unlockWaitingPeriod == UnlockWaitingPeriod.NONE) revert InvalidUnlockWaitingPeriod();
-    if (amount == 0) revert InvalidAmount();
+    if (amount < stakeMinValue()) revert InvalidAmount();
     address account = msg.sender;
     account.transferToContract(govToken(), amount);
     _mintStakingCertificate(account, amount);
@@ -165,7 +181,7 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseVotingEsc
     bytes calldata signature
   ) external {
     if (unlockWaitingPeriod == UnlockWaitingPeriod.NONE) revert InvalidUnlockWaitingPeriod();
-    if (amount == 0) revert InvalidAmount();
+    if (amount < stakeMinValue()) revert InvalidAmount();
     address account = msg.sender;
     account.transferToContract(govToken(), amount, nonce, deadline, signature);
     _mintStakingCertificate(account, amount);
@@ -201,6 +217,7 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseVotingEsc
   external {
     address account = msg.sender;
     _checkStakedAmount(account, unlockWaitingPeriod, amount);
+    amount = _clearDustForUnstake(account, unlockWaitingPeriod, amount);
     _burnStakingCertificate(account, amount);
     _unstake(account, unlockWaitingPeriod, amount);
     _unstakedRecordsOf[account].add(
@@ -253,6 +270,7 @@ contract GovTokenStaking is IGovTokenStaking, IErrors, Upgradeable, UseVotingEsc
 
     address account = msg.sender;
     _checkStakedAmount(account, from, amount);
+    amount = _clearDustForUnstake(account, from, amount);
 
     _unstake(account, from, amount);
     _stake(account, to, amount);
