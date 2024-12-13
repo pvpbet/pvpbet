@@ -79,9 +79,10 @@ describe('Bet', () => {
 
     await VotingEscrow.write.setGovTokenStaking([GovTokenStaking.address])
     await BetConfigurator.write.setChipMinValue([BetChip.address, parseUnits('1', 6)])
-    await BetConfigurator.write.setMinWageredTotalAmount([BetChip.address, parseUnits('1000', 6)])
-    await GovToken.write.transfer([user.account.address, parseUnits('1000000', 18)])
-    await GovToken.write.transfer([hacker.account.address, parseUnits('1000000', 18)])
+    await BetConfigurator.write.setMinWageredTotalAmount([BetChip.address, parseUnits('10', 6)])
+    await BetConfigurator.write.setVerificationRatio([BetChip.address, parseUnits('100', 18) / parseUnits('1', 6)])
+    await GovToken.write.transfer([user.account.address, parseUnits('10000000', 18)])
+    await GovToken.write.transfer([hacker.account.address, parseUnits('10000000', 18)])
 
     await Promise.all(
       [
@@ -94,20 +95,20 @@ describe('Bet', () => {
           GovToken,
           GovTokenStaking,
           UnlockWaitingPeriod.WEEK,
-          parseUnits('200000', 18),
+          parseUnits('2000000', 18),
         )
         await stake(
           wallet,
           GovToken,
           GovTokenStaking,
           UnlockWaitingPeriod.WEEK12,
-          parseUnits('200000', 18),
+          parseUnits('2000000', 18),
         )
         await buyChip(
           wallet,
           BetChip,
           USDC.address,
-          parseUnits('100000', await USDC.read.decimals()),
+          parseUnits('1000000', await USDC.read.decimals()),
         )
       }),
     )
@@ -157,8 +158,7 @@ describe('Bet', () => {
               chipMinValue: 0n,
               voteMinValue: 0n,
               minWageredTotalAmount: 0n,
-              minVerifiedTotalAmount: 0n,
-              minArbitratedTotalAmount: 0n,
+              verificationRatio: 0n,
               announcementPeriodDuration: 0n,
               arbitratingPeriodDuration: 0n,
               singleOptionMaxAmountRatio: 0n,
@@ -1038,9 +1038,9 @@ describe('Bet', () => {
         )
         const options = await Bet.read.options()
         await wager(chip, [
-          [owner, options[0], 2n],
-          [user, options[1], 9n],
-          [hacker, options[1], 1n],
+          [owner, options[0], 200n],
+          [user, options[1], 900n],
+          [hacker, options[1], 100n],
         ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.VERIFYING)
@@ -1086,9 +1086,9 @@ describe('Bet', () => {
         )
         const options = await Bet.read.options()
         await wager(chip, [
-          [owner, options[0], 2n],
-          [user, options[1], 9n],
-          [hacker, options[1], 1n],
+          [owner, options[0], 200n],
+          [user, options[1], 900n],
+          [hacker, options[1], 100n],
         ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.VERIFYING)
@@ -1137,9 +1137,9 @@ describe('Bet', () => {
         )
         const options = await Bet.read.options()
         await wager(chip, [
-          [owner, options[0], 2n],
-          [user, options[1], 9n],
-          [hacker, options[1], 1n],
+          [owner, options[0], 200n],
+          [user, options[1], 900n],
+          [hacker, options[1], 100n],
         ], Bet)
         assert.equal(await Bet.read.status(), BetStatus.WAGERING)
 
@@ -1199,9 +1199,9 @@ describe('Bet', () => {
         )
         const options = await Bet.read.options()
         await wager(chip, [
-          [owner, options[0], 2n],
-          [user, options[1], 9n],
-          [hacker, options[1], 1n],
+          [owner, options[0], 200n],
+          [user, options[1], 900n],
+          [hacker, options[1], 100n],
         ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.VERIFYING)
@@ -1298,9 +1298,9 @@ describe('Bet', () => {
         )
         const options = await Bet.read.options()
         await wager(chip, [
-          [owner, options[0], 2n],
-          [user, options[1], 9n],
-          [hacker, options[1], 1n],
+          [owner, options[0], 200n],
+          [user, options[1], 900n],
+          [hacker, options[1], 100n],
         ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.VERIFYING)
@@ -1354,9 +1354,9 @@ describe('Bet', () => {
         )
         const options = await Bet.read.options()
         await wager(chip, [
-          [owner, options[0], 2n],
-          [user, options[1], 9n],
-          [hacker, options[1], 1n],
+          [owner, options[0], 200n],
+          [user, options[1], 900n],
+          [hacker, options[1], 100n],
         ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.VERIFYING)
@@ -1412,9 +1412,9 @@ describe('Bet', () => {
         )
         const options = await Bet.read.options()
         await wager(chip, [
-          [owner, options[0], 2n],
-          [user, options[1], 9n],
-          [hacker, options[1], 1n],
+          [owner, options[0], 200n],
+          [user, options[1], 900n],
+          [hacker, options[1], 100n],
         ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.VERIFYING)
@@ -1453,9 +1453,9 @@ describe('Bet', () => {
         )
         const options = await Bet.read.options()
         await wager(chip, [
-          [owner, options[0], 2n],
-          [user, options[1], 9n],
-          [hacker, options[1], 1n],
+          [owner, options[0], 200n],
+          [user, options[1], 900n],
+          [hacker, options[1], 100n],
         ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.VERIFYING)
@@ -1513,9 +1513,9 @@ describe('Bet', () => {
         )
         const options = await Bet.read.options()
         await wager(chip, [
-          [owner, options[0], 2n],
-          [user, options[1], 9n],
-          [hacker, options[1], 1n],
+          [owner, options[0], 200n],
+          [user, options[1], 900n],
+          [hacker, options[1], 100n],
         ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.VERIFYING)
@@ -1565,9 +1565,9 @@ describe('Bet', () => {
         )
         const options = await Bet.read.options()
         await wager(chip, [
-          [owner, options[0], 2n],
-          [user, options[1], 9n],
-          [hacker, options[1], 1n],
+          [owner, options[0], 200n],
+          [user, options[1], 900n],
+          [hacker, options[1], 100n],
         ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.VERIFYING)
@@ -1699,9 +1699,9 @@ describe('Bet', () => {
           userWageredAmount,
           hackerWageredAmount,
         ] = await wager(chip, [
-          [owner, options[0], 2n],
-          [user, options[1], 9n],
-          [hacker, options[1], 1n],
+          [owner, options[0], 200n],
+          [user, options[1], 900n],
+          [hacker, options[1], 100n],
         ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.VERIFYING)
@@ -1796,9 +1796,9 @@ describe('Bet', () => {
           userWageredAmount,
           hackerWageredAmount,
         ] = await wager(chip, [
-          [owner, options[0], 2n],
-          [user, options[1], 9n],
-          [hacker, options[1], 1n],
+          [owner, options[0], 200n],
+          [user, options[1], 900n],
+          [hacker, options[1], 100n],
         ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.VERIFYING)
@@ -1819,8 +1819,8 @@ describe('Bet', () => {
           userDisputedAmount,
           hackerDisputedAmount,
         ] = await dispute(chip, [
-          [user, 9n],
-          [hacker, 1n],
+          [user, 8n],
+          [hacker, 2n],
         ], Bet)
         assert.equal(await Bet.read.status(), BetStatus.ARBITRATING)
 
@@ -1910,9 +1910,9 @@ describe('Bet', () => {
           userWageredAmount,
           hackerWageredAmount,
         ] = await wager(chip, [
-          [owner, options[0], 2n],
-          [user, options[1], 9n],
-          [hacker, options[1], 1n],
+          [owner, options[0], 200n],
+          [user, options[1], 900n],
+          [hacker, options[1], 100n],
         ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.VERIFYING)
@@ -1933,8 +1933,8 @@ describe('Bet', () => {
           userDisputedAmount,
           hackerDisputedAmount,
         ] = await dispute(chip, [
-          [user, 8n],
-          [hacker, 1n],
+          [user, 7n],
+          [hacker, 2n],
         ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.CONFIRMED)
@@ -2029,9 +2029,9 @@ describe('Bet', () => {
           userWageredAmount,
           hackerWageredAmount,
         ] = await wager(chip, [
-          [owner, options[0], 2n],
-          [user, options[1], 9n],
-          [hacker, options[1], 1n],
+          [owner, options[0], 200n],
+          [user, options[1], 900n],
+          [hacker, options[1], 100n],
         ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.VERIFYING)
@@ -2145,9 +2145,9 @@ describe('Bet', () => {
           userWageredAmount,
           hackerWageredAmount,
         ] = await wager(chip, [
-          [owner, options[0], 2n],
-          [user, options[1], 9n],
-          [hacker, options[1], 1n],
+          [owner, options[0], 200n],
+          [user, options[1], 900n],
+          [hacker, options[1], 100n],
         ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.VERIFYING)
@@ -2301,9 +2301,9 @@ describe('Bet', () => {
           userWageredAmount,
           hackerWageredAmount,
         ] = await wager(chip, [
-          [owner, options[0], 2n],
-          [user, options[1], 9n],
-          [hacker, options[1], 1n],
+          [owner, options[0], 200n],
+          [user, options[1], 900n],
+          [hacker, options[1], 100n],
         ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.VERIFYING)
@@ -2466,9 +2466,9 @@ describe('Bet', () => {
           userWageredAmount,
           hackerWageredAmount,
         ] = await wager(chip, [
-          [owner, options[0], 2n],
-          [user, options[1], 9n],
-          [hacker, options[1], 1n],
+          [owner, options[0], 200n],
+          [user, options[1], 900n],
+          [hacker, options[1], 100n],
         ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.VERIFYING)
@@ -2793,9 +2793,9 @@ describe('Bet', () => {
         )
         const options = await Bet.read.options()
         await wager(chip, [
-          [owner, options[0], 2n],
-          [user, options[1], 9n],
-          [hacker, options[1], 1n],
+          [owner, options[0], 200n],
+          [user, options[1], 900n],
+          [hacker, options[1], 100n],
         ], Bet)
         await time.increaseTo(await Bet.read.statusDeadline() + 1n)
         assert.equal(await Bet.read.status(), BetStatus.VERIFYING)

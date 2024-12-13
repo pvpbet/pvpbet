@@ -25,7 +25,7 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, UseVo
   function version()
   public pure override
   returns (string memory) {
-    return "1.1.0";
+    return "1.2.0";
   }
 
   using StringLib for string;
@@ -218,7 +218,13 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, UseVo
       address(this),
       _betOptionFactory
     );
-    emit BetCreated(bet, msg.sender, block.timestamp);
+    emit BetCreated(
+      bet,
+      chip,
+      msg.sender,
+      block.timestamp,
+      betVersion()
+    );
     _betMap[bet] = true;
     return bet;
   }

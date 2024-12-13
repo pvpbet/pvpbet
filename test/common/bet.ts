@@ -1,7 +1,7 @@
 import { ignition, viem } from 'hardhat'
 import BetManagerModule from '../../ignition/modules/BetManager'
 import { transfer } from '../../utils'
-import { zeroAddress } from 'viem'
+import { zeroAddress, formatUnits } from 'viem'
 import type {
   AbiEvent,
   Address,

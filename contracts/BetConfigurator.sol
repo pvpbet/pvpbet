@@ -30,11 +30,10 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
   address[] private _chipTokenAllowlist;
 
   // Bet configuration
-  mapping(address => uint256) private _chipMinValues;
-  mapping(address => uint256) private _chipMinWageredTotalAmounts;
   uint256 private _voteMinValue;
-  uint256 private _minVerifiedTotalAmount;
-  uint256 private _minArbitratedTotalAmount;
+  mapping(address token => uint256) private _chipMinValueOf;
+  mapping(address token => uint256) private _chipMinWageredTotalAmountOf;
+  mapping(address token => uint256) private _verificationRatioOf; // Required vote amount = chip amount × verification rate
   uint256 private _announcementPeriodDuration;
   uint256 private _arbitratingPeriodDuration;
   uint256 private _singleOptionMaxAmountRatio;
@@ -50,18 +49,17 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
     _maxOptionsCount = 10;
 
     _minWageringPeriodDuration = 1 days;
-    _maxWageringPeriodDuration = 90 days;
+    _maxWageringPeriodDuration = 7 days;
     _minVerifyingPeriodDuration = 1 days;
-    _maxVerifyingPeriodDuration = 90 days;
+    _maxVerifyingPeriodDuration = 7 days;
 
-    _chipMinValues[address(0)] = 0.001 ether;
-    _chipMinWageredTotalAmounts[address(0)] = 0.2 ether;
     _voteMinValue = 1 ether;
-    _minVerifiedTotalAmount = 10000 ether;
-    _minArbitratedTotalAmount = 10000 ether;
+    _chipMinValueOf[address(0)] = 0.001 ether;
+    _chipMinWageredTotalAmountOf[address(0)] = 0.01 ether;
+    _verificationRatioOf[address(0)] = 300_000;
 
     _announcementPeriodDuration = 1 days;
-    _arbitratingPeriodDuration = 3 days;
+    _arbitratingPeriodDuration = 2 days;
 
     _singleOptionMaxAmountRatio = 85;
     _confirmDisputeAmountRatio = 5;
@@ -134,8 +132,7 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
       chipMinValue: chipMinValue(chip),
       voteMinValue: _voteMinValue,
       minWageredTotalAmount: minWageredTotalAmount(chip),
-      minVerifiedTotalAmount: _minVerifiedTotalAmount,
-      minArbitratedTotalAmount: _minArbitratedTotalAmount,
+      verificationRatio: verificationRatio(chip),
       announcementPeriodDuration: _announcementPeriodDuration,
       arbitratingPeriodDuration: _arbitratingPeriodDuration,
       singleOptionMaxAmountRatio: _singleOptionMaxAmountRatio,
@@ -239,12 +236,12 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
   function chipMinValue(address chip)
   public view
   returns (uint256) {
-    return _chipMinValues[chip] > 0 ? _chipMinValues[chip] : 1 ether;
+    return _chipMinValueOf[chip] > 0 ? _chipMinValueOf[chip] : 1 ether;
   }
 
   function setChipMinValue(address chip, uint256 newChipMinValue)
   external onlyOwner {
-    _chipMinValues[chip] = newChipMinValue;
+    _chipMinValueOf[chip] = newChipMinValue;
   }
 
   function voteMinValue()
@@ -261,34 +258,23 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
   function minWageredTotalAmount(address chip)
   public view
   returns (uint256) {
-    return _chipMinWageredTotalAmounts[chip] > 0 ? _chipMinWageredTotalAmounts[chip] : chipMinValue(chip) * 200;
+    return _chipMinWageredTotalAmountOf[chip] > 0 ? _chipMinWageredTotalAmountOf[chip] : chipMinValue(chip) * 10;
   }
 
   function setMinWageredTotalAmount(address chip, uint256 newMinWageredTotalAmount)
   external onlyOwner {
-    _chipMinWageredTotalAmounts[chip] = newMinWageredTotalAmount;
+    _chipMinWageredTotalAmountOf[chip] = newMinWageredTotalAmount;
   }
 
-  function minVerifiedTotalAmount()
+  function verificationRatio(address chip)
   public view
   returns (uint256) {
-    return _minVerifiedTotalAmount;
+    return _verificationRatioOf[chip] > 0 ? _verificationRatioOf[chip] : 100;
   }
 
-  function setMinVerifiedTotalAmount(uint256 newMinVerifiedTotalAmount)
+  function setVerificationRatio(address chip, uint256 newVerificationRatio)
   external onlyOwner {
-    _minVerifiedTotalAmount = newMinVerifiedTotalAmount;
-  }
-
-  function minArbitratedTotalAmount()
-  public view
-  returns (uint256) {
-    return _minArbitratedTotalAmount;
-  }
-
-  function setMinArbitratedTotalAmount(uint256 newMinArbitratedTotalAmount)
-  external onlyOwner {
-    _minArbitratedTotalAmount = newMinArbitratedTotalAmount;
+    _verificationRatioOf[chip] = newVerificationRatio;
   }
 
   function announcementPeriodDuration()

@@ -55,7 +55,7 @@ contract BetChip is IBetChip, IErrors, IMetadata, ERC20 {
   returns (string memory) {
     if (token_.code.length == 0) revert InvalidERC20Token();
     try ERC20(token_).name() returns (string memory name_) {
-      return string.concat("PVPBetChipWrapped", name_);
+      return string.concat("PVPBet Chip Wrapped ", name_);
     } catch {
       revert InvalidERC20Token();
     }

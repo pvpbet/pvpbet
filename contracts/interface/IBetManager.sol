@@ -9,7 +9,13 @@ interface IBetManager {
   event BetFactorySet(address betFactory);
   event BetOptionFactorySet(address betOptionFactory);
   event CreationFeeSet(uint256 fee);
-  event BetCreated(address indexed bet, address indexed creator, uint256 timestamp);
+  event BetCreated(
+    address indexed bet,
+    address indexed chip,
+    address indexed creator,
+    uint256 timestamp,
+    string version
+  );
 
   /**
    * @dev Returns the contract address of the bet chip manager.

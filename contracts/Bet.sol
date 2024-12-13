@@ -218,7 +218,7 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
   function minVerifiedTotalAmount()
   public view
   returns (uint256) {
-    return _config.minVerifiedTotalAmount;
+    return wageredTotalAmount().mul(_config.verificationRatio);
   }
 
   function minDisputedTotalAmount()
@@ -230,7 +230,7 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
   function minArbitratedTotalAmount()
   public view
   returns (uint256) {
-    return _config.minArbitratedTotalAmount;
+    return verifiedTotalAmount();
   }
 
   function wageredTotalAmount()
@@ -528,7 +528,7 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
         winningOption = address(0);
       }
     }
-    if (total < _config.minVerifiedTotalAmount) return address(0);
+    if (total < minVerifiedTotalAmount()) return address(0);
     return winningOption;
   }
 
@@ -551,7 +551,7 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
         winningOption = address(0);
       }
     }
-    if (total < _config.minArbitratedTotalAmount) return address(0);
+    if (total < minArbitratedTotalAmount()) return address(0);
     return winningOption;
   }
 

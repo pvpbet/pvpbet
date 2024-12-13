@@ -9,8 +9,7 @@ interface IBet {
     uint256 chipMinValue;
     uint256 voteMinValue;
     uint256 minWageredTotalAmount;
-    uint256 minVerifiedTotalAmount;
-    uint256 minArbitratedTotalAmount;
+    uint256 verificationRatio;
     uint256 announcementPeriodDuration;
     uint256 arbitratingPeriodDuration;
     uint256 singleOptionMaxAmountRatio;

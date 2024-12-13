@@ -224,8 +224,6 @@ describe('BetManager', () => {
         const betConfig = await BetConfigurator.read.betConfig([chip])
         assert.deepEqual(await Bet.read.config(), betConfig)
         assert.equal(await Bet.read.minWageredTotalAmount(), betConfig.minWageredTotalAmount)
-        assert.equal(await Bet.read.minVerifiedTotalAmount(), betConfig.minVerifiedTotalAmount)
-        assert.equal(await Bet.read.minArbitratedTotalAmount(), betConfig.minArbitratedTotalAmount)
       }
     })
 

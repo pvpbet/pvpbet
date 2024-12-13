@@ -107,7 +107,7 @@ describe('BetChipManager', () => {
         const BetChip = await createBetChip(owner, BetChipManager, token.address)
         assert.equal(await BetChipManager.read.isBetChip([BetChip.address]), true)
         assert.equal(await BetChipManager.read.isBetChip([token.address]), false)
-        assert.equal(await BetChip.read.name(), `PVPBetChipWrapped${await token.read.name()}`)
+        assert.equal(await BetChip.read.name(), `PVPBet Chip Wrapped ${await token.read.name()}`)
         assert.equal(await BetChip.read.symbol(), `cw${await token.read.symbol()}`)
       }
     })

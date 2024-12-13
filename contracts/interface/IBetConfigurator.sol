@@ -33,17 +33,16 @@ interface IBetConfigurator {
   function chipTokenAllowlist() external view returns (address[] memory);
   function setChipTokenAllowlist(address[] memory newChipTokenAllowlist) external;
 
-  function chipMinValue(address chip) external view returns (uint256);
-  function setChipMinValue(address chip, uint256 newChipMinValue) external;
   function voteMinValue() external view returns (uint256);
   function setVoteMinValue(uint256 newVoteMinValue) external;
+  function chipMinValue(address chip) external view returns (uint256);
+  function setChipMinValue(address chip, uint256 newChipMinValue) external;
 
   function minWageredTotalAmount(address chip) external view returns (uint256);
   function setMinWageredTotalAmount(address chip, uint256 newMinWageredTotalAmount) external;
-  function minVerifiedTotalAmount() external view returns (uint256);
-  function setMinVerifiedTotalAmount(uint256 newMinVerifiedTotalAmount) external;
-  function minArbitratedTotalAmount() external view returns (uint256);
-  function setMinArbitratedTotalAmount(uint256 newMinArbitratedTotalAmount) external;
+
+  function verificationRatio(address chip) external view returns (uint256);
+  function setVerificationRatio(address chip, uint256 newVerificationRatio) external;
 
   function announcementPeriodDuration() external view returns (uint256);
   function setAnnouncementPeriodDuration(uint256 newAnnouncementPeriodDuration) external;
