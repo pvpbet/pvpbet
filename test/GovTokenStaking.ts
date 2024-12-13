@@ -147,6 +147,7 @@ describe('GovTokenStaking', () => {
     it('#rewardTokens() #setRewardTokens()', async () => {
       const {
         BetChip,
+        GovToken,
         GovTokenStaking,
         owner,
         hacker,
@@ -167,6 +168,31 @@ describe('GovTokenStaking', () => {
         await GovTokenStaking.read.rewardTokens(),
         [BetChip.address, zeroAddress],
       )
+
+      const accounts = [
+        { wallet: owner, unlockWaitingPeriod: UnlockWaitingPeriod.WEEK12, stakeRatio: 2n },
+        { wallet: hacker, unlockWaitingPeriod: UnlockWaitingPeriod.WEEK, stakeRatio: 3n },
+      ]
+      const tokens: [Address, bigint][] = [
+        [zeroAddress, parseEther('10')],
+        [BetChip.address, parseUnits('10000', 6)],
+      ]
+
+      // Staking
+      const stakedTotalAmount = parseUnits('100000', 18)
+      const stakeCount = accounts.reduce((acc, cur) => acc + cur.stakeRatio, 0n)
+      for (const { wallet, unlockWaitingPeriod, stakeRatio } of accounts) {
+        await stake(wallet, GovToken, GovTokenStaking, unlockWaitingPeriod, stakedTotalAmount * stakeRatio / stakeCount)
+      }
+
+      for (const [token, amount] of tokens) {
+        await distribute(owner, GovTokenStaking, token, amount)
+        assert.notEqual(await GovTokenStaking.read.accRewardPerWeight([token]), 0n)
+      }
+
+      await GovTokenStaking.write.setRewardTokens([[zeroAddress]], { account: owner.account })
+      assert.notEqual(await GovTokenStaking.read.accRewardPerWeight([zeroAddress]), 0n)
+      assert.equal(await GovTokenStaking.read.accRewardPerWeight([BetChip.address]), 0n)
     })
   })
 
