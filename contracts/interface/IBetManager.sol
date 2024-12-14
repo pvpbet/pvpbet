@@ -69,6 +69,9 @@ interface IBetManager {
 
   /**
 	 * @dev Creates a bet using ETH as chips.
+	 * @param details The details of the bet.
+	 * @param wageringPeriodDuration The duration of the wagering period.
+	 * @param verifyingPeriodDuration The duration of the verifying period.
 	 */
   function createBet(
     IBet.BetDetails calldata details,
@@ -77,13 +80,55 @@ interface IBetManager {
   ) external returns (address);
 
   /**
+	 * @dev Creates a bet using ETH as chips.
+	 * @param details The details of the bet.
+	 * @param wageringPeriodDuration The duration of the wagering period.
+	 * @param verifyingPeriodDuration The duration of the verifying period.
+	 * @param nonce The nonce of the permit2.
+   * @param deadline The deadline of the permit2.
+   * @param signature The signature of the permit2.
+	 */
+  function createBet(
+    IBet.BetDetails calldata details,
+    uint256 wageringPeriodDuration,
+    uint256 verifyingPeriodDuration,
+    uint256 nonce,
+    uint256 deadline,
+    bytes calldata signature
+  ) external returns (address);
+
+  /**
 	 * @dev Creates a bet using ERC20 tokens as chips.
+	 * @param details The details of the bet.
+	 * @param wageringPeriodDuration The duration of the wagering period.
+	 * @param verifyingPeriodDuration The duration of the verifying period.
+	 * @param chip The address of the ERC20 token contract.
 	 */
   function createBet(
     IBet.BetDetails calldata details,
     uint256 wageringPeriodDuration,
     uint256 verifyingPeriodDuration,
     address chip
+  ) external returns (address);
+
+  /**
+	 * @dev Creates a bet using ERC20 tokens as chips.
+	 * @param details The details of the bet.
+	 * @param wageringPeriodDuration The duration of the wagering period.
+	 * @param verifyingPeriodDuration The duration of the verifying period.
+	 * @param chip The address of the ERC20 token contract.
+	 * @param nonce The nonce of the permit2.
+   * @param deadline The deadline of the permit2.
+   * @param signature The signature of the permit2.
+	 */
+  function createBet(
+    IBet.BetDetails calldata details,
+    uint256 wageringPeriodDuration,
+    uint256 verifyingPeriodDuration,
+    address chip,
+    uint256 nonce,
+    uint256 deadline,
+    bytes calldata signature
   ) external returns (address);
 
   /**

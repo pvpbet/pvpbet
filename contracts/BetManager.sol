@@ -25,7 +25,7 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, UseVo
   function version()
   public pure override
   returns (string memory) {
-    return "1.2.0";
+    return "1.2.1";
   }
 
   using StringLib for string;
@@ -165,6 +165,26 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, UseVo
     uint256 verifyingPeriodDuration
   ) external
   returns (address) {
+    uint256 creationFee_ = _creationFee;
+    if (creationFee_ > 0) {
+      msg.sender.transferToContract(govToken(), creationFee_);
+    }
+    return _createBet(details, wageringPeriodDuration, verifyingPeriodDuration, address(0));
+  }
+
+  function createBet(
+    IBet.BetDetails calldata details,
+    uint256 wageringPeriodDuration,
+    uint256 verifyingPeriodDuration,
+    uint256 nonce,
+    uint256 deadline,
+    bytes calldata signature
+  ) external
+  returns (address) {
+    uint256 creationFee_ = _creationFee;
+    if (creationFee_ > 0) {
+      msg.sender.transferToContract(govToken(), creationFee_, nonce, deadline, signature);
+    }
     return _createBet(details, wageringPeriodDuration, verifyingPeriodDuration, address(0));
   }
 
@@ -175,6 +195,27 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, UseVo
     address chip
   ) external
   returns (address) {
+    uint256 creationFee_ = _creationFee;
+    if (creationFee_ > 0) {
+      msg.sender.transferToContract(govToken(), creationFee_);
+    }
+    return _createBet(details, wageringPeriodDuration, verifyingPeriodDuration, chip);
+  }
+
+  function createBet(
+    IBet.BetDetails calldata details,
+    uint256 wageringPeriodDuration,
+    uint256 verifyingPeriodDuration,
+    address chip,
+    uint256 nonce,
+    uint256 deadline,
+    bytes calldata signature
+  ) external
+  returns (address) {
+    uint256 creationFee_ = _creationFee;
+    if (creationFee_ > 0) {
+      msg.sender.transferToContract(govToken(), creationFee_, nonce, deadline, signature);
+    }
     return _createBet(details, wageringPeriodDuration, verifyingPeriodDuration, chip);
   }
 
@@ -199,11 +240,6 @@ contract BetManager is IBetManager, Upgradeable, Receivable, Withdrawable, UseVo
 
     if (!details.forumURL.isEmpty()) {
       configurator.validateUrl(details.forumURL);
-    }
-
-    uint256 creationFee_ = _creationFee;
-    if (creationFee_ > 0) {
-      msg.sender.transferToContract(govToken(), creationFee_);
     }
 
     address bet = IBetFactory(_betFactory).createBet(
