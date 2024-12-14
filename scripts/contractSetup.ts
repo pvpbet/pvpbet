@@ -27,11 +27,14 @@ exec(async chainId => {
     await publicClient.waitForTransactionReceipt({ hash })
   }
 
-  // hash = await BetConfigurator.write.setMinWageredTotalAmount([zeroAddress, parseEther('0.1')])
+  // hash = await BetConfigurator.write.setMinWageredTotalAmount([
+  //   '0x73aBECAcB2ccFa11947364FdBb4CbF150aafBDA9', // cwUSDC.e
+  //   parseUnits('20', 6),
+  // ])
   // await publicClient.waitForTransactionReceipt({ hash })
 
   // hash = await BetConfigurator.write.setVerificationRatio([
-  //   '0x79a02482a880bce3f13e09da970dc34db4cd24d1', // USDC.e
+  //   '0x73aBECAcB2ccFa11947364FdBb4CbF150aafBDA9', // cwUSDC.e
   //   parseUnits('100', 18) / parseUnits('1', 6),
   // ])
   // await publicClient.waitForTransactionReceipt({ hash })
