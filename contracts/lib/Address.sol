@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import {IBet} from "../interface/IBet.sol";
+import {IBetChip} from "../interface/IBetChip.sol";
+import {IBetOption} from "../interface/IBetOption.sol";
+
 library AddressLib {
   function isContractSender()
   internal view
@@ -11,58 +15,33 @@ library AddressLib {
   function isBet(address target)
   internal view
   returns (bool) {
-    return functionStaticCallReturnBool(target, abi.encodeWithSignature("isBet()"));
-  }
-
-  function isBetOption(address target)
-  internal view
-  returns (bool) {
-    return functionStaticCallReturnBool(target, abi.encodeWithSignature("isBetOption()"));
+    if (target.code.length > 0) {
+      try IBet(target).isBet() returns (bool yes) {
+        return yes;
+      } catch {}
+    }
+    return false;
   }
 
   function isBetChip(address target)
   internal view
   returns (bool) {
-    return functionStaticCallReturnBool(target, abi.encodeWithSignature("isBetChip()"));
-  }
-
-  function functionStaticCallReturnBool(address target, bytes memory data)
-  internal view
-  returns (bool) {
     if (target.code.length > 0) {
-      (bool success, bytes memory result) = target.staticcall(data);
-      if (success) {
-        return abi.decode(result, (bool));
-      }
+      try IBetChip(target).isBetChip() returns (bool yes) {
+        return yes;
+      } catch {}
     }
     return false;
   }
 
-  /**
-   * @notice From "@openzeppelin/contracts/utils/Address.sol"
-   */
-  error AddressInsufficientBalance(address account);
-  error AddressEmptyCode(address target);
-  error FailedInnerCall();
-  function functionCallWithValue(address target, bytes memory data, uint256 value)
-  internal
-  returns (bytes memory) {
-    if (address(this).balance < value) {
-      revert AddressInsufficientBalance(address(this));
+  function isBetOption(address target)
+  internal view
+  returns (bool) {
+    if (target.code.length > 0) {
+      try IBetOption(target).isBetOption() returns (bool yes) {
+        return yes;
+      } catch {}
     }
-    (bool success, bytes memory result) = target.call{value: value}(data);
-    if (!success) {
-      if (result.length > 0) {
-        assembly {
-          let result_size := mload(result)
-          revert(add(32, result), result_size)
-        }
-      } else {
-        revert FailedInnerCall();
-      }
-    } else if (result.length == 0 && target.code.length == 0) {
-      revert AddressEmptyCode(target);
-    }
-    return result;
+    return false;
   }
 }

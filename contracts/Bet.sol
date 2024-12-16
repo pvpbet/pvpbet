@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {BetActionArbitrate} from "./base/BetActionArbitrate.sol";
 import {BetActionDispute} from "./base/BetActionDispute.sol";
 import {IBet} from "./interface/IBet.sol";
@@ -8,6 +9,7 @@ import {IBetActionVerify} from "./interface/IBetActionVerify.sol";
 import {IBetActionWager} from "./interface/IBetActionWager.sol";
 import {IBetOptionFactory} from "./interface/IBetOptionFactory.sol";
 import {IErrors} from "./interface/IErrors.sol";
+import {IGovTokenStaking} from "./interface/IGovTokenStaking.sol";
 import {IMetadata} from "./interface/IMetadata.sol";
 import {IUseGovTokenStaking} from "./interface/IUseGovTokenStaking.sol";
 import {AddressLib} from "./lib/Address.sol";
@@ -715,19 +717,10 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
   function _distributeProtocolReward(uint256 amount)
   private {
     if (_chip == address(0)) {
-      _govTokenStaking.functionCallWithValue(
-        abi.encodeWithSignature("distribute()"),
-        amount
-      );
+      IGovTokenStaking(_govTokenStaking).distribute{value: amount}();
     } else {
-      _chip.functionCallWithValue(
-        abi.encodeWithSignature("approve(address,uint256)", _govTokenStaking, amount),
-        0
-      );
-      _govTokenStaking.functionCallWithValue(
-        abi.encodeWithSignature("distribute(address,uint256)", _chip, amount),
-        0
-      );
+      IERC20(_chip).approve(_govTokenStaking, amount);
+      IGovTokenStaking(_govTokenStaking).distribute(_chip, amount);
     }
   }
 

@@ -39,20 +39,20 @@ const config: HardhatUserConfig = {
     ],
     overrides: {
       'contracts/Bet.sol': {
-        version: '0.8.20',
+        version: '0.8.21',
         settings: {
           optimizer: {
             enabled: true,
-            runs: 100,
+            runs: 20,
           },
         },
       },
       'contracts/BetFactory.sol': {
-        version: '0.8.20',
+        version: '0.8.21',
         settings: {
           optimizer: {
             enabled: true,
-            runs: 100,
+            runs: 20,
           },
         },
       },

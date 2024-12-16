@@ -43,6 +43,12 @@ abstract contract BetActionDispute is IBetActionDispute, IErrors {
     return 0;
   }
 
+  function proxy()
+  public pure virtual
+  returns (address) {
+    return 0x054548F8ce087Aa516ECE75320F929f75f8D7f25;
+  }
+
   modifier onlyBet() virtual {
     if (msg.sender != bet()) {
       revert UnauthorizedAccess(msg.sender);
@@ -52,6 +58,13 @@ abstract contract BetActionDispute is IBetActionDispute, IErrors {
 
   modifier onlyChip() virtual {
     if (msg.sender != chip()) {
+      revert UnauthorizedAccess(msg.sender);
+    }
+    _;
+  }
+
+  modifier onlyProxy() virtual {
+    if (msg.sender != proxy()) {
       revert UnauthorizedAccess(msg.sender);
     }
     _;
@@ -76,6 +89,13 @@ abstract contract BetActionDispute is IBetActionDispute, IErrors {
   onlyChip {
     (uint256 payment, uint256 refund) = _dispute(disputer, amount);
     disputer.transfer(chip(), payment, refund);
+  }
+
+  function dispute(address disputer, uint256 amount, uint256 nonce, uint256 deadline, bytes calldata signature)
+  public virtual
+  onlyProxy {
+    (uint256 payment, uint256 refund) = _dispute(disputer, amount);
+    disputer.transfer(chip(), payment, refund, nonce, deadline, signature);
   }
 
   function _dispute(address disputer, uint256 amount)

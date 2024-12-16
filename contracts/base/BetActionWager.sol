@@ -42,6 +42,12 @@ abstract contract BetActionWager is IBetActionWager, IErrors {
     return 0;
   }
 
+  function proxy()
+  public view virtual
+  returns (address) {
+    return 0x054548F8ce087Aa516ECE75320F929f75f8D7f25;
+  }
+
   modifier onlyBet() virtual {
     if (msg.sender != bet()) {
       revert UnauthorizedAccess(msg.sender);
@@ -51,6 +57,13 @@ abstract contract BetActionWager is IBetActionWager, IErrors {
 
   modifier onlyChip() virtual {
     if (msg.sender != chip()) {
+      revert UnauthorizedAccess(msg.sender);
+    }
+    _;
+  }
+
+  modifier onlyProxy() virtual {
+    if (msg.sender != proxy()) {
       revert UnauthorizedAccess(msg.sender);
     }
     _;
@@ -75,6 +88,13 @@ abstract contract BetActionWager is IBetActionWager, IErrors {
   onlyChip {
     (uint256 payment, uint256 refund) = _wager(player, amount);
     player.transfer(chip(), payment, refund);
+  }
+
+  function wager(address player, uint256 amount, uint256 nonce, uint256 deadline, bytes calldata signature)
+  public virtual
+  onlyProxy {
+    (uint256 payment, uint256 refund) = _wager(player, amount);
+    player.transfer(chip(), payment, refund, nonce, deadline, signature);
   }
 
   function _wager(address player, uint256 amount)

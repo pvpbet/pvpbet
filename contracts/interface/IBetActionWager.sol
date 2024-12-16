@@ -23,10 +23,24 @@ interface IBetActionWager {
 
   /**
    * @dev Players to wager through the chip contract.
+   * @param player The address of the player.
+   * @param amount The amount of bet chips to wager.
    *
    * Can only be called by the chip contract.
    */
   function wager(address player, uint256 amount) external;
+
+  /**
+   * @dev Players to wager through the chip contract.
+   * @param player The address of the player.
+   * @param amount The amount of bet chips to wager.
+   * @param nonce The nonce of the permit2.
+   * @param deadline The deadline of the permit2.
+   * @param signature The signature of the permit2.
+   *
+   * Can only be called by the proxy contract.
+   */
+  function wager(address player, uint256 amount, uint256 nonce, uint256 deadline, bytes calldata signature) external;
 
   /**
    * @dev Returns the total wagered amount.

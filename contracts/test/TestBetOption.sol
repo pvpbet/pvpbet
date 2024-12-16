@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {IBet} from "../interface/IBet.sol";
 import {IVotingEscrow} from "../interface/IVotingEscrow.sol";
-import {AddressLib} from "../lib/Address.sol";
 import {TransferLib} from "../lib/Transfer.sol";
 
 contract TestBetOption {
@@ -62,6 +62,6 @@ contract TestBetOption {
   function functionCall(address target, bytes calldata data)
   external
   returns (bytes memory) {
-    return AddressLib.functionCallWithValue(target, data, 0);
+    return Address.functionCallWithValue(target, data, 0);
   }
 }
