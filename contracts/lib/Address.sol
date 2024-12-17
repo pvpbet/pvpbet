@@ -44,4 +44,18 @@ library AddressLib {
     }
     return false;
   }
+
+  function decimals(address target)
+  internal view
+  returns (uint8) {
+    if (target.code.length > 0) {
+      (bool success, bytes memory result) = target.staticcall(
+        abi.encodeWithSignature("decimals()")
+      );
+      if (success) {
+        return abi.decode(result, (uint8));
+      }
+    }
+    return 18;
+  }
 }

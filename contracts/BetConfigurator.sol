@@ -5,10 +5,12 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IBet} from "./interface/IBet.sol";
 import {IBetConfigurator} from "./interface/IBetConfigurator.sol";
 import {IErrors} from "./interface/IErrors.sol";
+import {AddressLib} from "./lib/Address.sol";
 import {MathLib} from "./lib/Math.sol";
 import {StringLib} from "./lib/String.sol";
 
 contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
+  using AddressLib for address;
   using MathLib for uint256;
   using StringLib for string;
 
@@ -236,7 +238,7 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
   function chipMinValue(address chip)
   public view
   returns (uint256) {
-    return _chipMinValueOf[chip] > 0 ? _chipMinValueOf[chip] : 1 ether;
+    return _chipMinValueOf[chip] > 0 ? _chipMinValueOf[chip] : uint256(10).pow(chip.decimals());
   }
 
   function setChipMinValue(address chip, uint256 newChipMinValue)
@@ -258,7 +260,9 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
   function minWageredTotalAmount(address chip)
   public view
   returns (uint256) {
-    return _chipMinWageredTotalAmountOf[chip] > 0 ? _chipMinWageredTotalAmountOf[chip] : chipMinValue(chip) * 10;
+    return _chipMinWageredTotalAmountOf[chip] > 0
+      ? _chipMinWageredTotalAmountOf[chip]
+      : chipMinValue(chip).mul(10);
   }
 
   function setMinWageredTotalAmount(address chip, uint256 newMinWageredTotalAmount)
@@ -269,7 +273,9 @@ contract BetConfigurator is IBetConfigurator, IErrors, Ownable {
   function verificationRatio(address chip)
   public view
   returns (uint256) {
-    return _verificationRatioOf[chip] > 0 ? _verificationRatioOf[chip] : 100;
+    return _verificationRatioOf[chip] > 0
+      ? _verificationRatioOf[chip]
+      : uint256(10).pow(uint256(18).sub(chip.decimals())).mul(100);
   }
 
   function setVerificationRatio(address chip, uint256 newVerificationRatio)
