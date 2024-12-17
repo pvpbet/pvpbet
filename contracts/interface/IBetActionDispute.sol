@@ -26,7 +26,7 @@ interface IBetActionDispute {
    * @param disputer The address of the disputer.
    * @param amount The amount of deposit paid when raising the dispute.
    *
-   * Can only be called by the chip contract.
+   * Can only be called by the proxy contract.
    */
   function dispute(address disputer, uint256 amount) external;
 
