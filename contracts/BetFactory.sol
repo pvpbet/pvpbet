@@ -16,7 +16,7 @@ contract BetFactory is IBetFactory, IMetadata {
   function version()
   public pure
   returns (string memory) {
-    return "1.2.2";
+    return "1.2.3";
   }
 
   address private _implementation;

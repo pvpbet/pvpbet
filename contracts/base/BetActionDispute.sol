@@ -51,7 +51,10 @@ abstract contract BetActionDispute is IBetActionDispute, IErrors {
   }
 
   modifier onlyProxy() virtual {
-    if (msg.sender != 0x054548F8ce087Aa516ECE75320F929f75f8D7f25 && msg.sender != chip()) {
+    if (
+      msg.sender != chip()
+      && msg.sender != 0x6A950D7EdC9608c209c49aCf939B2294fEf1f201
+    ) {
       revert UnauthorizedAccess(msg.sender);
     }
     _;
