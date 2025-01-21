@@ -470,17 +470,17 @@ contract Bet is IBet, IErrors, IMetadata, BetActionArbitrate, BetActionDispute {
     }
   }
 
-  function dispute(uint256 amount, uint256 nonce, uint256 deadline, bytes calldata signature)
+  function dispute(address disputer, uint256 amount)
   public override(BetActionDispute) {
-    super.dispute(amount, nonce, deadline, signature);
+    super.dispute(disputer, amount);
     if (_isValidDispute()) {
       _arbitratingPeriodStartTime = block.timestamp;
     }
   }
 
-  function dispute(address disputer, uint256 amount)
+  function dispute(address disputer, uint256 amount, uint256 nonce, uint256 deadline, bytes calldata signature)
   public override(BetActionDispute) {
-    super.dispute(disputer, amount);
+    super.dispute(disputer, amount, nonce, deadline, signature);
     if (_isValidDispute()) {
       _arbitratingPeriodStartTime = block.timestamp;
     }

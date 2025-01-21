@@ -67,13 +67,6 @@ abstract contract BetActionDispute is IBetActionDispute, IErrors {
     disputer.transfer(chip(), payment, refund);
   }
 
-  function dispute(uint256 amount, uint256 nonce, uint256 deadline, bytes calldata signature)
-  public virtual {
-    address disputer = msg.sender;
-    (uint256 payment, uint256 refund) = _dispute(disputer, amount);
-    disputer.transfer(chip(), payment, refund, nonce, deadline, signature);
-  }
-
   function dispute(address disputer, uint256 amount)
   public virtual
   onlyProxy {
